@@ -1,0 +1,14 @@
+"Adventurer!  Come, sit for a spell and listen to my plight." says the darkly robed figure.
+
+"You have the blessing of the God's, I can see it all around you.  You must help us.  I am
+a devout follower of the Creator of all, An'Karith.  Unnatural things are happening in the
+newly formed Marshlands.  I don't know if you have noticed the new and, well, rather annoying
+presence of Slyth.  Slyth is a new God, forged out of the turmoil of Avaloria.  As all young
+God's, Slyth is making trouble with anyone not like him.  He and the Green Warden have turned
+the area surrounding the Crossroads into a warzone!  Please dispatch fighters on both sides
+in the name of the All Father, An'Karith."
+
+{bObjectives:{n 
+    -{gStrike down the fighters on either side of the conflict between Slyth and the Warden.{n
+
+Kill 10 creatures within the Marshlands.

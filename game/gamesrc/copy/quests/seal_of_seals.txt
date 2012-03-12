@@ -1,0 +1,19 @@
+You are young.  You do not yet know your true calling or purpose.  We have 
+much work to do with you.  Across the way you will notice a chest, that very 
+clearly is missing a piece of itself.  If you can find the missing piece, 
+you are entitled to whatever you may find inside the chest itself.  It seems
+to be hopelessly lost somewhere outside this small sanctuary.  Try using the 
+Stone Summoning Circle and proceeding through the portal it creates.
+
+This seal will also grant you the ability to begin construction of your lair.
+Your deity demands you build a homage to their visage to attract more followers.
+This large room has been carved out of the largest mountain in the land, with the
+specific purpose of housing you and your soon to be army.  Welcome to the war,
+
+General.
+
+{gObjectivs:{n
+    -Find the deity seal for the Aspect.
+
+Search for the Deity Seal.
+

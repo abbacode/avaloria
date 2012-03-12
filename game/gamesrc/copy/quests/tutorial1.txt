@@ -1,0 +1,8 @@
+This is just some test text for the development quest, used for development
+purposes.  Maybe you should kill some boars?  long Text, blah blah blah blah
+
+{bObjectives:{n
+{gKill One Creature of any type and survive.{n
+
+You have been tasked with dispatching of one of the less desirable denziens of
+Avaloria.

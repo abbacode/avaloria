@@ -1,0 +1,11 @@
+One of the most important aspects of this stronghold will be how much revenue
+it can drive to you as its owner.  This particular mountain we find ourselves
+in is laden full of rich minerals and metals that can be mined and turned to 
+gold pieces.  So, with that said, we must build a Gold mine.  Do so and you
+will reap rewards.
+
+{gObjectives:{n
+    -Build a Gold Mine Structure
+
+Use the @construct command while in your lair to build a Gold Mine structure.
+type help @construct for more information.

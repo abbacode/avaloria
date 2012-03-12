@@ -1,0 +1,10 @@
+The all father has found out about a Slythian priest who goes by the name of Synesh Algreense.
+He is hold up in the Marshlands, researching who knows what and plotting nothing but destruction.
+If our intelligence is right, he means to wipe out the entire Crossroads settlement in an effort
+to show the power of Slyth to all.  You must stop him before he kills the innocent people of this
+settlement!
+
+{gObjectives{n
+    -Kill Synesh Algreense
+
+Kill the Slythian Priest before he kills everyone.

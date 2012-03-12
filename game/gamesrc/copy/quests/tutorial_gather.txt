@@ -1,0 +1,9 @@
+This is just a development quest used for some dev testings.
+I want you to go gather some weapons.
+
+{bObjectives{n
+{g- Find a weapon.{n
+
+Find a weapon within avaloria.
+
+

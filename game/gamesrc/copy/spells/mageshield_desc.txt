@@ -1,0 +1,6 @@
+{gMage Shield:{n
+    Surround yourself with a magical defensive barrier which makes your harder to hit.
+    First level grants {g+3{n Armor Rating.
+    {bSchool:\t{n {g Abjuration{n
+    {bMana Cost:{n\t 10
+    {bDuration:{n\t 10 Minutes

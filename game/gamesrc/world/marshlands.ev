@@ -1,0 +1,157 @@
+#
+#AVALORIA BATCH FILE
+#Zone: Marshlands
+#This file builds out all the relative rooms used in the Marshlands zone.
+#
+@tel The Crossroads
+#
+@dig Marshland Clearing;marshland_entrance;marshlands_room
+ : world.rooms.MarshLand
+#Open an exit back to the crossroads
+@open marshland clearing;clearing = marshland_entrance
+#
+@desc marshland clearing = 
+A trail winds out of the camp towards a lush marshland swamp about two miles away.
+
+If you listen closely, you can hear the swap insects busily buzzing and chittering
+
+their little lives away.  Every now and then, you think you hear shouts or sounds of
+
+fighting.  Must be your imagination.
+#
+marshland clearing
+#
+@desc
+This clearing is quite large and spacious.  To the very distant east lay a blanket of
+
+trees, marking the forest line very clearly against the horizon.  The ground here is
+
+not completely solid and you can feel your feet sinking slowly into the muck below.
+
+Tall reeds of whip grass cover the tiny creeks and rivers that run in criss cross
+
+patterns across the flooded marshland.  You notice a lot of destroyed remanants of very
+
+large trees.  It seems this marshland and clearing have only recently made an appearance
+
+on the landscape.
+
+
+Every now and then you think you hear the whipgrass rustle.
+#
+@open path to the crossroads;path;crossroads = The Crossroads
+#
+@set here/cell_number = A1
+#
+@dig/teleport Field of Whipgrass;field;marshlands_room
+ : world.rooms.MarshLand
+ = east 
+#
+#exit back to Clearing
+@open west;clearing = marshland_entrance
+#
+@desc
+The whipgrass is so tall you can barely see over it to know where you are going. The
+
+sounds of the wind whipping through the fields puts you on edge.  You have been seeing
+
+glimpses of figures darting through the blades of grass, but any time you inspect the 
+
+area you come up empty handed.  The ground you are walking on seems to be made primarily
+
+of decayed forest matter and inhabitants.  When you listen to the marshland, it almost
+
+seems to call to you as if it is alive just as you are.  The thought of this unsettles
+
+you to your core.
+#
+@set here/cell_number = A2
+#
+@dig/teleport Eroded Forest Tree Line;eroded;marshlands_room
+ : world.rooms.MarshLand
+ = east
+#
+#exit back to Field of Whipgrass
+#
+@open west;field = field
+#
+@desc
+The further east you have traveled, the less sunlight peaks through the dense fog surrounding
+
+you.  You have come now to the forest's edge, the tree line running as far as the eye can see 
+
+to the north and the south.  The large tree's of the Green Warden's domain loom over you, seemingly
+
+reaching to the top of the sky.  Their dark green leafy fingers almost seem to lurch out at you,
+
+trying to keep you from entering the dark beyond their branches.  It's getting quite dark, and
+
+it feels as if someone is watching you.
+#
+@set here/cell_number = A3
+#
+@dig/teleport Sunlit Marshland;marshlands_room;sunlit
+ : world.rooms.MarshLand
+ = northwest
+#
+#exit back to tree line
+@open southeast;tree line = eroded
+#
+@desc
+As you travel north and move away from the tree line, you move to a small portion of the swamp which
+
+is bathed in sunlight.  It has been days since you have seen the sun and it is a welcome sight and
+
+feeling.  The warmth penetrates you to your bones and rejuvanates you to your core. As you look further
+
+north, you see an ever running expanse of swamp and Marshland mirrored to the east bu the dominating
+
+forest tree line, standing ever vigilant against the encroaching forces of Slyth.
+#
+@set here/cell_number = Z3
+#
+@dig/teleport Foggy Swamp;marshlands_room;foggy
+ : world.rooms.MarshLand
+ = north
+#
+#exit back to sunlit marshland
+@open south;sunlit = sunlit
+#
+@desc
+Continuing to head into the dense swamp and marsh, you come across a fog covered bog.  The water
+
+gurgles and bubles while creating a dense fog that surrounds you completely.  You can't see more
+
+than a couple inches in front of your face.  You can hear something, or someone running around
+
+you.  The harder you try to see what is near you, the less you see anything at all.  The ground
+
+beneath your feet tries to suck you in to the murky dark below.
+#
+@set here/cell_number = Y3
+#
+@teleport Sunlit Marshland
+#
+@dig/teleport Soggy Grassland;marshlands_enemy_npc_spawn;marshlands_room;soggy
+ : world.rooms.MarshLand
+ = south
+#
+@open north;sunlit = sunlit
+#
+@desc
+The swamp thins here into a mixture of water ways and grassland.  The forces of Slyth do not
+
+have quite the hold that they do on the other parts of this region, but the start of the transformation
+
+can not be ignored.  Soon this grassland will be as murky, foggy and dense as the rest of the
+
+marshlands that you have traveled through thus far.  The smell of decaying plant and animals is
+
+strong in the air, and you notice the absense of sounds.  No birds, no insects, and no wind.
+#
+@set here/cell_number = Y2
+#
+
+#END
+@teleport The Crossroads
+

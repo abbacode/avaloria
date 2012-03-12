@@ -1,0 +1,16 @@
+"You must help me brave adventurer!  My brother and I were trying to cross
+the Marshlands so that we could bring goods bought at the Crossroads back to
+our village.  It seems the forces of The Green Warden have grown ever stronger during our
+stay in The Crossroads." says the woman, face smudged with dirt.
+
+She looks at the ground, suddenly silent as a wave of grief washes over her
+face.
+
+"They killed my brother, Alexander!" The woman screams to your, tears streaming
+down her face. Then as quickly as the tears started, they stopped.  In a very
+stern voice, the lady tells you: "Be my blade of vengence adventurer".
+
+{bObjectives{n
+    -{gBe the sword of vengence and slay 3 warden creatures of any type.{n
+
+Kill three warden creatues of any type within the marshlands.
