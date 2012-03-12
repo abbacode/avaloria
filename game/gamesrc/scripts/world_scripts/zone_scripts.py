@@ -24,4 +24,5 @@ class ZoneMobSpawner(Script):
         continually monitor, once all mobs are gone, respawn.
         """
         self.obj.calculate_mob_levels()
+        self.obj.spawn_quest_items()
             

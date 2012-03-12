@@ -386,7 +386,7 @@ class MobGenerator(Object):
                 prefix = random.choice(self.db.apparition_prefixes)
             mob_name = "%s %s" % (prefix, mob_name)
             mob = create.create_object("game.gamesrc.objects.world.mob.Mob", key = "%s" % mob_name, location=self.location) 
-            mob.aliases = ['mob_runner', 'irregular_runner', 'kill_crypt_mobs', 'crypt_mobs', 'kill_undead', 'kill_%s' % mob.name.lower()]
+            mob.aliases = ['kill_dungeon_mobs', 'mob_runner', 'irregular_runner', 'kill_crypt_mobs', 'crypt_mobs', 'kill_undead', 'kill_%s' % mob.name.lower()]
             try:
                 mob.desc = copyreader.read_file("gamesrc/copy/mobs/%s_%s.txt" % (prefix.lower(), mob_name.lower()))
             except:
@@ -410,7 +410,7 @@ class MobGenerator(Object):
                 prefix = random.choice(self.db.ancestral_spirit_prefixes)
             mob_name = "%s %s" % (prefix, mob_name_original)
             mob = create.create_object("game.gamesrc.objects.world.mob.Mob", key="%s" % mob_name, location=self.location)
-            mob.aliases = ['mob_runner', 'irregular_runner', 'ruins_mobs', 'kill_ruins_mobs', 'kill_%s' % mob_name_original.lower()]
+            mob.aliases = ['kill_dungeon_mobs','mob_runner', 'irregular_runner', 'ruins_mobs', 'kill_ruins_mobs', 'kill_%s' % mob_name_original.lower()]
             mob.db.level = self.location.db.level
             mob.db.rating = random.choice(self.db.ratings)
             mob.db.mob_type = '%s' % mob_name_original.lower()
@@ -452,6 +452,7 @@ class MobGenerator(Object):
         if rn <= .40:
             weapon = self.search('mob_blade', global_search=True, ignore_errors=True)[0]
             mob_weapon = weapon.copy()
+            mob_weapon.move_to(mob, quiet=True)
             mob_weapon.name = weapon.name
             equipment = mob.db.equipment
             equipment['weapon'] = mob_weapon

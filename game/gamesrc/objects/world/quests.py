@@ -110,6 +110,8 @@ class QuestManager(Object):
                     if 'kill_%s' % mob.db.mob_type in quest_objectives[objective]['type']:
                         if 'kill_%s' % mob.db.mob_type in mob.aliases:
                             quest_obj.tick_counter_objective(objective, caller=self.db.character)
+                    elif '%s' % quest_objectives[objective]['type'] in mob.aliases:
+                        quest_obj.tick_counter_objective(objective, caller=self.db.character)
                     elif 'kill_%s' % mob.name.lower() in quest_objectives[objective]['type']:
                         quest_obj.tick_counter_objective(objective, caller=self.db.character) 
                     elif 'boss_mob' in mob.aliases and 'kill_boss' in quest_objectives[objective]['type']:

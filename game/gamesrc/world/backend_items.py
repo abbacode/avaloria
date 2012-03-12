@@ -39,6 +39,8 @@ toughness.db.desc = "A thick training manual which details the use and learning 
 deity_seal = create.create_object("game.gamesrc.objects.world.items.Item", location=location, aliases=['deity seal', 'DEITY SEAL', 'starter_quests_items'], key="Deity Seal")
 deity_seal.db.quest_item = True
 deity_seal.db.desc = "A Red-Gold medallion with the known seal of your deity engraved on the face."
-
+family_heirloom = create.create_object("game.gamesrc.objects.world.items.Item", location=location, aliases=['family heirloom', 'FAMILY HEIRLOOM'], key="Family Heirloom")
+family_heirloom.desc = "A very bright gold necklace with a Large Karithian ruby set in the center of it."
+family_heirloom.db.quest_item = True
 
 

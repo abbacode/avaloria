@@ -6,6 +6,7 @@ from game.gamesrc.objects.world.rooms import Zone
 zone = create.create_object(Zone, key="Marshlands Zone Object")
 zone.aliases = ['zone_runner']
 zone.db.zone_name = "Marshlands"
+zone.db.quest_items = ['Family Heirloom']
 zone.db.enemy_npcs = ['Synesh Algreense']
 zone.db.mobs_spawned = False
 #zone.db.x_axis_labels = ['A', 'B', 'C', 'D', 'E']

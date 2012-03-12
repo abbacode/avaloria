@@ -36,7 +36,7 @@ slythain_nuisance.add_objective(objective)
 
 
 warden_nuisance = create.create_object(Quest, key="Have you met the Green Warden?", location=storage)
-warden_nuisance.short_description = 'Kill Warden soldiers'
+warden_nuisance.db.short_description = 'Kill Warden soldiers'
 warden_nuisance.set_description('%s/quests/warden_nuisance.txt' % copy_dir)
 warden_nuisance.db.gold_reward = 15
 warden_nuisance.db.exp_reward = 50
@@ -45,6 +45,18 @@ warden_nuisance.db.faction_reward = 15
 warden_nuisance.db.exclusions = "deity:green warden"
 objective = { 'objective_name': 'Kill 3 Warden Creatures', 'counter': 0, 'threshold': 3, 'completed': False, 'type': 'kill_warden'}
 warden_nuisance.add_objective(objective)
+
+find_necklace = create.create_object(Quest, key="An Item Of Importance", location=storage)
+find_necklace.db.short_description = 'Find the Family heirloom.'
+find_necklace.set_description('%s/quests/item_of_importance.txt' % copy_dir)
+find_necklace.db.gold_reward = 100
+find_necklace.db.prereq = 'Have you met the Slythain?;Have you met the Green Warden?'
+find_necklace.db.exp_reward = 300
+find_necklace.db.faction = ['karith', 'warden', 'kaylynne', 'slyth']
+find_necklace.db.faction_reward = 45
+find_necklace.db.exclusions = "none:none"
+objective = { 'objective_name': 'Find Julianne\'s Family Heirloom', 'counter': 0, 'threshold': 1, 'completed': False, 'type': 'gather_family heirloom'}
+find_necklace.add_objective(objective)
 
 light_in_the_dark = create.create_object(Quest, key="Light In The Dark", location=storage)
 light_in_the_dark.short_description = 'Kill Creatures in Marshlands.'
@@ -101,6 +113,7 @@ unnatural_things = create.create_object(Quest, key="Unnatural Things", location=
 unnatural_things.short_description = "Kill the unnatural"
 unnatural_things.aliases = ['unnatural things']
 unnatural_things.set_description('%s/quests/unnatural_things.txt' % copy_dir)
+unnatural_things.db.prereq = 'Dark Places'
 unnatural_things.db.gold_reward = 150
 unnatural_things.db.exclusions = "none:none"
 unnatural_things.db.repeatable = True

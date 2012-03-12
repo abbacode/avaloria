@@ -150,9 +150,9 @@ class CharacterClass(Character):
         if self.dbref == 2:
             return
         storage = self.search('storage', global_search=True, ignore_errors=True)[0]
-        aspect = storage.search("Aspect of %s" % self.db.attributes['deity'], global_search=False, location=storage, ignore_errors=True)[0]
+        aspect = storage.search("Aspect of An'Karith", global_search=False, location=storage, ignore_errors=True)[0]
         aspect_copy = aspect.copy()
-        aspect_copy.name = aspect.name
+        aspect_copy.name = 'Aspect of %s' % self.db.attributes['deity']
         aspect.move_to(self, quiet=True)
         aspect.do_dialog(caller=self, type='greeting')
 
@@ -183,6 +183,8 @@ class CharacterClass(Character):
         if base_stats is True:
             attributes['attack_rating'] = self.db.attributes['strength'] / 5
             attributes['armor_rating'] = (self.db.attributes['dexterity'] / 5) + 10
+            if self.db.equipment['armor'] is not None:
+                attributes['armor_rating'] += self.db.equipment['armor'].db.armor_rating
             self.db.attributes = attributes
         attributes['temp_dexterity'] = self.db.attributes['dexterity']
         attributes['temp_strength'] = self.db.attributes['strength']
@@ -721,7 +723,7 @@ Which attributes would you like to improve?
         attributes['level'] = int(attributes['level']) + 1
         if zero_out_exp is True:
             attributes['experience_made'] = 0
-        attributes['experience_needed'] = int((int(attributes['total_exp_made']) * 1.5))
+        attributes['experience_needed'] = int((int(attributes['total_exp_made']) * .50) + attributes['total_exp_made'])
         attributes['experience_to_next_level'] = attributes['experience_needed']
         attributes['experience_needed'] = attributes['experience_needed'] - attributes['experience_made']
         attributes['attribute_points'] = attributes['attribute_points'] + (int(attributes['intelligence'] / 2))

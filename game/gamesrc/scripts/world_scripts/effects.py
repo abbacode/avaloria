@@ -57,7 +57,7 @@ class HealthBuff(Effect):
         self.obj.db.attributes = character_attributes
 
     def at_stop(self):
-        self.obj.refresh_attributes(base_stats=False, health_and_mana=True)
+        self.obj.refresh_attributes(health_and_mana=True, base_stats=False)
         self.obj.remove_effect('%s' % self.key)
         self.obj.msg("Your health buff fades")
         
