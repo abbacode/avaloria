@@ -69,6 +69,8 @@ class CmdTransmute(Command):
             return
         if hasattr(self.what, "strip"):
             item_obj = self.caller.search(self.what, global_search=False)
+            if item_obj in None:
+                return
             gold_to_award = item_obj.db.value
             self.caller.msg("{CAs you concentrate the %s becomes gold coins in your hand." % item_obj.name)
             self.caller.award_gold(gold_to_award)
@@ -132,19 +134,18 @@ class CmdTalk(Command):
     locks = "cmd:all()"
 
     def parse(self):
+        if len(self.args) < 1:
+            print "usage: talk to <npc> <message>"
+            return
         args = self.args.split()
         self.npc = args[0]
         args.remove(self.npc)
         self.message = ' '.join(args)
 
     def func(self):
-        npc = self.caller.search(self.npc, global_search=False)
-        if npc is not None:
-            self.caller.msg("{mYou tell %s: %s{n" % (npc.name, self.message)) 
-        args.remove(self.npc)
-        self.message = ' '.join(args)
-
-    def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("usage: talk to <npc> <message>")
+            return
         npc = self.caller.search(self.npc, global_search=False)
         if npc is not None:
             self.caller.msg("{mYou tell %s: %s{n" % (npc.name, self.message)) 
@@ -172,12 +173,12 @@ class CmdUse(Command):
     locks = "cmd:all()"
 
     def parse(self):
-        if len(self.args) < 1:
-            self.caller.msg("What did you want to use? (use <item to use|skill>)")
-            return
         self.what = str(self.args.strip())
 
     def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("What did you want to use? (use <item to use|skill>)")
+            return
         skill_manager = self.caller.db.skill_log
         skills = skill_manager.db.skills
         for skill in skills:
@@ -211,12 +212,12 @@ class CmdInspect(Command):
     locks = "cmd:all()"
 
     def parse(self):
-        if len(self.args) < 1:
-            self.caller.msg("What did you want to inspect? (inspect <item or thing to look at>)")
-            return
         self.what = self.args.strip()
 
     def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("What did you want to inspect? (inspect <item or thing to look at>)")
+            return
             obj = self.caller.search(self.what, global_search=False)
             if obj is not None:
                 self.caller.msg("{WInpection details:{n")
@@ -273,13 +274,13 @@ class CmdLoot(Command):
     locks = "cmd:all()"
 
     def parse(self):
+        self.what = self.args.strip()
+
+    def func(self):
         if len(self.args) < 1:
             m = "Loot what? Please specify what you want to loot. (usage: loot <corpse>)"
             self.caller.msg(m)
             return
-        self.what = self.args.strip()
-
-    def func(self):
         corpse = self.caller.search(self.what) 
         if corpse is not None:
             self.caller.loot(corpse=corpse)
@@ -297,12 +298,12 @@ class CmdLootChest(Command):
     locks = "cmd:all()"
     
     def parse(self):
-        if len(self.args) < 1:
-            self.caller.msg("What chest did you want to loot?")
-            return
         self.what = self.args.strip()
         
     def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("What chest did you want to loot?")
+            return
         chest_obj = self.caller.search(self.what, global_search=False)
         if chest_obj is None:
             return
@@ -325,12 +326,12 @@ class CmdOpen(Command):
     locks = "cmd:all()"
     
     def parse(self):
-        if len(self.args) < 1:
-            self.caller.msg("What object did you want to open?")
-            return
         self.what = self.args.strip()
     
     def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("What object did you want to open?")
+            return
         object = self.caller.search(self.what, global_search=False)
         if not object.access(self.caller, 'open'):
             self.caller.msg("You can't open that.  You probably need a key or it is locked.")
@@ -365,6 +366,9 @@ class CmdEquip(Command):
             self.what = self.args.strip()
 
     def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("What did you want to equip?  equip <item to equip>")
+            return
         if self.what is not None:
             obj = self.caller.search(self.what, global_search=False)
             if not obj:
@@ -398,6 +402,9 @@ class CmdUnEquip(Command):
             self.what = self.args.strip()
 
     def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("What did you want to unequip?  unequip <slot to equip>")
+            return
         if self.what is not None:
             obj = self.caller.search(self.what, global_search=False, ignore_errors=True)
             if not obj:

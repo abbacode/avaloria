@@ -19,12 +19,12 @@ class CmdCon(Command):
     locks = "cmd:all()"
 
     def parse(self):
-        if len(self.args) < 1:
-            self.caller.msg("What did you want to size up? (con <baddy to size up>)")
-            return
         self.what = self.args.strip()
 
     def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("What did you want to size up? (con <baddy to size up>)")
+            return
         obj = self.caller.search(self.what, use_nicks=True)
         if obj is not None:
             obj.at_inspect(looker=self.caller)
@@ -45,6 +45,9 @@ class CmdFlee(Command):
     locks = "cmd:all()"
     
     def func(self):
+        if self.caller.db.in_comabat is not True:
+            self.caller.msg("You must be in combat to flee...")
+            return
         obj = self.caller
         zone_manager = obj.location.db.manager
         zone_map = zone_manager.db.path_map
@@ -77,12 +80,12 @@ class CmdAttack(Command):
     locks = "cmd:all()"
 
     def parse(self):
-        if len(self.args) < 1 and self.caller.db.in_combat is False:
-            self.caller.msg("What did you want to attack? Surely not yourself.")
-            return
         self.what = self.args.strip()
     
     def func(self):
+        if len(self.args) < 1 and self.caller.db.in_combat is False:
+            self.caller.msg("What did you want to attack? Surely not yourself.")
+            return
         player_combat_queue = self.caller.db.combat_queue
         if self.caller.db.in_combat is True:
             if len(player_combat_queue) == 4:
@@ -139,9 +142,6 @@ class CmdCast(Command):
     locks = "cmd:all()"
     
     def parse(self):
-        if len(self.args) < 1:
-            self.caller.msg("What did you want to cast?")
-            return
         self.what = self.args.split()
         self.spellname = ""
         self.character = ""
@@ -164,9 +164,15 @@ class CmdCast(Command):
                 
 
     def func(self):
+        if len(self.args) < 1:
+            self.caller.msg("What did you want to cast?")
+            return
         manager = self.caller.db.spellbook
         spells = manager.db.spells
         spell_obj = manager.find_item(self.spellname.title())
+        if not spell_obj:
+            self.caller.msg("That is not a valid spell, or you just do not know it yet.")
+            return
         if self.character is not None:
             spell_obj.db.caller = self.caller
             spell_obj.db.target = self.character
