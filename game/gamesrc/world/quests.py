@@ -24,7 +24,7 @@ tutorial_quest.add_objective(objective)
 storage = search.objects('storage', global_search=True)[0]
 copy_dir = '/var/mud/evennia/game/gamesrc/copy/'
 
-slythain_nuisance = create.create_object(Quest, key="Have you met the Slythain?", location=storage)
+slythain_nuisance = create.create_object(Quest, key="Have You Met The Slythain?", location=storage)
 slythain_nuisance.set_description("%s/quests/slythain_nuisance.txt" % copy_dir)
 slythain_nuisance.db.gold_reward = 15
 slythain_nuisance.db.exp_reward = 50
@@ -35,7 +35,7 @@ objective = { 'objective_name': 'Kill 3 Slythain', 'counter': 0, 'threshold': 3,
 slythain_nuisance.add_objective(objective)
 
 
-warden_nuisance = create.create_object(Quest, key="Have you met the Green Warden?", location=storage)
+warden_nuisance = create.create_object(Quest, key="Have You Met The Green Warden?", location=storage)
 warden_nuisance.db.short_description = 'Kill Warden soldiers'
 warden_nuisance.set_description('%s/quests/warden_nuisance.txt' % copy_dir)
 warden_nuisance.db.gold_reward = 15
@@ -50,7 +50,7 @@ find_necklace = create.create_object(Quest, key="An Item Of Importance", locatio
 find_necklace.db.short_description = 'Find the Family heirloom.'
 find_necklace.set_description('%s/quests/item_of_importance.txt' % copy_dir)
 find_necklace.db.gold_reward = 100
-find_necklace.db.prereq = 'Have you met the Slythain?;Have you met the Green Warden?'
+find_necklace.db.prereq = 'Have You Met The Slythain?;Have You Met The Green Warden?'
 find_necklace.db.exp_reward = 300
 find_necklace.db.faction = ['karith', 'warden', 'kaylynne', 'slyth']
 find_necklace.db.faction_reward = 45

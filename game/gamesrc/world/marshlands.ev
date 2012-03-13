@@ -110,7 +110,7 @@ forest tree line, standing ever vigilant against the encroaching forces of Slyth
 #
 @set here/cell_number = Z3
 #
-@dig/teleport Foggy Swamp;marshlands_room;foggy
+@dig/teleport Foggy Swamp;marshlands_quest_item_spawn;marshlands_room;foggy
  : world.rooms.MarshLand
  = north
 #
@@ -132,7 +132,7 @@ beneath your feet tries to suck you in to the murky dark below.
 #
 @teleport Sunlit Marshland
 #
-@dig/teleport Soggy Grassland;marshlands_enemy_npc_spawn;marshlands_room;soggy
+@dig/teleport Soggy Grassland;marshlands_enemy_npc_spawn;marshlands_quest_item_spawn;marshlands_room;soggy
  : world.rooms.MarshLand
  = south
 #
@@ -152,6 +152,81 @@ strong in the air, and you notice the absense of sounds.  No birds, no insects, 
 @set here/cell_number = Y2
 #
 
+@dig/teleport Marshland Expanse;marshlands_quest_item_spawn;marshlands_room;expanse
+ : world.rooms.MarshLand
+ = southwest
+#
+@open northeast;expanse = expanse
+#
+@desc
+This large expanse of marshland meanders for a good couple miles towards the south, then curving back to the 
+
+east slightly meeting up with the might Augana river running from the north.  You can see to the stark outline
+
+of Mount Zuldrom to the far, far north.  If you listen closely enough, you can hear the loud rushing sound
+
+of the giant river running south towards the Sea of Souls as it always as, and as it always will.  The fog
+
+is quite dense in this area, but the rolling hils within the marsh provide an easy way to keep track of the
+
+direction you are headed.  The whip grass is up to your waste, it brushes through through your fingers as you
+
+progress onward through the thick Marshlands.  Your watery footsteps echo through your ears loudly, and suddenly
+
+you notice that it is deathly quiet.
+
+#
+@set here/cell_number = Z2
+#
+
+@dig/teleport Sunlit Wetland;marshlands_quest_item_spawn;marshlands_room;wetland
+ : world.rooms.MarshLand
+ = south
+#
+@open north;wetland = wetland
+#
+
+@desc
+The sun is shining brightly and the fog has lifted in this expanse of the Marshes.  You can see the overgrowth
+
+and tall whip grass clearly in the light.  As you venture further south, you begin walking towards the outline
+
+of  a structure.  At first its hard to tell exactly what it is that you are headed to, but the closer you get
+
+the more you can tell it was once an outpost, specifically a Legion outpost.  The forces of Slyth have long since
+
+destroyed the structure and what remains is a scant reminder of the domineering stone structure that once stood
+
+before you.  It sounds as if voices are coming from inside the remains of the Outpost castle.
+
+#
+@set here/cell_number = A4
+#
+
+@dig Legion Ruin Entrance;ruins entrance
+ : world.rooms.MarshLand
+ = Covered Ruins Entrance
+#
+@desc Covered Cave Entrace = 
+Along one of the walls of the old ruins you find an entrance with stairs leading down into a dark, long forgotten
+
+cellar.  As you stand looking down into the abyss and strong breez comes up from the stairway, smacking you in the
+
+face abruptly.
+#
+covered ruins entrance
+#
+@desc
+As you descend down the stairway, you pass through a crumbling doorway into a small antechamber styled room which has 
+
+a very long hallway lined with wall torches attached to it.  The light from the torches in the hallway give enough light
+
+to allow you to just barely see within the antechamber.  The floor is covered in dust and earth from years, upon years
+
+of no use.  Clearly this is not the case now.  Someone is here.
+#
+@set here/cell_number = D1
+#
 #END
 @teleport The Crossroads
 

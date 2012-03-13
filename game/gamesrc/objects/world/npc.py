@@ -224,16 +224,22 @@ class Npc(Object):
         for quest in quests:
             print quest
             quest_obj = storage.search('%s' % quest.title(), global_search=False, ignore_errors=True)[0]
+            if quest.lower() in [ q.lower() for q in active_quests.keys()]:
+                continue
             if quest_obj.db.repeatable:
                 checked_quests.append(quest)
-                continue
-            if quest.lower() in [ q.lower() for q in active_quests.keys()]:
                 continue
             if quest.lower() in [ q.lower() for q in completed_quests.keys()]:
                 continue
             if quest_obj.db.prereq is not None:
-                if quest_obj.db.prereq.title() not in completed_quests.keys():
-                    continue 
+                if ';' in quest_obj.db.prereq:
+                    split_list = quest_obj.db.prereq.split(';')
+                    for item in split_list:
+                        if item in completed_quests.keys():
+                            continue
+                else:
+                    if quest_obj.db.prereq.title() not in completed_quests.keys():
+                        continue 
                 
             self.tell_character(caller, "%s quests in the list. %s" % (len(quests), quest))
             checked_quests.append(quest)

@@ -704,12 +704,27 @@ Which attributes would you like to improve?
                     return 
         storage = self.search('storage', global_search=True)
         quest_object = storage.search(quest, global_search=False, ignore_errors=True)[0]
-        if quest_object.prereq is not None:
-            if quest_object.prereq in manager.db.completed_quests.keys():
-                pass
+        if quest_object.db.prereq is not None:
+            if ';' in quest_object.db.prereq:
+                found = 0
+                split_list = quest_object.prereq.split(';')
+                for item in split_list:
+                    item = item.strip()
+                    try:
+                        completed_keys = manager.db.completed_quests.keys()
+                        completed_keys.index(item.title())
+                        found = 1
+                    except Exception:
+                        continue
+                if found != 1:
+                    self.msg("{RPre req not met.{n")
+                    return
             else:
-                self.msg("{RPre requisite not met.{n")
-                return 
+                if quest_object.prereq in manager.db.completed_quests.keys():
+                    pass
+                else:
+                    self.msg("{RPre requisite not met.{n")
+                    return 
         character_quest = quest_object.copy()
         character_quest.name = quest_object.name
         character_quest.add_help_entry()
