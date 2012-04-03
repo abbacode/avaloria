@@ -5,6 +5,7 @@ All commands in Evennia inherit from the 'Command' class in this module.
 
 """
 
+import re
 from src.locks.lockhandler import LockHandler
 from src.utils.utils import is_iter
 
@@ -26,6 +27,8 @@ class CommandMeta(type):
             except Exception: 
                 mcs.aliases = []
         mcs.aliases = [str(alias).strip() for alias in mcs.aliases]
+        if not hasattr(mcs, "save_for_next"):
+            mcs.save_for_next = False
 
         # pre-process locks as defined in class definition
         temp = []
@@ -40,6 +43,16 @@ class CommandMeta(type):
             temp.append(lockstring)
         mcs.lock_storage = ";".join(temp)
 
+        if hasattr(mcs, 'arg_regex') and isinstance(mcs.arg_regex, basestring):
+            mcs.arg_regex = re.compile(r"%s" % mcs.arg_regex, re.I)
+        else:
+            mcs.arg_regex = None
+        if not hasattr(mcs, "auto_help"):
+            mcs.auto_help = True
+        if not hasattr(mcs, 'is_exit'):
+            mcs.is_exit = False
+        if not hasattr(mcs, "help_category"):
+            mcs.help_category = "general"
         mcs.help_category = mcs.help_category.lower()
         super(CommandMeta, mcs).__init__(*args, **kwargs)
 
@@ -87,10 +100,15 @@ class Command(object):
     locks = ""
     # used by the help system to group commands in lists.
     help_category = "general"
+
+    # this normally does not need to be changed. It allows to turn off
+    # auto-help entry creation for individual commands.
+    auto_help = True 
     # There is also the property 'obj'. This gets set by the system 
     # on the fly to tie this particular command to a certain in-game entity.
     # self.obj should NOT be defined here since it will not be overwritten 
     # if it already exists. 
+    
 
     def __init__(self):
         self.lockhandler = LockHandler(self)

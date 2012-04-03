@@ -40,7 +40,7 @@ warden_nuisance.db.short_description = 'Kill Warden soldiers'
 warden_nuisance.set_description('%s/quests/warden_nuisance.txt' % copy_dir)
 warden_nuisance.db.gold_reward = 15
 warden_nuisance.db.exp_reward = 50
-warden_nuisance.db.faction = 'glade'
+warden_nuisance.db.faction = 'slyth'
 warden_nuisance.db.faction_reward = 15
 warden_nuisance.db.exclusions = "deity:green warden"
 objective = { 'objective_name': 'Kill 3 Warden Creatures', 'counter': 0, 'threshold': 3, 'completed': False, 'type': 'kill_warden'}
@@ -123,6 +123,21 @@ unnatural_things.db.faction_reward = 65
 objective = {'objective_name': 'Kill 10 Unnatural Beings in a dungeon', 'counter': 0, 'threshold': 10, 'completed': False, 'type': 'kill_dungeon_mobs'}
 unnatural_things.add_objective(objective)
 
+kill_heroes = create.create_object(Quest, key="A Few Good Men", location=storage)
+kill_heroes.short_description = 'Kill 3 Boss mobs.'
+kill_heroes.aliases = ['few good men']
+kill_heroes.set_description('%squests/a_few_good_men.txt' % copy_dir)
+kill_heroes.db.prereq = 'Dark Places'
+kill_heroes.db.gold_reward = 65
+kill_heroes.db.exclusions = "none:none"
+kill_heroes.db.exp_reward = 300
+kill_heroes.db.faction = 'karith'
+kill_heroes.db.faction_reward = 65
+objective = {'objective_name': 'Kill 3 Boss Mobs', 'counter': 0, 'threshold': 3, 'completed': False, 'type': 'kill_boss_mob'}
+kill_heroes.add_objective(objective)
+objective = {'objective_name': 'Loot a Rare Weapon', 'counter': 0, 'threshold': 1, 'completed': False, 'type': 'loot_rare_item'}
+kill_heroes.add_objective(objective)
+
 structure_quest = create.create_object(Quest, key="Construct a Mine", location=storage)
 structure_quest.short_description = 'Build a Mine.'
 structure_quest.aliases = ['structure quest', 'STRUCTURE QUEST']
@@ -134,4 +149,17 @@ structure_quest.db.exclusions = "none:none"
 structure_quest.db.faction = ['warden', 'slyth', 'karith', 'kaylynne']
 structure_quest.db.faction_reward = 50
 objective = {'objective_name': 'Build a Gold Mine', 'counter': 0, 'threshold': 1, 'completed': False, 'type': 'build_gold_mine' }
+structure_quest.add_objective(objective)
+
+structure_quest = create.create_object(Quest, key="Construct a Training Grounds", location=storage)
+structure_quest.short_description = "Build the Training Grounds"
+structure_quest.aliases = ['structure quests']
+structure_quest.set_description("%squests/build_training_grounds.txt" % copy_dir)
+structure_quest.db.gold_award = 50
+structure_quest.db.prereq = 'Construct A Mine'
+structure_quest.db.exp_award = 200
+structure_quest.db.exclusions = "none:none"
+structure_quest.db.faction = ['warden', 'slyth', 'karith', 'kaylynne']
+structure_quest.db.faction_reward = 85
+objective = {'objective_name': 'Build a Training Grounds', 'counter': 0, 'threshold': 1, 'completed': False, 'type': 'build_training_ground'}
 structure_quest.add_objective(objective)

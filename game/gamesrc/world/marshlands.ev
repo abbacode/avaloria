@@ -132,7 +132,7 @@ beneath your feet tries to suck you in to the murky dark below.
 #
 @teleport Sunlit Marshland
 #
-@dig/teleport Soggy Grassland;marshlands_enemy_npc_spawn;marshlands_quest_item_spawn;marshlands_room;soggy
+@dig/teleport Soggy Grassland;marshlands_quest_item_spawn;marshlands_room;soggy
  : world.rooms.MarshLand
  = south
 #
@@ -156,7 +156,7 @@ strong in the air, and you notice the absense of sounds.  No birds, no insects, 
  : world.rooms.MarshLand
  = southwest
 #
-@open northeast;expanse = expanse
+@open northeast;ne = expanse
 #
 @desc
 This large expanse of marshland meanders for a good couple miles towards the south, then curving back to the 
@@ -183,7 +183,7 @@ you notice that it is deathly quiet.
  : world.rooms.MarshLand
  = south
 #
-@open north;wetland = wetland
+@open north;n = expanse
 #
 
 @desc
@@ -203,11 +203,11 @@ before you.  It sounds as if voices are coming from inside the remains of the Ou
 @set here/cell_number = A4
 #
 
-@dig Legion Ruin Entrance;ruins entrance
+@dig Legion Ruin Entrance;ruins entrance;marshlands_room
  : world.rooms.MarshLand
  = Covered Ruins Entrance
 #
-@desc Covered Cave Entrace = 
+@desc Covered Ruins Entrance = 
 Along one of the walls of the old ruins you find an entrance with stairs leading down into a dark, long forgotten
 
 cellar.  As you stand looking down into the abyss and strong breez comes up from the stairway, smacking you in the
@@ -223,10 +223,41 @@ a very long hallway lined with wall torches attached to it.  The light from the 
 
 to allow you to just barely see within the antechamber.  The floor is covered in dust and earth from years, upon years
 
-of no use.  Clearly this is not the case now.  Someone is here.
+of no use.  Clearly this is not the case now.  Someone is here.  You can make out the outlines of footprints in the 
+
+caked on dust covering the floor.  At the end of the long hallway, you can make out a very decrepit looking wooden
+
+door.
 #
 @set here/cell_number = D1
 #
+@open Marshlands;marsh = Sunlit Wetland
+#
+@desc marsh =
+You can see the sunlight from the wetlands outside the ruins peaking in through the hidden entrance you discovered.
+#
+@dig/teleport Dining Hall;hall;marshlands_room;marshlands_enemy_npc_spawn;
+ : world.rooms.MarshLand
+ = Wooden Door
+#
+@desc
+As you come through the door, you are greeted by a well lit dining hall.  There are large tables lined up in a typical
+
+dining fashion.  The size of the hall is quite surprising to you as it is carved from the living rock itself. Hanging high
+
+above you are large, candle chandeliers which provide most of the light that is used to see in this particular room. All the
+
+available torches are lit along the wall.  Someone must be here, you can sense their presence.  You can feel them watching
+
+you.  As you stand surveying your surroundings you heard someone snicker quietly.
+
+
+You try to locate the sound of the laughter, but it seems to be coming from everywhere.
+#
+@set here/cell_number = D2
+#
+@open Wooden door;door = ruins entrance
+# 
 #END
 @teleport The Crossroads
 

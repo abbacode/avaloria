@@ -26,6 +26,7 @@ from django.conf import settings
 from src.utils.batchprocessors import BATCHCMD, BATCHCODE
 from src.commands.cmdset import CmdSet
 from src.commands.default.muxcommand import MuxCommand
+from src.utils import utils
 
 HEADER_WIDTH = 70
 UTF8_ERROR = \
@@ -57,14 +58,12 @@ def format_header(caller, entry):
     """
     width = HEADER_WIDTH - 10
     entry = entry.strip()    
-    header = entry[:min(width, min(len(entry), entry.find('\n')))]
-    if len(entry) > width:
-        header = "%s[...]" % header    
+    header = utils.crop(entry, width=width)
     ptr = caller.ndb.batch_stackptr + 1 
     stacklen = len(caller.ndb.batch_stack)    
     header = "{w%02i/%02i{G: %s{n" % (ptr, stacklen, header)
     # add extra space to the side for padding.
-    header = "%s%s" % (header, " "*(width-len(header)))
+    header = "%s%s" % (header, " "*(width - len(header)))
     header = header.replace('\n', '\\n')
     
     return header 
@@ -152,7 +151,7 @@ def show_curr(caller, showall=False):
     string += "{G(hh for help)"
     if showall:
         for line in codeall.split('\n'):
-            string += "\n{n>>> %s" % line
+            string += "\n{G|{n %s" % line
     caller.msg(string)
 
 def purge_processor(caller):
@@ -273,7 +272,7 @@ class CmdBatchCode(MuxCommand):
     """
     key = "@batchcode"
     aliases = ["@batchcodes"]
-    locks = "cmd:perm(batchcommands) or superuser()"    
+    locks = "cmd:superuser()"    
     help_category = "Building"
 
     def func(self):
@@ -297,8 +296,8 @@ class CmdBatchCode(MuxCommand):
 
         if not codes:
             string = "'%s' not found.\nYou have to supply the python path "
-            string += "of the file relative to \nyour batch-file directory (%s)."
-            caller.msg(string % (python_path, settings.BASE_BATCHPROCESS_PATH))
+            string += "of the file relative to \nyour batch-file directories (%s)."
+            caller.msg(string % (python_path, ", ".join(settings.BASE_BATCHPROCESS_PATHS)))
             return
         switches = self.switches
 

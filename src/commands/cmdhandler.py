@@ -35,7 +35,9 @@ command line. The process is as follows:
 
 """
 
+from copy import copy
 from traceback import format_exc
+from twisted.internet.defer import inlineCallbacks, returnValue
 from django.conf import settings
 from src.comms.channelhandler import CHANNELHANDLER
 from src.commands.cmdsethandler import import_cmdset
@@ -72,6 +74,7 @@ class ExecSystemCommand(Exception):
         self.syscmd = syscmd
         self.sysarg = sysarg
 
+@inlineCallbacks
 def get_and_merge_cmdsets(caller):
     """
     Gather all relevant cmdsets and merge them. Note 
@@ -79,7 +82,7 @@ def get_and_merge_cmdsets(caller):
     """
     # The calling object's cmdset 
     try:
-        caller.at_cmdset_get()
+        yield caller.at_cmdset_get()
     except Exception:
         logger.log_trace()
     try:
@@ -90,7 +93,7 @@ def get_and_merge_cmdsets(caller):
     # Create cmdset for all player's available channels
     channel_cmdset = None
     if not caller_cmdset.no_channels:
-        channel_cmdset = CHANNELHANDLER.get_cmdset(caller)
+        channel_cmdset = yield CHANNELHANDLER.get_cmdset(caller)
 
     # Gather cmdsets from location, objects in location or carried        
     local_objects_cmdsets = [None] 
@@ -100,15 +103,15 @@ def get_and_merge_cmdsets(caller):
     if location and not caller_cmdset.no_objs:
         # Gather all cmdsets stored on objects in the room and
         # also in the caller's inventory and the location itself
-        local_objlist = location.contents_get(exclude=caller.dbobj) + caller.contents + [location]
+        local_objlist = yield location.contents_get(exclude=caller.dbobj) + caller.contents + [location]
         for obj in local_objlist:
             try:
                 # call hook in case we need to do dynamic changing to cmdset
-                obj.at_cmdset_get()
+                yield obj.at_cmdset_get()
             except Exception:
                 logger.log_trace()
-        local_objects_cmdsets = [obj.cmdset.current for obj in local_objlist
-                                 if (obj.cmdset.current and obj.locks.check(caller, 'call', no_superuser_bypass=True))]
+        local_objects_cmdsets = yield [obj.cmdset.current for obj in local_objlist
+                                       if (obj.cmdset.current and obj.locks.check(caller, 'call', no_superuser_bypass=True))]
         for cset in local_objects_cmdsets:
             #This is necessary for object sets, or we won't be able to separate 
             #the command sets from each other in a busy room.
@@ -123,9 +126,9 @@ def get_and_merge_cmdsets(caller):
 
     cmdsets = [caller_cmdset] + [player_cmdset] + [channel_cmdset] + local_objects_cmdsets
     # weed out all non-found sets 
-    cmdsets = [cmdset for cmdset in cmdsets if cmdset]
+    cmdsets = yield [cmdset for cmdset in cmdsets if cmdset]
     # sort cmdsets after reverse priority (highest prio are merged in last)
-    cmdsets = sorted(cmdsets, key=lambda x: x.priority)
+    cmdsets = yield sorted(cmdsets, key=lambda x: x.priority)
 
     if cmdsets:
         # Merge all command sets into one, beginning with the lowest-prio one
@@ -133,18 +136,19 @@ def get_and_merge_cmdsets(caller):
         for merging_cmdset in cmdsets:
             #print "<%s(%s,%s)> onto <%s(%s,%s)>" % (merging_cmdset.key, merging_cmdset.priority, merging_cmdset.mergetype, 
             #                                        cmdset.key, cmdset.priority, cmdset.mergetype)        
-            cmdset = merging_cmdset + cmdset 
+            cmdset = yield merging_cmdset + cmdset 
     else:
         cmdset = None
 
     for cset in (cset for cset in local_objects_cmdsets if cset):
         cset.duplicates = cset.old_duplicates
 
-    return cmdset 
+    returnValue(cmdset)
 
 
 # Main command-handler function 
 
+@inlineCallbacks
 def cmdhandler(caller, raw_string, testing=False):
     """
     This is the main function to handle any string sent to the engine.    
@@ -153,13 +157,13 @@ def cmdhandler(caller, raw_string, testing=False):
     raw_string - the command string given on the command line
     testing - if we should actually execute the command or not. 
               if True, the command instance will be returned instead.
+
+    Note that this function returns a deferred!               
     """    
     try: # catch bugs in cmdhandler itself
         try: # catch special-type commands
 
-            cmdset = get_and_merge_cmdsets(caller)
-
-            # print cmdset
+            cmdset = yield get_and_merge_cmdsets(caller)
             if not cmdset:
                 # this is bad and shouldn't happen. 
                 raise NoCmdSets
@@ -167,17 +171,17 @@ def cmdhandler(caller, raw_string, testing=False):
             raw_string = raw_string.strip()
             if not raw_string:
                 # Empty input. Test for system command instead.
-                syscmd = cmdset.get(CMD_NOINPUT)
+                syscmd = yield cmdset.get(CMD_NOINPUT)
                 sysarg = ""
                 raise ExecSystemCommand(syscmd, sysarg)
             # Parse the input string and match to available cmdset.
             # This also checks for permissions, so all commands in match
             # are commands the caller is allowed to call.
-            matches = COMMAND_PARSER(raw_string, cmdset, caller)
+            matches = yield COMMAND_PARSER(raw_string, cmdset, caller)
             # Deal with matches
             if not matches:
                 # No commands match our entered command
-                syscmd = cmdset.get(CMD_NOMATCH)
+                syscmd = yield cmdset.get(CMD_NOMATCH)
                 if syscmd: 
                     sysarg = raw_string
                 else:
@@ -186,12 +190,12 @@ def cmdhandler(caller, raw_string, testing=False):
 
             if len(matches) > 1:
                 # We have a multiple-match
-                syscmd = cmdset.get(CMD_MULTIMATCH)
+                syscmd = yield cmdset.get(CMD_MULTIMATCH)
                 sysarg = "There where multiple matches."
                 if syscmd:
                     syscmd.matches = matches
                 else:
-                    sysarg = at_multimatch_cmd(caller, matches)
+                    sysarg = yield at_multimatch_cmd(caller, matches)
                 raise ExecSystemCommand(syscmd, sysarg)
             
             # At this point, we have a unique command match. 
@@ -202,7 +206,7 @@ def cmdhandler(caller, raw_string, testing=False):
             if hasattr(cmd, 'is_channel') and cmd.is_channel:
                 # even if a user-defined syscmd is not defined, the 
                 # found cmd is already a system command in its own right. 
-                syscmd = cmdset.get(CMD_CHANNEL)                
+                syscmd = yield cmdset.get(CMD_CHANNEL)                
                 if syscmd:
                     # replace system command with custom version
                     cmd = syscmd           
@@ -220,24 +224,33 @@ def cmdhandler(caller, raw_string, testing=False):
             if hasattr(cmd, 'obj') and hasattr(cmd.obj, 'scripts'):
                 # cmd.obj are automatically made available.
                 # we make sure to validate its scripts. 
-                cmd.obj.scripts.validate()
+                yield cmd.obj.scripts.validate()
             
             if testing:
                 # only return the command instance
-                return cmd
-
+                returnValue(cmd)
+        
             # pre-command hook
-            cmd.at_pre_cmd()
+            yield cmd.at_pre_cmd()
 
             # Parse and execute        
-            cmd.parse()
+            yield cmd.parse()
             # (return value is normally None)
-            ret = cmd.func()
+            ret = yield cmd.func()
 
             # post-command hook
-            cmd.at_post_cmd()
-            # Done! By default, Evennia does not use this return at all
-            return ret 
+            yield cmd.at_post_cmd()
+
+            if cmd.save_for_next:
+                # store a reference to this command, possibly
+                # accessible by the next command.
+                caller.ndb.last_cmd = yield copy(cmd)
+            else:
+                caller.ndb.last_cmd = None 
+            
+            # Done! This returns a deferred. By default, Evennia does
+            # not use this at all.
+            returnValue(ret)
 
         except ExecSystemCommand, exc:             
             # Not a normal command: run a system command, if available,
@@ -253,16 +266,17 @@ def cmdhandler(caller, raw_string, testing=False):
                 if hasattr(syscmd, 'obj') and hasattr(syscmd.obj, 'scripts'):
                     # cmd.obj is automatically made available.
                     # we make sure to validate its scripts. 
-                    syscmd.obj.scripts.validate()
+                    yield syscmd.obj.scripts.validate()
                     
                 if testing:
                     # only return the command instance
-                    return syscmd
+                    returnValue(syscmd)
 
                 # parse and run the command
-                syscmd.parse()
-                syscmd.func()
+                yield syscmd.parse()
+                yield syscmd.func()
             elif sysarg:
+                # return system arg
                 caller.msg(exc.sysarg)
 
         except NoCmdSets:
@@ -285,7 +299,7 @@ def cmdhandler(caller, raw_string, testing=False):
     except Exception:            
         # This catches exceptions in cmdhandler exceptions themselves
         string = "%s\nAbove traceback is from a Command handler bug."
-        string += " Please contact an admin."
+        string += " Please contact an admin and/or file a bug report."
         logger.log_trace(string)
         caller.msg(string % format_exc())
 

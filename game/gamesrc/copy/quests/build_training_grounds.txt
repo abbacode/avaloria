@@ -1,0 +1,9 @@
+It is imperative we continue to build up our fortifications here, as the threat
+of enemy action towards us grows with every passing moment.  You need to begin 
+construction of a Training Grounds so that when we finally attract henchman, they
+will have a place to train and level.
+
+{gObjectives:{n
+    -Build a Training Grounds Structure
+
+Build a Training Grounds.

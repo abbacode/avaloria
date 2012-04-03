@@ -602,8 +602,7 @@ class DungeonGenerator(Object):
         manager.db.dungeon = dungeon
         self.db.zone = zone
         #manually trigger zone_runner to spawn mobs
-        zone_runner_script = search.scripts('zone_runner')[0]
-        zone_runner_script.at_repeat() 
+        zone.update()
 
         i = 0   
         lair = self.search(self.location.db.lair_id, global_search=True)

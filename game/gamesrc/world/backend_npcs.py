@@ -62,6 +62,7 @@ desc = "This man is clad is green robes, from head to toe.  You see no visible s
 desc += "does not seem to notice your presence.  He seems to be very deep in thought, as you can hear him\n"
 desc += "frantically whispering to himself."
 enemy_npc.db.desc = desc
+enemy_npc.db.actions = {'greeting': 'Ah, so you have come to test the will and power of the almighty Ssslyth have you?', 'taunt': "And don't come back!", 'mock': "You hit like a girl anyways!"}
 enemy_npc.db.combat_dialogue = ['You know not whatssss you do little onesss.', 'Yesss, this is as I have sseen.', 'Come, meet your doom']
 enemy_npc.db.dialogue = ['Thissss cannot be...', 'Why hasss the masster forsaken me?', 'No, no, thiisss must be wrong.']
 enemy_npc.db.rating = 'hero'
@@ -79,8 +80,52 @@ m += "and has begun his assertion, or attempt at assertion of power.  The neares
 m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
 m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {mto learn more."
 aspect_of_karith.db.dialogue = { 'greeting': m }
-aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine']
+aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
 aspect_of_karith.db.merchant = False
 aspect_of_karith.db.trainer = False
 aspect_of_karith.db.quest_giver = True
 
+
+aspect_of_karith = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Aspect of Slyth", location=storage)
+desc = "This transluscent visage shows an old man, hunched over with a cane.  His white beard flows to the floor.  He looks upon you kindly."
+aspect_of_karith.db.desc = desc
+m = "Welcome young one, I have been expecting you to awake for some time now.  Avaloria is in grave danger young hero.\n"
+m += "Currently the spiritual world is at war.  The newest God of our realm, Slyth has seemingly grown ever powerful\n"
+m += "and has begun his assertion, or attempt at assertion of power.  The nearest lands are those of the Green Warden\n"
+m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
+m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {mto learn more."
+aspect_of_karith.db.dialogue = { 'greeting': m }
+aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
+aspect_of_karith.db.merchant = False
+aspect_of_karith.db.trainer = False
+aspect_of_karith.db.quest_giver = True
+
+
+aspect_of_karith = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Aspect of Kaylynne", location=storage)
+desc = "This transluscent visage shows an old man, hunched over with a cane.  His white beard flows to the floor.  He looks upon you kindly."
+aspect_of_karith.db.desc = desc
+m = "Welcome young one, I have been expecting you to awake for some time now.  Avaloria is in grave danger young hero.\n"
+m += "Currently the spiritual world is at war.  The newest God of our realm, Slyth has seemingly grown ever powerful\n"
+m += "and has begun his assertion, or attempt at assertion of power.  The nearest lands are those of the Green Warden\n"
+m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
+m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {mto learn more."
+aspect_of_karith.db.dialogue = { 'greeting': m }
+aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
+aspect_of_karith.db.merchant = False
+aspect_of_karith.db.trainer = False
+aspect_of_karith.db.quest_giver = True
+
+
+aspect_of_karith = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Aspect of the Green Warden", location=storage)
+desc = "This transluscent visage shows an old man, hunched over with a cane.  His white beard flows to the floor.  He looks upon you kindly."
+aspect_of_karith.db.desc = desc
+m = "Welcome young one, I have been expecting you to awake for some time now.  Avaloria is in grave danger young hero.\n"
+m += "Currently the spiritual world is at war.  The newest God of our realm, Slyth has seemingly grown ever powerful\n"
+m += "and has begun his assertion, or attempt at assertion of power.  The nearest lands are those of the Green Warden\n"
+m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
+m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {mto learn more."
+aspect_of_karith.db.dialogue = { 'greeting': m }
+aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
+aspect_of_karith.db.merchant = False
+aspect_of_karith.db.trainer = False
+aspect_of_karith.db.quest_giver = True

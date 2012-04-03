@@ -24,13 +24,33 @@ class CombatManager(Object):
                                         "As you bring your weapon down, it bounces off of %s's armor harmlessly" % self.defender.key,
                                         "You swing your weapon but miss mightily.", 
                                         "You try to clobber %s, but miss wildly." % self.defender.key]
-        self.opponent_missed_attacks_text = ["%s misses you with their wild attack." % self.defender.key]
+        self.opponent_missed_attacks_text = ["%s misses you with their wild attack." % self.defender.key,
+                                                "%s clumsily tries to attack you, but misses horribly." % self.defender.key,
+                                                "%s comes at you, but is deflected by your armor." % self.defender.key,
+                                                "%s swings at you mightily, but misses" % self.defender.key]
     
     def score_hit(self, who):
         if 'attacker' in who:
             damage_amount = self.attacker.get_damage()
+            character_weapon = self.attacker.db.equipment['weapon']
+            if character_weapon is None:
+                self.punching_texts = ["You pummel %s with a flurry of punches for {R%s{n damage!" % (self.defender.key, damage_amount),
+                                            "You connect with a quick jab for {R%s{n damage!" % damage_amount,
+                                            "You uppercut %s for {R%s{n damage!" % (self.defender.key, damage_amount),
+                                            "As you throw a punch, you feel it connect for {R%s{n damage!" % damage_amount ]
+                msg_text = random.choice(self.punching_texts)
+            else:
+                equipment = self.attacker.db.equipment
+                weapon = equipment['weapon']
+                self.character_hit_text = ["You swing your %s at full force, hitting for {R%s{n damage!" % (weapon.name, damage_amount),
+                                                "You deal {R%s{n damage to %s!" % (damage_amount, self.defender.key),
+                                                "You bring your %s down on %s's head for {R%s{n damage!" % (weapon.name, self.defender.key, damage_amount),
+                                                "Striking with vengence you do {R%s{n damage!" % damage_amount]
+                msg_text = random.choice(self.character_hit_text)
             self.defender.take_damage(damage=damage_amount)
-            self.attacker.msg("You deal {r%s{n damage to %s." % (damage_amount, self.defender.key ))
+            self.attacker.msg(msg_text)
+            
+           # self.attacker.msg(You deal {r%s{n damage to %s." % (damage_amount, self.defender.key ))
             """
             if self.defender.db.attributes['temp_health'] <= 0:
                 self.attacker.msg("{bYou have defeated your foe!{n DEBUG: inside combat manager")

@@ -33,6 +33,33 @@ class Item(Object):
         return self.db.is_equipped
                 
 
+class LightSource(Item):
+    """
+    An object that emits light.
+    """
+    def at_object_creation(self):
+        Item.at_object_creation(self)
+        self.db.desc = "A typical, simple torch."
+        self.db.burntime = 60*5
+        self.db.is_active = False
+   
+    def reset(self):
+        if self.db.burntime < 0:
+            self.db.is_active = False
+        try:
+            loc = self.location.location
+        except AttributeError:
+            loc = self.location
+        loc.msg_contents("{R%s has burned out." % self.name)
+        try:
+            self.location.location.scripts.validate()
+        except AttributeError:
+            self.location.scripts.validate()
+
+
+
+    
+        
 class Weapon(Item):
     """
     An object that is a weapon (i.e can be equipped and used to hurt

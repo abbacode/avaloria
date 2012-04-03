@@ -32,12 +32,21 @@ recommended that the batch-code processor is limited only to
 superusers or highly trusted staff.
 
 
+=======================================================================
+
 Batch-command processor file syntax
 
-The batch-command processor accepts 'batchcommand files' e.g 'batch.ev',
-containing a sequence of valid evennia commands in a simple
-format. The engine runs each command in sequence, as if they had been
-run at the game prompt.
+The batch-command processor accepts 'batchcommand files' e.g
+'batch.ev', containing a sequence of valid evennia commands in a
+simple format. The engine runs each command in sequence, as if they
+had been run at the game prompt.
+
+Each evennia command must be delimited by a line comment to mark its
+end. 
+
+#INSERT path.batchcmdfile - this as the first entry on a line will
+      import and run a batch.ev file in this position, as if it was 
+      written in this file. 
 
 This way entire game worlds can be created and planned offline; it is
 especially useful in order to create long room descriptions where a
@@ -72,6 +81,9 @@ It seems the bottom of the box is a bit loose.
 # (Assuming #221 is a warehouse or something.)
 # (remember, this comment ends the @teleport command! Don'f forget it)
 
+# Example of importing another file at this point. 
+#IMPORT examples.batch
+
 @drop box
 
 # Done, the box is in the warehouse! (this last comment is not necessary to
@@ -81,31 +93,45 @@ It seems the bottom of the box is a bit loose.
 An example batch file is game/gamesrc/commands/examples/batch_example.ev. 
 
 
+==========================================================================
+
 
 Batch-code processor file syntax
 
-The Batch-code processor accepts full python modules (e.g. "batch.py") that
-looks identical to normal Python files with a few exceptions that allows them
-to the executed in blocks. This way of working assures a sequential execution
-of the file and allows for features like stepping from block to block
-(without executing those coming before), as well as automatic deletion
-of created objects etc. You can however also run a batch-code python file
-directly using Python (and can also be de). 
+The Batch-code processor accepts full python modules (e.g. "batch.py")
+that looks identical to normal Python files with a few exceptions that
+allows them to the executed in blocks. This way of working assures a
+sequential execution of the file and allows for features like stepping
+from block to block (without executing those coming before), as well
+as automatic deletion of created objects etc. You can however also run
+a batch-code python file directly using Python (and can also be de).
 
-Code blocks are separated by python comments starting with special code words. 
+Code blocks are separated by python comments starting with special
+code words.
 
 #HEADER - this denotes commands global to the entire file, such as
           import statements and global variables. They will
-          automatically be pasted at the top of all code blocks. Observe
-          that changes to these variables made in one block is not
-          preserved between blocks!
-#CODE [objname, objname, ...] - This designates a code block that will be executed like a 
+          automatically be pasted at the top of all code
+          blocks. Observe that changes to these variables made in one
+          block is not preserved between blocks!
+#CODE 
+#CODE (info)
+#CODE (info) objname1, objname1, ... - 
+           This designates a code block that will be executed like a
            stand-alone piece of code together with any #HEADER
-           defined. <objname>s mark the (variable-)names of objects created in the code, 
-           and which may be auto-deleted by the processor if desired (such as when 
-           debugging the script). E.g., if the code contains the command 
-           myobj = create.create_object(...), you could put 'myobj' in the #CODE header
-           regardless of what the created object is actually called in-game. 
+           defined. (info) text is used by the interactive mode to
+           display info about the node to run.  <objname>s mark the
+           (variable-)names of objects created in the code, and which
+           may be auto-deleted by the processor if desired (such as
+           when debugging the script). E.g., if the code contains the
+           command myobj = create.create_object(...), you could put
+           'myobj' in the #CODE header regardless of what the created
+           object is actually called in-game.
+#INSERT path.filename - This imports another batch_code.py file and
+          runs it in the given position.  paths are given as python
+          path. The inserted file will retain its own HEADERs which
+          will not be mixed with the HEADERs of the file importing
+          this file.
 
 The following variables are automatically made available for the script:
 
@@ -131,6 +157,8 @@ obj.location = caller.location
 obj.db.gold = GOLD
 caller.msg("The object was created!")
 
+#INSERT another_batch_file
+
 #CODE
 
 script = create.create_script()
@@ -139,6 +167,7 @@ script = create.create_script()
 
 import re
 import codecs
+import traceback, sys
 from traceback import format_exc
 from django.conf import settings
 from django.core.management import setup_environ
@@ -147,6 +176,7 @@ from src.utils import utils
 from game import settings as settings_module
 
 ENCODINGS = settings.ENCODINGS
+CODE_INFO_HEADER = re.compile(r"\(.*?\)")
 
 #------------------------------------------------------------
 # Helper function
@@ -235,13 +265,16 @@ class BatchCommandProcessor(object):
           1) # at the beginning of a line marks the end of the command before it.
                It is also a comment and any number of # can exist on subsequent
                lines (but not inside comments).
-          2) Commands are placed alone at the beginning of a line and their
+          2) #INSERT at the beginning of a line imports another
+             batch-cmd file file and pastes it into the batch file as if 
+             it was written there. 
+          3) Commands are placed alone at the beginning of a line and their
              arguments are considered to be everything following (on any
              number of lines) until the next comment line beginning with #.
-          3) Newlines are ignored in command definitions
-          4) A completely empty line in a command line definition is condered
+          4) Newlines are ignored in command definitions
+          5) A completely empty line in a command line definition is condered
              a newline (so two empty lines is a paragraph).
-          5) Excess spaces and indents inside arguments are stripped. 
+          6) Excess spaces and indents inside arguments are stripped. 
 
         """
 
@@ -251,8 +284,10 @@ class BatchCommandProcessor(object):
             Identifies the line type (comment, commanddef or empty)
             """
             try:
-                if line.strip()[0] == '#':
-                    return "comment"
+                if line.strip().startswith("#INSERT"):
+                    return "insert"
+                elif line.strip()[0] == '#':
+                    return "comment"                
                 else:
                     return "commanddef"
             except IndexError:
@@ -276,10 +311,22 @@ class BatchCommandProcessor(object):
         for line in lines:
                         
             typ = identify_line(line)
+ 
             if typ == "commanddef":
                 curr_cmd += line
             elif typ == "empty" and curr_cmd:
                 curr_cmd += "\r\n"
+            elif typ == "insert":
+                # note that we are not safeguarding for 
+                # cyclic imports here!
+                if curr_cmd:
+                    commands.append(curr_cmd.strip())
+                curr_cmd = ""
+                filename = line.lstrip("#INSERT").strip() 
+                insert_commands = self.parse_file(filename)
+                if insert_commands == None:
+                    insert_commands = ["{rINSERT ERROR: %s{n" % filename]
+                commands.extend(insert_commands)                
             else: #comment
                 if curr_cmd:
                     commands.append(curr_cmd.strip())                
@@ -301,6 +348,13 @@ class BatchCommandProcessor(object):
 #
 #------------------------------------------------------------
 
+def tb_filename(tb):
+    "Helper to get filename from traceback"
+    return tb.tb_frame.f_code.co_filename
+def tb_iter(tb):
+    while tb is not None:
+        yield tb
+        tb = tb.tb_next
 
 class BatchCodeProcessor(object):
     """
@@ -315,7 +369,8 @@ class BatchCodeProcessor(object):
 
         1) Lines starting with #HEADER starts a header block (ends other blocks)
         2) Lines starting with #CODE begins a code block (ends other blocks)
-        3) #CODE headers may be of the following form: #CODE (info) objname, objname2, ...
+        3) #CODE headers may be of the following form: #CODE (info) objname, objname2, ...        
+        4) Lines starting with #INSERT are on form #INSERT filename. 
         3) All lines outside blocks are stripped.
         4) All excess whitespace beginning/ending a block is stripped.
 
@@ -327,29 +382,30 @@ class BatchCodeProcessor(object):
             Identifies the line type: block command, comment, empty or normal code.          
 
             """    
-            line = line.strip()
+            parseline = line.strip()
 
-            if line.startswith("#HEADER"):
+            if parseline.startswith("#HEADER"):
                 return ("header", "", "")
-            elif line.startswith("#CODE"):
+            if parseline.startswith("#INSERT"):
+                filename = line.lstrip("#INSERT").strip()
+                if filename:
+                    return ('insert', "", filename)
+                else:
+                    return ('comment', "", "{r#INSERT <None>{n")
+            elif parseline.startswith("#CODE"):
                 # parse code command
                 line = line.lstrip("#CODE").strip()
-                objs = []
-                info = ""
-                if line and '(' in line and ')' in line:
-                    # a code description
-                    lp = line.find('(')
-                    rp = line.find(')')
-                    info = line[lp:rp+1]
-                    line = line[rp+1:] 
-                if line:
-                    objs = [obj.strip() for obj in line.split(',')]                
+                info = CODE_INFO_HEADER.findall(line) or ""
+                if info:
+                    info = info[0]
+                    line = line.replace(info, "")
+                objs = [o.strip() for o in line.split(",") if o.strip()]                
                 return ("codeheader", info, objs)
-            elif line.startswith('#'):
-                return ('comment', "", "\n%s" % line)
+            elif parseline.startswith('#'):
+                return ('comment', "", "%s" % line)
             else:
                 #normal line - return it with a line break.
-                return ('line', "", "\n%s" % line)
+                return ('line', "", "%s" % line)
 
         # read indata
 
@@ -372,7 +428,16 @@ class BatchCodeProcessor(object):
             #     print "::", in_header, in_code, mode, line.strip() 
             # except:
             #     print "::", in_header, in_code, mode, line             
-            if mode == 'header':
+            if mode == 'insert': 
+                # recursive load of inserted code files - note that we
+                # are not checking for cyclic imports!
+                in_header = False
+                in_code = False
+                inserted_codes = self.parse_file(line) or [{'objs':"", 'info':line, 'code':""}]
+                for codedict in inserted_codes: 
+                    codedict["inserted"] = True                
+                codes.extend(inserted_codes)
+            elif mode == 'header':
                 in_header = True
                 in_code = False
             elif mode == 'codeheader':                
@@ -380,9 +445,7 @@ class BatchCodeProcessor(object):
                 in_code = True
                 # the line is a list of object variable names
                 # (or an empty list) at this point.
-                codedict = {'objs':line,
-                            'info':info,
-                            'code':""}
+                codedict = {'objs':line, 'info':info, 'code':""}
                 codes.append(codedict)
             elif mode == 'comment' and in_header:
                 continue
@@ -398,10 +461,21 @@ class BatchCodeProcessor(object):
 
         # last, we merge the headers with all codes.
         for codedict in codes:
-            codedict["code"] = "#CODE %s %s\n%s\n\n%s" % (codedict['info'],
-                                                          ", ".join(codedict["objs"]),
-                                                          header.strip(), 
-                                                          codedict["code"].strip())
+            #print "codedict:", codedict
+            if codedict and "inserted" in codedict:
+                # we don't need to merge code+header in this case
+                # since that was already added in the recursion. We
+                # just check for errors.
+                if not codedict['code']:
+                    codedict['code'] = "{r#INSERT ERROR: %s{n" % codedict['info']
+            else:                
+                objs = ", ".join(codedict["objs"])
+                if objs: 
+                    objs = "[%s]" % objs
+                codedict["code"] = "#CODE %s %s \n%s\n\n%s" % (codedict['info'],
+                                                               objs,
+                                                               header.strip(),
+                                                               codedict["code"].strip())
         return codes
 
     def code_exec(self, codedict, extra_environ=None, debug=False):
@@ -410,7 +484,6 @@ class BatchCodeProcessor(object):
 
         extra_environ - dict with environment variables
         """
-
         # define the execution environment
         environ = "setup_environ(settings_module)"
         environdict = {"setup_environ":setup_environ, 
@@ -420,7 +493,7 @@ class BatchCodeProcessor(object):
                 environdict[key] = value
 
         # merge all into one block
-        code = "%s\n%s" % (environ, codedict['code'])
+        code = "%s # auto-added by Evennia\n%s" % (environ, codedict['code'])
         if debug:
             # try to delete marked objects
             for obj in codedict['objs']:
@@ -430,10 +503,26 @@ class BatchCodeProcessor(object):
         try:
             exec(code, environdict)
         except Exception:
-            errlist = format_exc().split('\n')
-            if len(errlist) > 4:
-                errlist = errlist[4:]
-            err = "\n".join(" %s" % line for line in errlist if line)
+            etype, value, tb = sys.exc_info()                       
+
+            fname = tb_filename(tb)
+            for tb in tb_iter(tb):
+                if fname != tb_filename(tb):
+                    break
+            lineno = tb.tb_lineno - 1
+            err = ""
+            for iline, line in enumerate(code.split("\n")):
+                if iline == lineno: 
+                    err += "\n{w%02i{n: %s" % (iline + 1, line) 
+                elif lineno - 5 < iline < lineno + 5: 
+                    err += "\n%02i: %s" % (iline + 1, line) 
+
+            err += "\n".join(traceback.format_exception(etype, value, tb))            
+            #errlist = format_exc().split('\n')
+            #if len(errlist) > 4:
+            #    errlist = errlist[4:]            
+            #err = "\n".join(" %s" % line for line in errlist if line)
+
             if debug:
                 # try to delete objects again.
                 try:

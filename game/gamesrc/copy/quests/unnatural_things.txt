@@ -1,0 +1,12 @@
+You have done well so far young one.  Well indeed.  Mount zuldrom holds many treasures and
+much danger. The Mountain holds many ruins of the Earthen nation, and other much older 
+civilizations. These ruins however hold  the spirits of the past and other denziens of
+much more corporeal nature.  Typically these ruins and crypts are in accessible, however you 
+can use the Stone Summoning Circle every day to summon a portal to the ruins inside the Mountain.
+
+We must keep evil inside the Mountain at bay.  The entire fate of the outside world depends on
+it.   They grow ever stronger.  Ever stronger.
+
+{gObjectives:{n
+    -Kill 10 Unnatural Things inside the portal summoned by the Summoning circle in your
+     lair.

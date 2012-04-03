@@ -1,9 +1,167 @@
 import random
 import re
-from src.utils import utils
+from src.utils import utils, create
 from src.commands.cmdset import CmdSet
 from game.gamesrc.commands.basecommand import Command, MuxCommand
 
+class ActionCommand(Command):
+    
+    def at_post_cmd(self):
+        temp_health = self.caller.db.attributes['temp_health']
+        base_health = self.caller.db.attributes['health']
+        temp_mana = self.caller.db.attributes['temp_mana']
+        base_mana = self.caller.db.attributes['mana']
+        exp_made = self.caller.db.attributes['experience_made']
+        exp_needed = self.caller.db.attributes['experience_to_next_level']
+        temp_balance = self.caller.db.attributes['temp_balance']
+        balance = self.caller.db.attributes['balance']
+        self.caller.msg("{RHP: (%s/%s){n {CMP: (%s/%s){n {yEXP: (%s/%s){n BAL:{g(%s/%s){n" % (temp_health, base_health, temp_mana, base_mana, exp_made, exp_needed, temp_balance, balance))
+
+class CmdInvite(Command):
+    """
+    Invite another player to be in a group with you.  Once a group is formed, you will have
+    your own chat channel, and also receive bonuses to experience and other things.
+
+    Usage:
+        invite <character name>
+
+    """
+    key = 'invite'
+    aliases = ['inv', 'ginvite']
+    help_category = 'general'
+    locks = "cmd:all()"
+
+    def parse(self):
+        self.what = self.args.strip()
+        
+    def func(self):
+        caller = self.caller
+        if self.what is None or len(self.args) < 1:
+            caller.msg("Please specify who you would like to invite")
+            return
+        invitee = caller.search(self.what, global_search=False)
+        if invitee is None:
+            caller.msg("Can't find anyone by that name")
+            return
+        
+        if invitee.db.grouped:
+            caller.msg("{R%s is already in a party." % invitee.name)
+            return
+
+        if caller.db.group is None:
+            caller.msg("{CParty invitation sent to {c%s.{n" % invitee.name)
+            invitee.negotiate_group_invite(caller, invitee)
+        else:
+            group = caller.db.group
+            if caller.name not in group.db.leader:
+                caller.msg("{RMust be leader to invite.{n")
+                return
+            else:
+                caller.msg("{CParty invitation sent to {c%s.{n" % invitee.name)
+                invitee.negotiate_group_invite(caller, invitee)
+            
+            
+        
+class CmdGroupTalk(Command):
+    """
+    Sends a message to the group object channel for group talk
+    Usage:
+        p <message>
+        g <message>
+        group <message>
+    
+    """
+    key = 'party'
+    aliases = ['p', 'g', 'group']
+    help_category = 'group'
+    locks = "cmd:all()"
+    
+    def parse(self):
+        self.what = self.args.strip()
+    
+    def func(self):
+        caller = self.caller
+        if len(self.what) < 1:
+            caller.msg("{RWhat do you want to say?{n")
+            return
+        group = caller.db.group
+        channel = group.db.channel
+        channel.msg("{W[{cParty{n{W]<{G%s{n{W>: %s"% (caller.name, self.what))
+
+            
+class CmdGroup(MuxCommand):
+    """
+    Shows information about your group and the characters in it.
+    Usage:
+        @group/<switches>
+            swiches: leave, kick, disband
+
+        @group (list the characters in the group with you.)
+    """
+    key = '@group'
+    aliases = ['group']
+    help_category = 'general'
+    locks = "cmd:all()"
+    
+    def func(self):
+        caller = self.caller
+        group = caller.db.group
+        if not self.switches:
+            if caller.db.group is None:
+                caller.msg("{RYou do you not belong to a group.{n")
+                return
+            else:
+                msg = "{{C{0:<20}{1:<20}{2:<20}{3:<20}{4:<10}{5:<5}{{n".format("Name", "Location", "Race", "Deity", "Level", "Leader")
+                caller.msg(msg)
+                msg = "{C-----------------------------------------------------------------------------------------------------------------{n"
+                caller.msg(msg)
+                members = group.db.members
+                for char in members:
+                    if char.name == group.db.leader:
+                        msg = "{{G{0:<20}{{n{{W{1:<20}{2:<20}{3:<20}{4:<10}{5:<5}{{n".format(char.name, char.location, char.db.attributes['race'], char.db.attributes['deity'],  char.db.attributes['level'], 'Yes')
+                    else:    
+                        msg = "{{G{0:<20}{{n{{W{1:<20}{2:<20}{3:<20}{4:<10}{5:<5}{{n".format(char.name, char.location, char.db.attributes['race'], char.db.attributes['deity'], char.db.attributes['level'], 'No')
+                    caller.msg(msg)
+                msg = "{C-----------------------------------------------------------------------------------------------------------------{n"
+                caller.msg(msg)
+        else:
+            if 'leave' in self.switches:
+                if len(group.db.members) == 2:
+                    group.disband()
+                else:
+                    group = caller.db.group
+                    caller.db.group = None
+                    group.leave(caller)
+            elif 'disband' in self.switches:
+                if caller.name == group.db.leader:
+                    group.disband()
+                else:
+                    caller.msg("{RMust be the party leader to disband.{n")
+                    return
+            elif 'kick' in self.switches:
+                if caller.name == group.db.leader:
+                    character = self.args.strip() 
+                    character_obj = self.caller.search(character, global_search=True)
+                    group.leave(character_obj)
+                    character_obj.msg("{R%s has kicked you from the party.{n" % group.db.leader)
+                else:
+                    caller.msg("{RMust be the party leader to do that.{n")
+                    return
+            elif 'promote' in self.switches:
+                if caller.name == group.db.leader:
+                    character = self.args.strip()
+                    character_obj = self.caller.search(character)
+                    group.promote(character_obj)
+                else:
+                    caller.msg("{RMust be the party leader to do that.{n")
+                    return
+
+            
+                
+        
+                
+    
+                 
 class CmdInventory(MuxCommand):
     """
     Shows you what you are carrying, also showing what is equipped and what is 
@@ -69,7 +227,7 @@ class CmdTransmute(Command):
             return
         if hasattr(self.what, "strip"):
             item_obj = self.caller.search(self.what, global_search=False)
-            if item_obj in None:
+            if item_obj is None:
                 return
             gold_to_award = item_obj.db.value
             self.caller.msg("{CAs you concentrate the %s becomes gold coins in your hand." % item_obj.name)
@@ -156,7 +314,7 @@ class CmdTalk(Command):
             
         
 
-class CmdUse(Command):
+class CmdUse(ActionCommand):
     """
     Attempt to use the given item. If the item can be used, your character
     will trye to use it.  This obviously can mean different things depending
@@ -198,7 +356,7 @@ class CmdUse(Command):
             self.caller.msg("Doesn't look like the %s is useable" % obj.name)
         return  
 
-class CmdInspect(Command):
+class CmdInspect(ActionCommand):
     """
     Gathers detailed information about things and people around you.
     Sees things that 'look' does not.
@@ -218,15 +376,15 @@ class CmdInspect(Command):
         if len(self.args) < 1:
             self.caller.msg("What did you want to inspect? (inspect <item or thing to look at>)")
             return
-            obj = self.caller.search(self.what, global_search=False)
-            if obj is not None:
-                self.caller.msg("{WInpection details:{n")
-                if hasattr(obj, 'at_inspect'):
-                    obj.at_inspect(looker=self.caller)
-                else:
-                    self.caller.msg("Nothing more is known about %s." % obj.name)
+        obj = self.caller.search(self.what, global_search=False)
+        if obj is not None:
+            self.caller.msg("{WInpection details:{n")
+            if hasattr(obj, 'at_inspect'):
+                obj.at_inspect(looker=self.caller)
+            else:
+                self.caller.msg("Nothing more is known about %s." % obj.name)
     
-class CmdShow(Command):
+class CmdShow(ActionCommand):
     """
     Displays current values for information regarding your character
     Usage:
@@ -263,7 +421,7 @@ class CmdShow(Command):
         else:
             self.caller.character_summary()
 
-class CmdLoot(Command):
+class CmdLoot(ActionCommand):
     """
     Loots the corpse given.
     
@@ -484,8 +642,46 @@ class CmdQuestLog(MuxCommand):
             quest_manager.quest_log_short_display(self.caller)     
             return
                  
-    
+#DARK ROOM OVERRIDES
+
+class CmdDarkLook(Command):
+    """
+    Look around in the dark.
+    USAGE:
+        look
+
+    """
+    key = 'look'
+    aliases = ['feel', 'fiddle', 'l', 'feel around']
+    locks = "cmd:all()"
+    help_category = "General"
+   
+    def func(self):
+        caller = self.caller
+        caller.msg("It's pitch black, you can't even see your hand in front of your face.  Light a torch maybe?")
+        return
+
+
 #character class command sets
+class DarkCmdSet(CmdSet):
+    """
+    State command set that limits abilities while in a dark room
+    """
+    key = 'DarkCmdSet'
+    mergetype = 'Replace' 
+
+    def at_cmdset_creation(self):
+        self.add(CmdDarkLook())
+
+class GroupCommandSet(CmdSet):
+    """
+    Group commands only available while in a group
+    """
+    key = 'GroupCmdSet'
+    
+    def at_cmdset_creation(self):
+        self.add(CmdGroupTalk())
+
 class FreeAttributePointsState(CmdSet):
     """
     This state is activated when there are attribute ponts to spend
@@ -526,6 +722,8 @@ class CharacterCommandSet(CmdSet):
         self.add(CmdOpen())
         self.add(CmdQuestLog())
         self.add(CmdSkills())
+        self.add(CmdInvite())
+        self.add(CmdGroup())
 
 class ChestCommandSet(CmdSet):
     """

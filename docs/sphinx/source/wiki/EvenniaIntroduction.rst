@@ -40,7 +40,7 @@ created for you automatically if you use the defaults).
 
 Using the full power of Python throughout the server offers some
 distinct advantages. All your coding, from object definitions and custom
-commands to AI scripts and economic systems are done in normal Python
+commands to AI scripts and economic systems is done in normal Python
 modules rather than some ad-hoc scripting language. The fact that you
 script the game in the same high-level language that you code it in
 allows for very powerful and custom game implementations indeed.
@@ -117,6 +117,7 @@ Standards/Protocols supported
    database as game.
 -  IRC/IMC2 - external IRC and/or IMC2 channels can be connected to
    in-game chat channels
+-  RSS feeds can be echoed to in-game channels
 -  ANSI, xterm256 colours
 -  Several different databases supported (SQLite3, MySQL, ...)
 

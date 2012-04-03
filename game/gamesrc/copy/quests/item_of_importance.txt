@@ -1,0 +1,12 @@
+You have helped me before, so I am coming to you again.  In my rapid fleeing from the marshlands
+I seem to have lost an item of utmost importance.  It is a beautiful, golden necklace with a bright
+Karith ruby in the middle of it.  This necklace is more important you, me or anyone in this camp.
+It absolutely can not fall into the wrong hands.  We must find it.
+
+It could be anywhere, or in any creatures hands by this point.  Please search the marshlands
+and find it!
+
+{gObjectives:{n
+    -Find the family heirloom.
+
+Find Julianne's family heirloom somewhere in the marshlands.

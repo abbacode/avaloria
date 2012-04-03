@@ -24,6 +24,11 @@ def is_iter(iterable):
     """
     return hasattr(iterable, '__iter__')
 
+def make_iter(obj):
+    "Makes sure that the object is always iterable."
+    if not hasattr(obj, '__iter__'): return [obj]
+    return obj 
+
 def fill(text, width=78, indent=0):
     """
     Safely wrap text to a certain number of characters.
@@ -646,4 +651,3 @@ def init_new_player(player):
     if player.character:
         player.character.db.FIRST_LOGIN = True                            
     player.db.FIRST_LOGIN = True 
-     

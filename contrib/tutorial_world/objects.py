@@ -10,10 +10,12 @@ Objects:
 TutorialObject
 
 Readable 
+Climbable
 Obelisk 
 LightSource 
 CrumblingWall
 Weapon 
+WeaponRack
 
 """
 
@@ -248,14 +250,16 @@ class StateLightSourceOn(Script):
         prematurely, this hook will store the current
         burntime. 
         """
-        # calculate remaining burntime 
-        try:
-            time_burnt = time.time() - self.db.script_started
-        except TypeError:
-            # can happen if script_started is not defined
-            time_burnt = self.interval
-        burntime = self.interval - time_burnt
-        self.obj.db.burntime = burntime 
+        # calculate remaining burntime, if object is not
+        # already deleted (because it burned out)
+        if self.obj:
+            try:
+                time_burnt = time.time() - self.db.script_started
+            except TypeError:
+                # can happen if script_started is not defined
+                time_burnt = self.interval
+            burntime = self.interval - time_burnt
+            self.obj.db.burntime = burntime
 
     def is_valid(self):
         "This script is only valid as long as the lightsource burns."
@@ -334,7 +338,7 @@ class LightSource(TutorialObject):
         super(LightSource, self).at_object_creation()
         self.db.tutorial_info = "This object can be turned on off and has a timed script controlling it."
         self.db.is_active = False 
-        self.db.burntime = 60 # 1 minute
+        self.db.burntime = 60*3 # 3 minutes
         self.db.desc = "A splinter of wood with remnants of resin on it, enough for burning."
         # add commands 
         self.cmdset.add_default(CmdSetLightSource, permanent=True)
@@ -729,6 +733,7 @@ class CmdAttack(Command):
 
         if target.db.combat_parry_mode:
             # target is defensive; even harder to hit!
+            target.msg("{GYou defend, trying to avoid the attack.{n")
             hit *= 0.5
 
         if random.random() <= hit:

@@ -27,6 +27,10 @@
 #            debugging the script). E.g., if the code contains the command 
 #            myobj = create.create_object(...), you could put 'myobj' in the #CODE header
 #            regardless of what the created object is actually called in-game. 
+# #INSERT filename - this includes another code batch file. The named file will be loaded and 
+#            run at this point. Note that code from the inserted file will NOT share #HEADERs
+#            with the importing file, but will only use the headers in the importing file.
+#            make sure to not create a cyclic import here! 
 
 # The following variable is automatically made available for the script:
 
@@ -43,7 +47,7 @@ from src.utils import create, search
 from game.gamesrc.objects.examples import red_button
 from game.gamesrc.objects import baseobjects
 
-limbo = search.objects(caller, 'Limbo', global_search=True)[0]
+limbo = search.objects('Limbo', global_search=True)[0]
 
 
 #CODE (create red button)
@@ -60,7 +64,6 @@ red_button = create.create_object(red_button.RedButton, key="Red button",
 
 # we take a look at what we created
 caller.msg("A %s was created." % red_button.key)
-
 
 #CODE (create table and chair) table, chair
 

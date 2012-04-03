@@ -9,6 +9,7 @@ from src.objects.models import ObjectDB, ObjAttribute
 from src.players.models import PlayerAttribute
 from src.utils import create, utils, debug 
 from src.commands.default.muxcommand import MuxCommand
+from src.commands.cmdhandler import get_and_merge_cmdsets
 
 # used by @find
 CHAR_TYPECLASS = settings.BASE_CHARACTER_TYPECLASS
@@ -1149,7 +1150,46 @@ class CmdSetAttribute(ObjManipCommand):
     key = "@set"
     locks = "cmd:perm(set) or perm(Builders)"
     help_category = "Building"
-    
+
+    def convert_from_string(self, strobj):
+        """
+        Converts a single object in *string form* to its equivalent python
+        type. Handles floats, ints, and limited nested lists and dicts 
+        (can't handle lists in a dict, for example, this is mainly due to 
+        the complexity of parsing this rather than any technical difficulty -
+        if there is a need for @set-ing such complex structures on the 
+        command line we might consider adding it). 
+
+        We need to convert like this since all data being sent over the
+        telnet connection by the Player is text - but we will want to
+        store it as the "real" python type so we can do convenient
+        comparisons later (e.g.  obj.db.value = 2, if value is stored as a
+        string this will always fail).
+        """
+        def rec_convert(obj):
+            """
+            Helper function of recursive conversion calls.
+            """
+            # simple types 
+            try: return int(obj)
+            except ValueError: pass
+            try: return float(obj)
+            except ValueError: pass
+            # iterables
+            if obj.startswith('[') and obj.endswith(']'):
+                "A list. Traverse recursively." 
+                return [rec_convert(val) for val in obj[1:-1].split(',')]
+            if obj.startswith('(') and obj.endswith(')'):
+                "A tuple. Traverse recursively." 
+                return tuple([rec_convert(val) for val in obj[1:-1].split(',')])
+            if obj.startswith('{') and obj.endswith('}') and ':' in obj:
+                "A dict. Traverse recursively."
+                return dict([(rec_convert(pair.split(":",1)[0]), rec_convert(pair.split(":",1)[1]))
+                             for pair in obj[1:-1].split(',') if ":" in pair])
+            # if nothing matches, return as-is
+            return obj
+        return rec_convert(strobj.strip())
+   
     def func(self):
         "Implement the set attribute - a limited form of @py."
 
@@ -1191,21 +1231,9 @@ class CmdSetAttribute(ObjManipCommand):
                     else:
                         string += "\n%s has no attribute '%s'." % (obj.name, attr)            
         else:
-            # setting attribute(s)
- 
-            # analyze if we are trying to set a list or a dict.
-            if value.startswith('[') and value.endswith(']'):
-                value = value.lstrip('[').rstrip(']').split(',')            
-                value = [utils.to_str(val) for val in value]
-            elif value.startswith('{') and value.endswith('}') and ':' in value:
-                dictpairs = value.lstrip('{').rstrip('}').split(',')            
-                try:
-                    value = dict([[utils.to_str(p.strip()) for p in pair.split(':')] for pair in dictpairs])
-                except Exception:
-                    pass 
-
-            for attr in attrs:
-                obj.set_attribute(attr, value)
+            # setting attribute(s). Make sure to convert to real Python type before saving.
+             for attr in attrs:
+                obj.set_attribute(attr, self.convert_from_string(value))
                 string += "\nCreated attribute %s/%s = %s" % (obj.name, attr, value)
         # send feedback
         caller.msg(string.strip('\n')) 
@@ -1506,7 +1534,7 @@ class CmdExamine(ObjManipCommand):
                 string += "\n %s = %s" % (attr, value)
         return string 
     
-    def format_output(self, obj, raw=False):
+    def format_output(self, obj, avail_cmdset, raw=False):
         """
         Helper function that creates a nice report about an object.
 
@@ -1518,8 +1546,8 @@ class CmdExamine(ObjManipCommand):
                    "player":"\n{wPlayer{n: {c%s{n",
                    "playerperms":"\n{wPlayer Perms{n: %s",
                    "typeclass":"\n{wTypeclass{n: %s (%s)",
-                   "location":"\n{wLocation{n: %s",
-                   "destination":"\n{wDestination{n: %s",
+                   "location":"\n{wLocation{n: %s (#%s)",
+                   "destination":"\n{wDestination{n: %s (#%s)",
                    "perms":"\n{wPermissions{n: %s",
                    "locks":"\n{wLocks{n:",
                    "cmdset":"\n{wCurrent Cmdset(s){n:\n %s",
@@ -1532,9 +1560,9 @@ class CmdExamine(ObjManipCommand):
                    "aliases":"\nAliases: %s",
                    "player":"\nPlayer: %s",
                    "playerperms":"\nPlayer Perms: %s",
-                   "typeclass":"\nTypeclass: %s (%s)",
-                   "location":"\nLocation: %s",
-                   "destination":"\nDestination: %s",
+                   "typeclass":"\nTypeclass: %s%s",
+                   "location":"\nLocation: %s (#%s)",
+                   "destination":"\nDestination: %s (#%s)",
                    "perms":"\nPermissions: %s",
                    "locks":"\nLocks:",
                    "cmdset":"\nCurrent Cmdset(s):\n %s",
@@ -1562,10 +1590,10 @@ class CmdExamine(ObjManipCommand):
             string += headers["playerperms"] % (", ".join(perms))         
         string += headers["typeclass"] % (obj.typeclass.typename, obj.typeclass_path)
 
-        if hasattr(obj, "location"):
-            string += headers["location"] % obj.location
+        if hasattr(obj, "location") and obj.location:
+            string += headers["location"] % (obj.location, obj.location.id)
         if hasattr(obj, "destination") and obj.destination:
-            string += headers["destination"]  % obj.destination
+            string += headers["destination"]  % (obj.destination, obj.destination.id)
         perms = obj.permissions
         if perms:            
             string += headers["perms"] % (", ".join(perms)) 
@@ -1579,8 +1607,8 @@ class CmdExamine(ObjManipCommand):
             string += headers["cmdset"] % cmdsetstr
     
             # list the actually available commands
-            from src.commands.cmdhandler import get_and_merge_cmdsets
-            avail_cmdset = get_and_merge_cmdsets(obj)
+            #from src.commands.cmdhandler import get_and_merge_cmdsets
+            #avail_cmdset = get_and_merge_cmdsets(obj)
             avail_cmdset = sorted([cmd.key for cmd in avail_cmdset if cmd.access(obj, "cmd")])
             
             cmdsetstr = utils.fill(", ".join(avail_cmdset), indent=2)                            
@@ -1619,6 +1647,18 @@ class CmdExamine(ObjManipCommand):
         msgdata = None
         if "raw" in self.switches:
             msgdata = {"raw":True}
+
+        def get_cmdset_callback(cmdset):
+            """
+            We make use of the cmdhandeler.get_and_merge_cmdsets below. This 
+            is an asynchronous function, returning a Twisted deferred.
+            So in order to properly use this we need use this callback; 
+            it is called with the result of get_and_merge_cmdsets, whenever
+            that function finishes. Taking the resulting cmdset, we continue
+            to format and output the result. 
+            """
+            string = self.format_output(obj, cmdset, raw=msgdata)
+            caller.msg(string.strip(), data=msgdata)
             
         if not self.args:
             # If no arguments are provided, examine the invoker's location.
@@ -1627,12 +1667,11 @@ class CmdExamine(ObjManipCommand):
             #If we don't have special info access, just look at the object instead.
                 caller.execute_cmd('look %s' % obj.name)
                 return              
-            string = self.format_output(obj, raw=msgdata)
-            caller.msg(string.strip(), data=msgdata)
-            return 
+            # using callback for printing result whenever function returns. 
+            get_and_merge_cmdsets(obj).addCallback(get_cmdset_callback)
+            return
 
         # we have given a specific target object 
-        string = ""
         for objdef in self.lhs_objattr:
 
             obj_name = objdef['name']
@@ -1653,10 +1692,10 @@ class CmdExamine(ObjManipCommand):
             if obj_attrs:
                 for attrname in obj_attrs:
                     # we are only interested in specific attributes                    
-                    string += self.format_attributes(obj, attrname, crop=False, raw=msgdata)                        
+                    caller.msg(self.format_attributes(obj, attrname, crop=False, raw=msgdata))
             else:
-                string += self.format_output(obj, raw=msgdata)        
-        caller.msg(string.strip(), data=msgdata)
+                # using callback to print results whenever function returns. 
+                get_and_merge_cmdsets(obj).addCallback(get_cmdset_callback)
 
 
 class CmdFind(MuxCommand):

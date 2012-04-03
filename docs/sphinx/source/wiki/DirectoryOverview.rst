@@ -1,8 +1,17 @@
 Evennia directory overview
 ==========================
 
+::
+
+    evennia/  
+      contrib/
+      docs/   
+      game/
+      locale/ 
+      src/
+
 Evennia's main directory (``evennia``) is divided into five sub
-directories - ``src/``, ``game/``, ``contrib/``, ``locale`` and
+directories - ``src/``, ``game/``, ``contrib/`` , ``locale`` and
 ``doc/``. The first two are the most important ones. ``game/`` is the
 place where you will create your own game, whereas ``src/`` is the home
 of the Evennia server itself. Your code should usually just import
@@ -35,8 +44,8 @@ create a nice browsable web-index of all the sources and comments. In
 the same way you could in theory also create nice ``LaTeX``-formatted
 PDFs of the Evennia source (all 400+ pages of it ...).
 
-The ``locale`` directory
-------------------------
+The ``locale/`` directory
+-------------------------
 
 This contains internationalization strings for translating the Evennia
 core server to different languages. See
@@ -67,16 +76,7 @@ the server.
 
     game/
       evennia.py
-      manage.py  gamesrc/
-        commands/ 
-          examples/
-        scripts/
-          examples/
-        objects/
-          examples/
-        world/     
-          examples/
-        conf/
+      manage.py  gamesrc/     commands/        examples/     scripts/       examples/     objects/       examples/     world/            examples/     conf/
 
 ``game/gamesrc/``
 ~~~~~~~~~~~~~~~~~
@@ -142,12 +142,12 @@ syntax.
 ``gamesrc/conf/``
 ^^^^^^^^^^^^^^^^^
 
-``gamesrc/world/`` holds optional extension modules for the Evennia
+``gamesrc/conf/`` holds optional extension modules for the Evennia
 engine. Certain functionality in the server is meant to be extended, and
 in order to allow you to do this without modifying the server itself, it
-imports files from this directory. Modifying these are optionally and
-you can usually change a variable in ``game/settings.py`` to change
-which module Evennia is looking for. There are dummy example files in
+imports files from this directory. Modifying these are optional and you
+can usually change a variable in ``game/settings.py`` to change exactly
+which module Evennia actually uses. There are dummy example files in
 here, read their headers for usage instructions.
 
 The ``src/`` directory
@@ -162,17 +162,7 @@ bugs or features missing, file a bug report or send us a message.
 ::
 
     src/
-      settings_defaults.py  commands/
-      comms/
-      help/
-      objects/
-      locks/
-      players/
-      scripts/
-      server/
-      typeclasses/
-      utils/
-      web/
+      settings_defaults.py  commands/   comms/   help/   objects/   locks/   players/   scripts/   server/   typeclasses/   utils/   web/
 
 Most of the folders in ``src/`` are technically "Django apps",
 identified by containing a file ``models.py`` and usually
@@ -217,8 +207,8 @@ point to your copy.
 ~~~~~~~~~~~~~~
 
 ``src/comms/`` defines all aspects of OOC
-`communication <Communications.html>`_, notably *channels* and the basic
-operations for storing listeners to channels.
+`communication <Communications.html>`_, notably *channels*, *messages*
+and the basic operators for connecting external listeners to channels.
 
 ``src/help/``
 ~~~~~~~~~~~~~
@@ -244,8 +234,8 @@ lock functions are found here.
 ~~~~~~~~~~~~~~~~
 
 The `Player <Players.html>`_ is the OOC-represention of the person
-behind the game character. This directory defines the database handling
-and methods acting on the Player object.
+connected to the game. This directory defines the database handling and
+methods acting on the Player object.
 
 ``src/scripts/``
 ~~~~~~~~~~~~~~~~
@@ -259,9 +249,10 @@ connection timeouts) are also defined here.
 ~~~~~~~~~~~~~~~
 
 This directory is the heart of Evennia. It holds the server process
-itself (started from ``game/evennia.py``) and all `sessions and
-protocols <SessionProtocols.html>`_ that allow users to connect to it.
-It also knows how to store dynamic server info in the database.
+itself (started from ``game/evennia.py``), the portal and all `sessions
+and protocols <SessionProtocols.html>`_ that allow users to connect to
+the game. It also knows how to store dynamic server info in the
+database.
 
 ``src/typeclasses/``
 ~~~~~~~~~~~~~~~~~~~~
@@ -300,10 +291,13 @@ Assorted notes
 
 Whereas ``game/gamesrc/`` contains a set of directories already, you
 might find that another structure suits your development better. For
-example, it could sometimes easier to put all the commands and scripts a
-certain object needs in the same module as that object, rather than
-slavishly split them out into their respective directories and import.
-Don't be shy to define your own directory structure as needed. A basic
-rule of thumb should nevertheless be to avoid code-duplication. So if a
-certain script or command could be useful for other objects, break it
-out into its own module and import from it.
+example, it could sometimes be easier to put all the commands and
+scripts a certain object needs in the same module as that object, rather
+than slavishly split them out into their respective directories and
+import. Don't be shy to define your own directory structure as needed. A
+basic rule of thumb should nevertheless be to avoid code-duplication. So
+if a certain script or command could be useful for other objects, break
+it out into its own module and import from it. Don't forget that if you
+add a new directory, it must contain an ``__init__.py`` file (it can be
+empty) in order for Python to recognize it as a place it can import
+modules from.

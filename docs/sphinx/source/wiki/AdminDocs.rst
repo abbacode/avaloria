@@ -12,6 +12,7 @@ Installation and Early Life
 -  `Starting, stopping, reloading and resetting
    Evennia <StartStopReload.html>`_
 -  `Keeping your game up to date <UpdatingYourGame.html>`_
+-  `Making your game available online <OnlineSetup.html>`_
 
 Customizing the server
 ----------------------
@@ -21,6 +22,12 @@ Customizing the server
 -  `Changing text encodings used by the server <TextEncodings.html>`_
 -  `How to connect Evennia to IRC channels <IRC.html>`_
 -  `How to connect Evennia to an IMC2 network <IMC2.html>`_
+-  `How to connect Evennia to RSS feeds <RSS.html>`_
+
+Administrating the running game
+-------------------------------
+
+-  `Banning <Banning.html>`_ Banning and deleting users
 
 Working with Evennia
 --------------------

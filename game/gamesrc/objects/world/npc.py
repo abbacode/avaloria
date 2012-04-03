@@ -38,6 +38,23 @@ class EnemyNpc(Mob):
         self.key = self.db.pre_death_name
         self.refresh_attributes()
 
+    def interact(self, caller, action=None):
+        actions = self.db.actions
+        if action is None:
+            return
+        elif action in 'greeting':
+            greet_message = actions['greeting']
+            self.location.msg_contents('{R[%s]{n: %s' % (self.name, greet_message) )
+            #caller.msg('{R[%s]{n: %s' % (self.name, greet_message) )
+        elif action in 'mock':
+            mock_message = actions['mock']
+            self.location.msg_contents('{R[%s]{n: %s' % (self.name, mock_message))
+#            caller.msg('{R[%s]{n: %s' % (self.name, mock_message) )
+        elif action in 'taunt':
+            taunt_message = actions['taunt']
+            self.location.msg_contents('{R[%s]{n: %s{n' % (self.name,taunt_message))
+#           caller.msg('{R[%s]{n: %s' % (self.name, taunt_message) )
+
     def roam(self):
         pass
 
@@ -222,14 +239,8 @@ class Npc(Object):
         completed_quests = character_quest_log.db.completed_quests
         storage = self.search('storage', global_search=True)
         for quest in quests:
-            print quest
             quest_obj = storage.search('%s' % quest.title(), global_search=False, ignore_errors=True)[0]
             if quest.lower() in [ q.lower() for q in active_quests.keys()]:
-                continue
-            if quest_obj.db.repeatable:
-                checked_quests.append(quest)
-                continue
-            if quest.lower() in [ q.lower() for q in completed_quests.keys()]:
                 continue
             if quest_obj.db.prereq is not None:
                 if ';' in quest_obj.db.prereq:
@@ -240,8 +251,12 @@ class Npc(Object):
                 else:
                     if quest_obj.db.prereq.title() not in completed_quests.keys():
                         continue 
+            if quest_obj.db.repeatable:
+                checked_quests.append(quest)
+                continue
+            if quest.lower() in [ q.lower() for q in completed_quests.keys()]:
+                continue
                 
-            self.tell_character(caller, "%s quests in the list. %s" % (len(quests), quest))
             checked_quests.append(quest)
         if len(checked_quests) < 1:
             self.tell_character(caller, "I have no more work for you adventurer.")

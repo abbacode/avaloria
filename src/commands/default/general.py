@@ -75,6 +75,7 @@ class CmdLook(MuxCommand):
     key = "look"
     aliases = ["l", "ls"]
     locks = "cmd:all()"
+    arg_regex = r"\s.*?|$"
 
     def func(self):
         """
@@ -458,7 +459,7 @@ class CmdSay(MuxCommand):
     """
     
     key = "say"
-    aliases = ['"']
+    aliases = ['"', "'"]
     locks = "cmd:all()"
     
     def func(self):
@@ -522,9 +523,10 @@ class CmdPose(MuxCommand):
         "Hook function"        
         if not self.args:
             msg = "Do what?"
+            self.caller.msg(msg)
         else:
             msg = "%s%s" % (self.caller.name, self.args)
-        self.caller.location.msg_contents(msg)
+            self.caller.location.msg_contents(msg)
         
 class CmdEncoding(MuxCommand):
     """
@@ -640,7 +642,7 @@ class CmdOOCLook(CmdLook):
     key = "look"
     aliases = ["l", "ls"]
     locks = "cmd:all()"
-    help_cateogory = "General"
+    help_category = "General"
 
     def func(self):
         "implement the ooc look command"

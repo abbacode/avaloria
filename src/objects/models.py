@@ -21,6 +21,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from src.utils.idmapper.models import SharedMemoryModel
 from src.typeclasses.models import Attribute, TypedObject, TypeNick, TypeNickHandler
+from src.typeclasses.models import get_cache, set_cache, del_cache
 from src.typeclasses.typeclass import TypeClass
 from src.objects.manager import ObjectManager
 from src.players.models import PlayerDB
@@ -29,11 +30,15 @@ from src.commands.cmdsethandler import CmdSetHandler
 from src.commands import cmdhandler
 from src.scripts.scripthandler import ScriptHandler
 from src.utils import logger
-from src.utils.utils import is_iter, to_unicode, to_str, mod_import
+from src.utils.utils import make_iter, to_unicode, to_str, mod_import
 
 #PlayerDB = ContentType.objects.get(app_label="players", model="playerdb").model_class()
 
 AT_SEARCH_RESULT = mod_import(*settings.SEARCH_AT_RESULT.rsplit('.', 1))
+
+GA = object.__getattribute__
+SA = object.__setattr__
+DA = object.__delattr__
 
 #------------------------------------------------------------
 #
@@ -208,20 +213,25 @@ class ObjectDB(TypedObject):
     #@property 
     def aliases_get(self):
         "Getter. Allows for value = self.aliases"
-        return list(Alias.objects.filter(db_obj=self).values_list("db_key", flat=True))
+        try:
+            return GA(self, "_cached_aliases")
+        except AttributeError:
+            aliases = list(Alias.objects.filter(db_obj=self).values_list("db_key", flat=True))
+            SA(self, "_cached_aliases", aliases)
+            return aliases 
     #@aliases.setter
     def aliases_set(self, aliases):
         "Setter. Allows for self.aliases = value"        
-        if not is_iter(aliases):
-            aliases = [aliases]            
-        for alias in aliases:
+        for alias in make_iter(aliases):
             new_alias = Alias(db_key=alias, db_obj=self)
             new_alias.save()
+        SA(self, "_cached_aliases", aliases)
     #@aliases.deleter
     def aliases_del(self):
         "Deleter. Allows for del self.aliases"
         for alias in Alias.objects.filter(db_obj=self):
             alias.delete()
+        DA(self, "_cached_aliases")
     aliases = property(aliases_get, aliases_set, aliases_del)
 
     # player property (wraps db_player)
@@ -232,29 +242,26 @@ class ObjectDB(TypedObject):
         We have to be careful here since Player is also
         a TypedObject, so as to not create a loop.
         """
-        try:
-            return object.__getattribute__(self, 'db_player')
-        except AttributeError:
-            return None 
+        return get_cache(self, "player")
     #@player.setter
     def player_set(self, player):
         "Setter. Allows for self.player = value"
         if isinstance(player, TypeClass):
             player = player.dbobj
-        self.db_player = player 
-        self.save()
+        set_cache(self, "player", player)
     #@player.deleter
     def player_del(self):
         "Deleter. Allows for del self.player"
         self.db_player = None
         self.save()
+        del_cache(self, "player")
     player = property(player_get, player_set, player_del)
 
     # location property (wraps db_location)
     #@property 
     def location_get(self):
         "Getter. Allows for value = self.location."
-        loc = self.db_location
+        loc = get_cache(self, "location")
         if loc:
             return loc.typeclass
         return None 
@@ -274,8 +281,7 @@ class ObjectDB(TypedObject):
                     loc = location.dbobj    
             else:                
                 loc = location.dbobj                        
-            self.db_location = loc 
-            self.save()
+            set_cache(self, "location", loc)
         except Exception:
             string = "Cannot set location: "
             string += "%s is not a valid location." 
@@ -287,13 +293,14 @@ class ObjectDB(TypedObject):
         "Deleter. Allows for del self.location"
         self.db_location = None 
         self.save()
+        del_cache()
     location = property(location_get, location_set, location_del)
 
     # home property (wraps db_home)
     #@property 
     def home_get(self):
         "Getter. Allows for value = self.home"
-        home = self.db_home 
+        home = get_cache(self, "home")
         if home:
             return home.typeclass
         return None 
@@ -311,26 +318,26 @@ class ObjectDB(TypedObject):
                     hom = home.dbobj    
             else:                
                 hom = home.dbobj                
-            self.db_home = hom        
+            set_cache(self, "home", hom)
         except Exception:
             string = "Cannot set home: "
             string += "%s is not a valid home." 
             self.msg(string % home)
             logger.log_trace(string)
             #raise 
-        self.save()
     #@home.deleter
     def home_del(self):
         "Deleter. Allows for del self.home."
         self.db_home = None 
         self.save()
+        del_cache(self, "home")
     home = property(home_get, home_set, home_del)
 
     # destination property (wraps db_destination)
     #@property 
     def destination_get(self):
         "Getter. Allows for value = self.destination."
-        dest = self.db_destination
+        dest = get_cache(self, "destination")
         if dest:
             return dest.typeclass
         return None 
@@ -350,8 +357,7 @@ class ObjectDB(TypedObject):
                     dest = destination.dbobj    
             else:                
                 dest = destination.dbobj                        
-            self.db_destination = dest 
-            self.save()
+            set_cache(self, "destination", dest)
         except Exception:
             string = "Cannot set destination: "
             string += "%s is not a valid destination." 
@@ -363,33 +369,11 @@ class ObjectDB(TypedObject):
         "Deleter. Allows for del self.destination"
         self.db_destination = None 
         self.save()
+        del_cache(self, "destination")
     destination = property(destination_get, destination_set, destination_del)
 
-    #@property for consistent aliases access throughout Evennia
-    #@aliases.setter
-    def aliases_set(self, aliases):
-        "Adds an alias to object"
-        if not is_iter(aliases):
-            aliases = [aliases]
-        for alias in aliases:
-            query = Alias.objects.filter(db_obj=self, db_key__iexact=alias)
-            if query.count():
-                continue 
-            new_alias = Alias(db_key=alias, db_obj=self)
-            new_alias.save()
-    #@aliases.getter
-    def aliases_get(self):
-        "Return a list of all aliases defined on this object."
-        return list(Alias.objects.filter(db_obj=self).values_list("db_key", flat=True))
-    #@aliases.deleter
-    def aliases_del(self):
-        "Removes aliases from object"
-        query = Alias.objects.filter(db_obj=self)        
-        if query:
-            query.delete()
-    aliases = property(aliases_get, aliases_set, aliases_del)
-
-    # cmdset_storage property
+    # cmdset_storage property. 
+    # This seems very sensitive to caching, so leaving it be for now. /Griatch
     #@property
     def cmdset_storage_get(self):
         "Getter. Allows for value = self.name. Returns a list of cmdset_storage."
@@ -399,8 +383,7 @@ class ObjectDB(TypedObject):
     #@cmdset_storage.setter
     def cmdset_storage_set(self, value):
         "Setter. Allows for self.name = value. Stores as a comma-separated string."
-        if is_iter(value):
-            value = ",".join([str(val).strip() for val in value])
+        value = ",".join(str(val).strip() for val in make_iter(value))
         self.db_cmdset_storage = value
         self.save()        
     #@cmdset_storage.deleter
@@ -409,7 +392,6 @@ class ObjectDB(TypedObject):
         self.db_cmdset_storage = ""
         self.save()
     cmdset_storage = property(cmdset_storage_get, cmdset_storage_set, cmdset_storage_del)
-
 
     class Meta:
         "Define Django meta options"
@@ -605,8 +587,7 @@ class ObjectDB(TypedObject):
         """
         contents = self.contents
         if exclude:
-            if not is_iter(exclude):
-                exclude = [exclude]              
+            exclude = make_iter(exclude)
             contents = [obj for obj in contents
                         if (obj not in exclude and obj not in exclude)]
         for obj in contents:

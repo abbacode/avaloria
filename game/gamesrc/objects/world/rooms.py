@@ -1,5 +1,5 @@
 from game.gamesrc.objects.baseobjects import Room, Object
-from src.utils import create, search
+from src.utils import create, search, utils
 import random, string
 
 class PlayerLairExit(Object):
@@ -35,6 +35,7 @@ class DungeonRoom(Room):
 
     def at_object_creation(self):
         self.db.level = None
+        self.db.quest_item_spawned = False
     
     def at_object_receive(self, moved_obj, source_location):
         if moved_obj.has_player:
@@ -45,9 +46,14 @@ class DungeonRoom(Room):
             player_map["%s" % moved_obj.name] = self.db.cell_number
             manager.db.player_map = player_map
             self.db.manager = manager
+        self.post_object_receive(caller=moved_obj)
+
+    def post_object_receive(self,caller):
         for item in self.contents:
             if hasattr(item, 'mob_type'):
                 item.db.should_update = True
+            if hasattr(item, 'actions'):
+                item.interact(caller, action='greeting')
 
     def at_object_leave(self, moved_obj, target_location):
         manager = self.db.manager
@@ -55,13 +61,19 @@ class DungeonRoom(Room):
             return
         if moved_obj.has_player:
             player_map = manager.db.player_map
-            del player_map[moved_obj.name]
+            try:
+                del player_map[moved_obj.name]
+            except KeyError:
+                pass
             manager.db.player_map = player_map
             self.db.manager = manager
         if self.db.cell_number not in manager.db.player_map.keys():
             for item in self.contents:
                 if hasattr(item, 'mob_type'):
                     item.db.should_update = False
+                    if hasattr(item, 'actions'):
+                        action = random.choice(['taunt', 'mock'])
+                        item.interact(moved_obj, action)
             
             
 
@@ -75,6 +87,40 @@ class Woodlands(Room):
         self.db.spawn_mobs = False
         self.db.hidden_treasure  = False
 
+
+class DarkRoom(DungeonRoom):
+    """
+    A room with no light source, which causes the player to be unable to see
+    until a torch is lit.
+    """
+    def at_object_creation(self):
+        DungeonRoom.at_object_creation(self)
+        self.db.spawn_mobs = True
+        self.db.hidden_treasure = True
+        self.db.player_map = {}
+        self.db.dungeon_type = 'dungeon'
+        self.db.is_dark = True
+        self.scripts.add("game.gamesrc.scripts.world_scripts.dungeon_scripts.DarkState")
+         
+    def is_lit(self):
+        """
+        Checks for a lightsource on all characters in the room.
+        """
+        return False
+        """
+        return any([any([True for obj in char.contents 
+                        if utils.inherits_from(obj, LightSource) and obj.is_active]) 
+                for char in self.contents if char.has_player])
+        """
+    def at_object_receive(self, character, source_location):
+        if character.has_player:
+            if not self.is_lit():
+                character.cmdset.add("game.gamesrc.commands.world.character_cmdset.DarkCmdSet")
+        self.scripts.validate()              
+        
+    def at_object_leave(self, character, source_location):
+        character.cmdset.delete("game.gamesrc.commands.world.character_cmdset.DarkCmdSet")
+        self.scripts.validate()
 
 class MarshLand(DungeonRoom):
     """
@@ -154,13 +200,16 @@ class Zone(Object):
 
         for item in self.db.quest_items:
             obj = storage.search('%s' % item, global_search=False, ignore_errors=True)[0]
-            obj_copy = obj.copy()
-            obj_copy.name = obj.name
             if type(spawn_rooms) == type(list()):
                 room = random.choice(spawn_rooms)    
             else:
                 room = spawn_rooms
-            obj_copy.move_to(room, quiet=True)
+            if item not in [ object.name for object in room.contents ]:
+                obj_copy = obj.copy()
+                obj_copy.name = obj.name
+                obj_copy.move_to(room, quiet=True)
+            else:
+                print "spawn logic not triggered"
         
     def generate_zone_path(self):
         path_map = self.db.path_map
@@ -199,7 +248,8 @@ class Zone(Object):
        
         print "%s: %s (counters)" % (self.name, counters )
         for counter in counters:
-            if counters[counter] < 3:
+            print counters[counter]
+            if int(counters[counter]) < 3:
                 self.replenish_mobs(counter) 
     
         self.db.mob_map = mob_map

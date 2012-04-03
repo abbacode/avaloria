@@ -16,6 +16,7 @@ from src.objects.models import ObjectDB
 from src.typeclasses.models import TypedObject
 from src.players.models import PlayerDB
 from src.web.news.models import NewsEntry
+from src.utils import utils
 
 def page_index(request):
     """
@@ -32,7 +33,7 @@ def page_index(request):
     recent_users = PlayerDB.objects.get_recently_connected_players()[:fpage_player_limit]
 
     exits = ObjectDB.objects.filter(db_destination__isnull=False)
-    rooms = [room for room in ObjectDB.objects.filter(db_home__isnull=True) if room not in exits]
+    rooms = [room for room in ObjectDB.objects.filter(db_location__isnull=True) if room not in exits]
 
     pagevars = {
         "page_title": "Front Page",

@@ -16,19 +16,21 @@ Python object management for free.
 
 There are three main game 'entities' in Evennia that are what we call
 *typeclassed*. They are `Players <Players.html>`_,
-`Objects <Objects.html>`_ and `Scripts <Scripts.html>`_. As said, this
-basically means that they are (almost) normal Python classes that hide
-underlying database models ...
+`Objects <Objects.html>`_ and `Scripts <Scripts.html>`_. This means that
+they are *almost* normal Python classes - they behave and can be
+inherited from etc just like normal Python classes except that for
+storing data they hide underlying database models ...
 
 ... and that's basically all you *really* need to know about how
 typeclasses work behind the scenes.
 
-To work with them you should however know that all the listed game
-entities inherit a common interface from the typeclass system,
-properties you can *always* expect a typeclassed entity to have *beyond*
-the more specialized properties unique to each sub-type. Typeclasses
-also do some special things with their in-built class methods that you
-shouldn't edit.
+To work with them you should however know that Objects, Scripts and
+Players all inherit a lot of helper methods from the typeclass system,
+properties you can *always* expect a typeclassed entity to have. In
+addition to these, each of the three sub types also offer a host of help
+methods and properties you can use. The database handling is hidden, but
+it means that typeclasses do some special things with their in-built
+class methods that you shouldn't edit.
 
 Properties available to all typeclassed entities (Players, Objects,
 Scripts)
@@ -253,8 +255,7 @@ query). You can easily convert between them with ``dbobj.typeclass`` and
 
 ::
 
-    obj = ObjectDB.objects.get_id(1) # custom evennia manager method. This returns the typeclass.
-    obj = ObjectDB.objects.get(1) # standard Django. Returns a Django model object.
+    obj = ObjectDB.objects.get_id(1) # custom evennia manager method. This returns the typeclass. obj = ObjectDB.objects.get(1) # standard Django. Returns a Django model object.
 
 Even more important to know for Django affectionados: Evennia's custom
 methods return *lists* where you with normal Django methods would expect

@@ -91,7 +91,7 @@ class MuxCommand(BaseMuxCommand):
         # this can be removed in your child class, it's just 
         # printing the ingoing variables as a demo
         super(MuxCommand, self).func()
-    
+    """ 
     def at_post_cmd(self):
         temp_health = self.caller.db.attributes['temp_health']
         base_health = self.caller.db.attributes['health']
@@ -102,7 +102,7 @@ class MuxCommand(BaseMuxCommand):
         temp_balance = self.caller.db.attributes['temp_balance']
         balance = self.caller.db.attributes['balance']
         self.caller.msg("{RHP: (%s/%s){n {CMP: (%s/%s){n {yEXP: (%s/%s){n BAL:{g(%s/%s){n" % (temp_health, base_health, temp_mana, base_mana, exp_made, exp_needed, temp_balance, balance))
-        
+    """  
 
 
 
@@ -138,6 +138,7 @@ class Command(BaseCommand):
         This hook is called after the command has finished executing 
         (after self.func()).
         """
+        """
         temp_health = self.caller.db.attributes['temp_health']
         base_health = self.caller.db.attributes['health']
         temp_mana = self.caller.db.attributes['temp_mana']
@@ -147,6 +148,7 @@ class Command(BaseCommand):
         temp_balance = self.caller.db.attributes['temp_balance']
         balance = self.caller.db.attributes['balance']
         self.caller.msg("{RHP: (%s/%s){n {CMP: (%s/%s){n {YEXP: (%s/%s){n BAL:{G(%s/%s){n" % (temp_health, base_health, temp_mana, base_mana, exp_made, exp_needed, temp_balance, balance))
+        """
 
 
     def parse(self):

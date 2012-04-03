@@ -6,7 +6,7 @@
 from src.utils import utils 
 
 DEFAULT_SCREEN = \
-"""{b=============================================================={n
+"""{b =============================================================={n
  Welcome to {gAvaloria{n, version Alpha! 
 
  As the game is currently in Alpha, data persistence can not be

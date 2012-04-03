@@ -47,7 +47,7 @@ class CharacterClass(Character):
         attributes['temp_armor_rating'] = self.db.attributes['armor_rating']
         attributes['temp_dexterity'] = self.db.attributes['dexterity']
         attributes['temp_strength'] = self.db.attributes['strength']
-        self.db.factions = { 'glade': 0, 'warden': 0, 'unknowns': 0, 'karith': 0, 'legion': 0, 'kaylynne': 0, 'molto': 0 }
+        self.db.factions = { 'slyth': 0, 'warden': 0, 'unknowns': 0, 'karith': 0, 'legion': 0, 'kaylynne': 0, 'molto': 0 }
         self.db.percentages = { 'constitution_bonus': 0.0, 'spell_damage_bonus': 0.0, 'melee_damage_bonus': 0.0, 'spell_fizzle_chance': 0.25, 'spell_buff_bonus': 0.0 }
         self.db.effects = {}
         self.db.group = None
@@ -59,6 +59,7 @@ class CharacterClass(Character):
         self.db.spells = []
         self.db.in_combat = False
         self.db.unbalanced = False
+        self.db.grouped = False
         self.db.target = None
         #player item creation
         lair = create.create_object("game.gamesrc.objects.world.lair.Lair", key="%s's Lair" % self.key)
@@ -149,11 +150,9 @@ class CharacterClass(Character):
     def at_first_login(self): 
         if self.dbref == 2:
             return
-        storage = self.search('storage', global_search=True, ignore_errors=True)[0]
-        aspect = storage.search("Aspect of An'Karith", global_search=False, location=storage, ignore_errors=True)[0]
-        aspect_copy = aspect.copy()
-        aspect_copy.name = 'Aspect of %s' % self.db.attributes['deity']
-        aspect.move_to(self, quiet=True)
+        aspect = self.search("Aspect of An'Karith", global_search=False, location=self.location, ignore_errors=True)[0]
+        print aspect.name
+        aspect.name = 'Aspect of %s' % self.db.attributes['deity']
         aspect.do_dialog(caller=self, type='greeting')
 
     def refresh_attribute(self, attributes):
@@ -541,6 +540,9 @@ class CharacterClass(Character):
            
     def add_attribute_points(self, attribute, points):
         attributes = self.db.attributes
+        if points > attributes['attribute_points']:
+            self.msg("{RNot enough attribute points.{n")
+            return
         attributes['%s' % attribute] += int(points)
         attributes['attribute_points'] -= points
         self.db.attributes = attributes
@@ -745,6 +747,31 @@ Which attributes would you like to improve?
         self.db.attributes = attributes
         self.msg("{bYou have gained a level of experience! You are now level %s! {n" % attributes['level'])
 
+    def negotiate_group_invite(self, inviter, invitee):
+        """
+        dictate actions when asked to join a group
+        """
+        prompt_yesno(self, question="{C%s would like you adventure with you.  Will you join them?{n" % inviter.name,
+                    yescode="self.caller.accept_group_invite('%s')" % inviter.name, nocode="self.caller.deny_group_invite('%s')" % inviter.name, default="Y")
+        
+    def accept_group_invite(self, caller):
+        caller = self.search(caller, global_search=False)
+        if caller.db.grouped:
+            print "Group Found."
+            group = caller.db.group
+            group.invite(caller, self)
+        else:
+            print "No group found on %s" % caller.name
+            group = create.create_object("game.gamesrc.objects.world.character.CharacterGroup")
+            group.generate_initial_members(caller, self)
+        self.cmdset.add("game.gamesrc.commands.world.character_cmdset.GroupCommandSet")
+        self.db.grouped = True
+
+
+    def deny_group_invite(self, caller):
+        caller = self.search(caller, global_search=False)
+        caller.msg("{R%s declines your invitation.{n" % self.name)
+        return
 
     """
     Effects Management
@@ -830,12 +857,21 @@ class FriendList(Object):
 
 class CharacterGroup(Object):
     """
-    Represents a group of characters.  Placeholder for now.
+    Represents a group of characters. This object also holds the "party" chat channel used for group
+    communication.  This object once it is created is stored as an attribute on the Character Model
+    for whichever characters are a part of the group.  This object is also where any loot arbitration,
+    and bonus management should happen.
+
+    A safe rule of thumb is, if it deals with grouping specifically, or a function of the group itself, 
+    the code should be in this class.
     """
     def at_object_creation(self):
         self.db.members = []
-        self.db.experince_bonus = None
+        self.db.experience_bonus = None
         self.db.loot_manager = None
+        self.db.channel = None
+        self.db.leader = None
+        self.location = self.search('Limbo', global_search=True)
         
 
   
@@ -845,6 +881,18 @@ class CharacterGroup(Object):
         members.append(inviter)
         members.append(invitee)
         self.db.members = members
+        inviter.db.group = self
+        inviter.db.grouped = True
+        inviter.cmdset.add("game.gamesrc.commands.world.character_cmdset.GroupCommandSet")
+        invitee.db.group = self
+        self.db.leader = inviter.name
+        self.create_comm_channels()
+        channel = self.db.channel
+        channel.connect_to(inviter)
+        channel.connect_to(invitee)
+        channel.msg("{CAdventuring Party formed! {GLeader{n: %s {CMembers: %s{n" % (self.db.leader, members))
+        self.db.members = members
+
  
     def generate_comm_locks(self):
         members = self.db.members
@@ -852,9 +900,46 @@ class CharacterGroup(Object):
         
     def create_comm_channels(self):
         try:
-            party_chat = create.create_channel("Party Chat [%s]" % self.id, ('p', 'group'), 'Party Chat', "send:attr(group, %s);listen:attr(group, %s)" % (self.name, self.name)) 
+            party_chat = create.create_channel("Party Chat [%s]" % self.id, 'Party Chat', locks="send:attr(group, %s);listen:attr(group, %s)" % (self.name, self.name)) 
+            self.db.channel = party_chat
         except:
             for member in members:
                 member.msg("{rParty chat channel failed to open.  Contact an admin, this shouldn't happen.{n")
 
+    def invite(self, inviter, invitee):
+        channel = self.db.channel
+        members = self.db.members
+        if len(members) == 5:
+            inviter.msg("{RMaximum amount of characters in the group.{n")
+            return
+        members.append(invitee)
+        invitee.db.group = self
+        channel.connect_to(invitee)    
+        channel.msg("{c%s joins the party.{n" % invitee.name)
+        self.db.channel = channel
+   
+    def leave(self, character):
+        channel = self.db.channel
+        members = self.db.members
+        channel.msg("{c%s has left the party.{n" % character.name)
+        character.db.group = None
+        channel.disconnect_from(character)
+        members.remove(character)
+        character.db.grouped = False
+        character.cmdset.delete("gamesrc.commands.world.character_cmdset.GroupCommandSet")
 
+    def disband(self):
+        channel = self.db.channel
+        members = self.db.members
+        channel.msg("{RParty disbanded.{n")
+        for member in members:
+            member.db.group = None
+        channel.delete()
+        self.delete()
+
+    def promote(self, character):
+        channel = self.db.channel
+        channel.msg("{C%s is now party leader!{n" % character.name)
+        self.db.leader = character.name
+        
+        

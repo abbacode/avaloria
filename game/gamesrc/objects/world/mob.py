@@ -236,10 +236,12 @@ class Mob(Object):
             if self.db.equipment['weapon'] is not None:
                 strike = create.create_object("game.gamesrc.objects.world.skills.Strike", key='strike', aliases=['mob_skills'])
                 strike.db.character = self
+                strike.move_to(self, quiet=True)
                 skills.append(strike)
             kick = create.create_object("game.gamesrc.objects.world.skills.Kick", key='kick', aliases=['mob_skills'])
             kick.db.character = self
             skills.append(kick)
+            kick.move_to(self, quiet=True)
             self.db.skills = skills
         elif 'caster' in self.db.combat_type:
             pass
@@ -247,6 +249,7 @@ class Mob(Object):
             spells = self.db.spells
             heal = create.create_object("game.gamesrc.objects.world.spells.Heal", key='Heal')
             spells.append(heal)
+            heal.move_to(self, quiet=True)
             self.db.spells = spells
         elif 'tank' in self.db.combat_type:
             pass
@@ -412,7 +415,8 @@ class Mob(Object):
                 if character:
                     if character.db.in_combat is True:
                         return
-                    self.location.msg_contents("%s turns towards %s and readies their weapon." % (self.name, character.name))
+                    self.location.msg_contents("{R%s turns towards %s and readies their weapon.{n" % (self.name, character.name), exclude=character)
+                    character.msg("{R%s turns towards you and readies themselves for combat!{n" % self.name)
                     character.db.target = self
                     self.begin_attack(character)
                     self.db.in_combat = True
@@ -429,6 +433,15 @@ class Mob(Object):
         
         if self.location.db.cell_number not in [ value for value in player_map.values()]:
             self.db.should_update = False
+        try:
+            rn = random.random()
+            if rn < .10:
+                dialogue = self.db.dialogue
+                d_msg = random.choice(dialogue)
+                self.location.msg_contents(dmsg)
+        except AttributeError:
+            pass
+                
         if self.db.in_combat is True:
             #find the target, if none then get out of combat
             target = self.db.target
@@ -443,4 +456,5 @@ class Mob(Object):
                 return
         else:
             return
-        
+       
+       

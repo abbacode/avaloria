@@ -57,6 +57,7 @@ class CharacterSentinel(Script):
         if self.obj.db.attributes['attribute_points'] > 0:
             if self.db.points_flag is False:
                 self.obj.cmdset.add(character_cmdset.FreeAttributePointsState)
+                self.obj.msg("{CYou have unspent attribute points.  Type 'points' to spend them.{n")
                 self.db.points_flag = True
             else:
                 pass 
@@ -77,6 +78,9 @@ class CharacterSentinel(Script):
             if attributes['temp_mana'] > attributes['mana']:
                 attributes['temp_mana'] = attributes['mana']
             self.obj.db.attributes = attributes
+
+        if self.obj.db.group is None:
+            self.obj.db.grouped = False
             
            
 

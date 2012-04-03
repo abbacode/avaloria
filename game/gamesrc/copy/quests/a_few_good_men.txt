@@ -1,0 +1,14 @@
+We have been striking at the heart of the Unnatural forces quite well so far.
+I sense that there are more generals and lieutenants are being summong and created
+to organize for the topside assuault. As you can imagine this would be devestating
+to our world.  We can not allow their leadership to gain foothold.  You must go
+back to the innards of Mount Zuldrom and hunt out the boss's of the Unnatural
+forces which are gathering there.
+
+Avaloria's immediate future depends on it.  
+
+{gObjectives:{n
+    -Kill 3 Unnatural Bosses
+    -Loot a rare item from them
+
+You must kill the gathering leaders of he Unnatural.
