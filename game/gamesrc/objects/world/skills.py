@@ -110,6 +110,7 @@ class Skill(Object):
         self.db.cost_to_level = 100 #cost in exp.
         self.db.increment = int(self.db.cost_to_level * .1) + 1
         self.db.character = None
+        self.db.lootable = False
         self.locks.add("view:none()")
 
     def on_use(self):

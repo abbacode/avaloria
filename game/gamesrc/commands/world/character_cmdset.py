@@ -27,7 +27,7 @@ class CmdInvite(Command):
 
     """
     key = 'invite'
-    aliases = ['inv', 'ginvite']
+    aliases = ['ginvite']
     help_category = 'general'
     locks = "cmd:all()"
 

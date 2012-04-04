@@ -23,6 +23,7 @@ class Item(Object):
         self.db.slot = None
         self.db.equipable = False
         self.db.is_equipped = False
+        self.db.lootable = True
         self.db.attribute_bonuses = {'strength': 0, 'dexterity':0, 'intelligence': 0, 'constitution': 0 }
         self.db.lootset = None
     

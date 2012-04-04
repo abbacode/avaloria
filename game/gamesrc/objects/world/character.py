@@ -279,9 +279,10 @@ class CharacterClass(Character):
         if corpse.db.corpse is True and corpse.db.lootable is True:
             self.award_gold(corpse.db.attributes['gold'])
             for item in corpse.contents:
-                item.move_to(self, quiet=True)
-                self.msg("You loot: %s" % item.name)
-                self.location.msg_contents("%s looted: %s" % (self.name, item.name), exclude=self)
+                if item.db.lootable:
+                    item.move_to(self, quiet=True)
+                    self.msg("You loot: %s" % item.name)
+                    self.location.msg_contents("%s looted: %s" % (self.name, item.name), exclude=self)
             if corpse.db.reanimate:
                 return
             corpse.delete()
@@ -757,11 +758,9 @@ Which attributes would you like to improve?
     def accept_group_invite(self, caller):
         caller = self.search(caller, global_search=False)
         if caller.db.grouped:
-            print "Group Found."
             group = caller.db.group
-            group.invite(caller, self)
+            group.join(caller, self)
         else:
-            print "No group found on %s" % caller.name
             group = create.create_object("game.gamesrc.objects.world.character.CharacterGroup")
             group.generate_initial_members(caller, self)
         self.cmdset.add("game.gamesrc.commands.world.character_cmdset.GroupCommandSet")
@@ -825,16 +824,22 @@ class FriendList(Object):
 
     def list_friends(self, caller):
         friends = self.db.friends
-        caller.msg("{c|== Friends ==|{n")
+        #caller.msg("{c|== Friends ==|{n")
+        msg = "{0:<15}{1:<25}{2:<20}{3:<20}".format("Name", "Logged in as", "Location", "Level")
+        caller.msg(msg)
+        msg = "{C----------------------------------------------------------------------------------------------------{n"
+        caller.msg(msg)
         for friend in friends:
             friend = self.search(friend.name, global_search=True, player=True)
             if friend.character:
                 character = friend.character
-                msg = "{y%s{n --\t {g%s{n\t -- {C%s{n" % (friend.name, character.db.attributes['level'], character.location)
+                msg = "{{G{0:<15}{{n{1:<25}{2:<20}{3:<20}".format(friend.name, character.name, character.location, character.db.attributes['level']) 
             else:
                 continue #they aren't online and dont need to be shown.
                 
             caller.msg(msg)
+        msg = "{C-----------------------------------------------------------------------------------------------------{n"
+        caller.msg(msg)
     
     def add_friend(self, caller, friend):
         character_obj = self.search(friend, global_search=True)
@@ -884,6 +889,7 @@ class CharacterGroup(Object):
         inviter.db.group = self
         inviter.db.grouped = True
         inviter.cmdset.add("game.gamesrc.commands.world.character_cmdset.GroupCommandSet")
+        print "DEBUG -> CharacterGroup.generate_initial_members: adding GroupCommandSet to Inviter"
         invitee.db.group = self
         self.db.leader = inviter.name
         self.create_comm_channels()
@@ -906,7 +912,7 @@ class CharacterGroup(Object):
             for member in members:
                 member.msg("{rParty chat channel failed to open.  Contact an admin, this shouldn't happen.{n")
 
-    def invite(self, inviter, invitee):
+    def join(self, inviter, invitee):
         channel = self.db.channel
         members = self.db.members
         if len(members) == 5:
