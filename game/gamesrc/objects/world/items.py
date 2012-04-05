@@ -232,6 +232,8 @@ class Armor(Item):
         character_attributes['temp_armor_rating'] = character_attributes['armor_rating']
         self.db.is_equipped = False
         self.location.db.attributes = character_attributes
+
+
     
         
 class Potion(Item):

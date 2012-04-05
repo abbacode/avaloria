@@ -54,7 +54,7 @@ class CharacterClass(Character):
         self.db.combat_queue = deque([])
         self.db.quest_flags = {}
         self.db.attributes = attributes
-        self.db.equipment= { 'weapon': None, 'armor': None, 'shield': None, 'Neck': None, 'Left Finger': None, 'Right Finger': None, 'Back': None, 'Trinket': None}
+        self.db.equipment= { 'weapon': None, 'armor': None, 'shield': None, 'neck': None, 'left finger': None, 'right finger': None, 'back': None, 'trinket': None}
         self.db.skills = []
         self.db.spells = []
         self.db.in_combat = False
@@ -404,6 +404,12 @@ class CharacterClass(Character):
         if ite is None:
             wep_equipped = 0
             armor_equipped = 0
+            lring_equipped = 0
+            rring_equipped = 0
+            back_equipped = 0
+            trinket_equipped = 0
+            shield_equipped = 0
+
             for item in self.contents:
                 if item.db.slot is not None:
                     if 'weapon' in item.db.slot and wep_equipped == 0:
@@ -413,6 +419,26 @@ class CharacterClass(Character):
                     elif 'armor' in item.db.slot and armor_equipped == 0:
                         equipment['armor'] = item
                         armor_equipped = 1
+                        item.on_equip()
+                    elif 'left finger' in item.db.slot and lring_equipped == 0:
+                        equipment['left finger'] = item
+                        lring_equipped = 1
+                        item.on_equip()
+                    elif 'right finger' in item.db.slot and rring_equipped == 0:
+                        equipment['right finger'] = item
+                        rring_equipped = 1
+                        item.on_equip()
+                    elif 'back' in item.db.slot and back_equipped == 0:
+                        equipment['back'] = item
+                        back_equipped = 1
+                        item.on_equip()
+                    elif 'trinket' in item.db.slot and trinket_equipped == 0:
+                        equipment['trinket'] = item
+                        trinket_equipped = 1
+                        item.on_equip()
+                    elif 'shield' in item.db.slot and shield_equipped == 0:
+                        equipment['shield'] = item
+                        shield_equipped = 1
                         item.on_equip()
 
             if wep_equipped != 1:
@@ -436,6 +462,26 @@ class CharacterClass(Character):
             equipment['armor'] = ite
             self.db.equipment = equipment
             self.msg("You are now wearing %s for armor." % self.db.equipment['armor'])
+        elif 'left finger' in slot:
+            equipment['left finger'] = ite
+            self.db.equipment = equipment
+            self.msg("You are now wearing %s on your left finger." % ite.name)
+        elif 'right finger' in slot:
+            equipment['right finger'] = ite
+            self.db.equipment = equipment
+            self.msg("You are now wearing %s on your right finger." % ite.name)
+        elif 'back' in slot:
+            equipment['back'] = ite
+            self.db.euqipment = equipment
+            self.msg("You are now wearing %s on your back." % ite.name)
+        elif 'shield' in slot:
+            equipment['shield'] = ite
+            self.db.equipment = equipment
+            self.msg("You are now using %s as a shield" % ite.name)
+        elif 'trinket' in slot:
+            equipment['trinket'] = ite
+            self.db.equipment = equipment
+            self.msg("You are now using %s as your trinket." % ite.name)
         else:
             self.msg("{r%s is not equippable in any slot!{n" % ite)
     
@@ -471,6 +517,31 @@ class CharacterClass(Character):
                 self.msg("{w%s Armor rating lost{n" % obj.db.armor_rating)
                 obj.on_unequip()
                 equipment['armor'] = None
+            elif 'right finger' in ite:
+                obj = equipment['right finger']
+                self.msg("{wUnequipped %s{n" % equipment['right finger'])
+                obj.on_unequip()
+                equipment['right finger'] = None
+            elif 'left finger' in ite:
+                obj = equipment['left finger']
+                self.msg("{wUnequipped %s{n" % equipment['left finger'])
+                obj.on_unequip()
+                equipment['left finger'] = None
+            elif 'back' in ite:
+                obj = equipment['back']
+                self.msg("{wUnequipped %s{n" % equipment['back'])
+                obj.on_unequip()
+                equipment['back'] = None
+            elif 'trinket' in ite:
+                obj = equipment['trinket']
+                self.msg("{wUnequipped %s{n" % equipment['trinket'])
+                obj.on_unequip()
+                equipment['trinket'] = None
+            elif 'shield' in ite:
+                obj = equipment['shield']
+                self.msg("{wUnequipped %s{n" % equipment['shield'])
+                obj.on_unequip()
+                equipment['shield'] = None
         self.db.equipment = equipment
         
             
@@ -483,7 +554,7 @@ class CharacterClass(Character):
         self.easy_display(table, "Other Stats")
     
     def display_equipped(self, feedback=True):
-        table = ['Armor', 'Weapon']
+        table = ['Armor', 'Weapon', 'Left Finger', 'Right Finger', 'Shield', 'Trinket', 'Back',]
         self.easy_display(table, "Equipment")
     
     def easy_display(self, table, title):

@@ -24,6 +24,13 @@ class LootGenerator(Object):
         self.db.art_armor_prefixes = ['God Touched', 'Demon Touched', 'Spell Woven', 'Light Blessed', 'Heavenly Crafted', 'Spell Touched']
         self.db.armor_choices = ['Leather', 'Chainmail', 'Plate', 'Studded Leather', 'Scalemail', 'Ringmail', 'Padded', 'Robe',
                                     'Half Plate', 'Mithril']
+        #rings
+        self.db.avg_ring_prefixes = ['Worn', 'Light', 'Darkened', 'Rusted', 'Brass', 'Gold']
+        self.db.unc_ring_prefixes = [ 'Fine Gold', 'Fine Brass', 'Fine Silver', 'Journeyman']
+        self.db.rare_ring_prefixes = ['Mastercraft', 'Shining Gold', 'Bright Silver', 'Shining Brass']
+        self.db.art_ring_prefixes = ['Spellcrafted Gold', 'Light Touched Gold', 'Blessed Silver', 'Spelltouched Brass', 'Godtouched Silver']
+        self.db.ring_choices = ['Ring', 'Band', 'Loop', 'Binding']
+
         self.db.level = 1
    
     def set_armor_type(self, armor, armortype):
@@ -49,6 +56,13 @@ class LootGenerator(Object):
         elif 'polearm' in weapontype or 'Polearm' in weapontype:
             weapon.db.weapon_type = 'polearm' 
         return weapon
+    
+    def set_ring_type(self, ring, ringtype):
+        choices = ['left finger', 'right finger']
+        slot = random.choice(choices)
+        ring.db.slot = slot
+        return ring
+
 
     def set_armor_rating(self, armor):
         if 'average' in self.db.loot_rating:
@@ -99,6 +113,29 @@ class LootGenerator(Object):
         elif 'polearm' in weapon.db.weapon_type:
             weapon.db.damage = "1d12"
         return weapon
+ 
+    def set_ring_bonuses(self, ring):
+        stats = ['strength', 'dexterity', 'constitution', 'intelligence']
+        choice = random.choice(stats)
+        attr_bonuses = ring.db.attribute_bonuses
+        if 'average' in self.db.loot_rating:
+            modifier = random.randrange(1,2)
+        elif 'uncommon' in self.db.loot_rating:
+            modifier = random.randrange(3,6)
+        elif 'rare' in self.db.loot_rating:
+            modifier = random.randrange(7,10)
+        elif 'artifact' in self.db.loot_rating:
+            modifier = random.randrange(12,18)
+        for stat in stats:
+            if choice == stat:
+                attr_bonuses[choice] = modifier
+            else:
+                attr_bonuses[stats] = 0
+        ring.db.attribute_bonuses = attr_bonuses
+
+        
+       
+             
 
                  
     def create_loot_set(self, loot_rating, number_of_items, item_type):
