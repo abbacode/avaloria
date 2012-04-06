@@ -202,6 +202,33 @@ class CmdInventory(MuxCommand):
         exp_cur = self.caller.db.attributes['experience_currency']
         self.caller.msg("{CYou have: {y%s{n{C gold and {y%s{n {CExperience Currency.{n" % (gold, exp_cur))
 
+class CmdLair(MuxCommand):
+    """
+    Shows information about your stronghold and allow for control of minions/henchman.
+    Eventually will allow for control of said henchman.
+    
+    usage: @lair/switches <command>
+
+    switches: /henchman - show henchman currently assigned to your lair.
+    
+    @lair - list brief summary of your lair.
+
+    """
+    key = '@lair'
+    aliases = ['lair']
+    help_category = 'general'
+    locks = "cmd:all()"
+    
+    def func(self):
+        lair = self.caller.db.lair
+        if self.switches:
+            if 'henchman' in self.switches:
+                lair.display_henchman()
+        else:
+            lair.display_summary(self.caller)
+
+           
+
 class CmdTransmute(Command):
     """
     Call upon your divinely gifted power to transmute unwanted items into gold.
@@ -724,6 +751,7 @@ class CharacterCommandSet(CmdSet):
         self.add(CmdSkills())
         self.add(CmdInvite())
         self.add(CmdGroup())
+        self.add(CmdLair())
 
 class ChestCommandSet(CmdSet):
     """

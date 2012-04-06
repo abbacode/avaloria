@@ -307,7 +307,7 @@ class StructureManager(Object):
 
         self.character.spend_gold(gold_to_start)
         structure = create.create_object("game.gamesrc.objects.world.structures.Structure", key="{rUnder Construction: %s{n" % self.struct_name)
-        structure.aliases = [self.struct_name, self.struct_name.lower()]
+        structure.aliases = [ self.struct_name ]
         structure.db.completed_name = self.struct_name
         self.db.already_built += "%s;" % self.struct_name
         self.character.msg("{bBegan construction of the:{n {r%s{n!" % self.struct_name)

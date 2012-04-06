@@ -106,5 +106,5 @@ class LairRunner(Script):
         
     def at_repeat(self):
         self.ndb.subscribers = search.objects('lair_runner')
-        [lair.update for lair in self.ndb.subscribers]
+        [lair.update() for lair in self.ndb.subscribers]
         
