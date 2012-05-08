@@ -1,6 +1,6 @@
 import random
 from src.utils import create
-from game.gamesrc.objects.baseobjects import Object
+from ev import Object
 from game.gamesrc.scripts.world_scripts import storage_scripts
 from game.gamesrc.objects.world.items import *
 from game.gamesrc.objects.world.generators import LootGenerator

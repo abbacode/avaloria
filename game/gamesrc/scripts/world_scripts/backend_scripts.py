@@ -1,4 +1,4 @@
-from game.gamesrc.scripts.basescript import Script
+from ev import Script
 
 
 class TrashMan(Script):

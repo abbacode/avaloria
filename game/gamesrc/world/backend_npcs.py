@@ -40,6 +40,8 @@ quest_npc = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Juli
 desc = "This woman has dirt smudged on her face and through her hair, she has a look of panic painted across\n"
 desc += "her fair skinned face. Her red hair is matted and frizzy.  As you look at her she waves you down \n"
 desc += "quite frantically."
+quest_npc.aliases = [quest_npc.key]
+quest_npc.name = "{Y!{n %s" % quest_npc.key
 quest_npc.desc = desc
 quest_npc.db.quests = ['An Item Of Importance','Have You Met The Slythain?', 'Have You Met The Green Warden?'] 
 quest_npc.db.merchant = False
@@ -50,6 +52,8 @@ quest_npc = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Dark
 desc = "You almost did not notice this darkly clad figure standing within an alleyway formed by the Armorer\n"
 desc +="and Alchemist shop.  You recognize the robes as those of a An'Karith Monk.  He notices you and beckons."
 quest_npc.desc = desc
+quest_npc.aliases = [quest_npc.key]
+quest_npc.name = "{Y!{n %s" % quest_npc.key
 quest_npc.db.real_name = "Riatheron Giroyn"
 quest_npc.db.quests = ['Light In The Dark', 'A Terrible Menace']
 quest_npc.db.merchant = False
@@ -78,7 +82,7 @@ m = "Welcome young one, I have been expecting you to awake for some time now.  A
 m += "Currently the spiritual world is at war.  The newest God of our realm, Slyth has seemingly grown ever powerful\n"
 m += "and has begun his assertion, or attempt at assertion of power.  The nearest lands are those of the Green Warden\n"
 m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
-m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {mto learn more."
+m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {Cto learn more."
 aspect_of_karith.db.dialogue = { 'greeting': m }
 aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
 aspect_of_karith.db.merchant = False

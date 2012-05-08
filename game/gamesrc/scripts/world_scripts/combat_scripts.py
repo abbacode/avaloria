@@ -1,6 +1,6 @@
 import random
 from src.utils import create
-from game.gamesrc.scripts.basescript import Script
+from ev import Script
 
 
 class InCombatState(Script):

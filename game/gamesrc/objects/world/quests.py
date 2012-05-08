@@ -1,6 +1,6 @@
 import random
 from src.utils import create, utils
-from game.gamesrc.objects.baseobjects import Object
+from ev import Object
 from game.gamesrc.objects import copyreader
 
 
@@ -128,6 +128,8 @@ class QuestManager(Object):
                     if 'gather_%s' % item.db.type in quest_objectives[objective]['type']:
                         quest_obj.tick_counter_objective(objective, caller=self.db.character)
                     elif 'gather_%s' % item.name.lower() in quest_objectives[objective]['type']:
+                        quest_obj.tick_counter_objective(objective, caller=self.db.character)
+                    elif 'loot_rare_item' in quest_objectives[objective]['type']:
                         quest_obj.tick_counter_objective(objective, caller=self.db.character)
                     elif 'build' in quest_objectives[objective]['type']:
                         if 'gold_mine' in quest_objectives[objective]['type']:

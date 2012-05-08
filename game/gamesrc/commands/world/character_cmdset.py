@@ -1,8 +1,8 @@
 import random
 import re
+from ev import CmdSet, Command
+from game.gamesrc.commands.basecommand import MuxCommand
 from src.utils import utils, create
-from src.commands.cmdset import CmdSet
-from game.gamesrc.commands.basecommand import Command, MuxCommand
 
 class ActionCommand(Command):
     
@@ -432,11 +432,11 @@ class CmdShow(ActionCommand):
         caller_effect_manager = self.caller.db.effect_manager
         if 'all' not in self.what:
             if 'attributes' in self.what:
-                self.caller.display_attributes()
+                self.caller.pretty_table()
             elif 'stats' in self.what:
-                self.caller.display_stats()
+                self.caller.pretty_table(type="Stats")
             elif 'equipment' in self.what:
-                self.caller.display_equipped()
+                self.caller.pretty_table(type="Equipment")
             elif 'skills' in self.what:
                 manager = self.caller.db.skill_log
                 manager.display_skills(self.caller)
@@ -689,6 +689,34 @@ class CmdDarkLook(Command):
         return
 
 
+class CmdLight(Command):
+    """
+    Light a particular light source so that you may see in the dark.
+    
+    usage: light <object to light>  ex: light simple torche
+    """
+    key = "light"
+    aliases = ['lite', 'ignite']
+    locks = "cmd:all()"
+    help_category = "General"
+    
+    def parse(self):
+        self.what = self.args.strip()
+        
+    def func(self):
+        """
+        We check here to see if the caller passed an object name, if they have then we do a search
+        for all objects named simalarly within the calller.  In the event there are more than one,
+        we will default to the first in the list.
+        """
+        if len(self.what) < 1:
+            self.caller.msg("Light what?")
+            return 
+        light_sources = self.caller.search(self.what, global_search=False, ignore_errors=True)
+        lightsource = light_sources[0]
+        lightsource.db.is_active = True
+        lightsource.scripts.add("game.gamesrc.scripts.world_scripts.item_scripts.StateLightSourceOn")
+        
 #character class command sets
 class DarkCmdSet(CmdSet):
     """
@@ -699,6 +727,7 @@ class DarkCmdSet(CmdSet):
 
     def at_cmdset_creation(self):
         self.add(CmdDarkLook())
+        self.add(CmdLight())
 
 class GroupCommandSet(CmdSet):
     """
@@ -752,6 +781,7 @@ class CharacterCommandSet(CmdSet):
         self.add(CmdInvite())
         self.add(CmdGroup())
         self.add(CmdLair())
+        self.add(CmdLight())
 
 class ChestCommandSet(CmdSet):
     """

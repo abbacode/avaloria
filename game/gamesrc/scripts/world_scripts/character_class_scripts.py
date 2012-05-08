@@ -1,5 +1,5 @@
 from src.utils import create, utils
-from game.gamesrc.scripts.basescript import Script
+from ev import Script
 from game.gamesrc.commands.world import character_cmdset as character_cmdset
 from game.gamesrc.commands.world import combat_cmdset as combat_cmdset
 from game.gamesrc.commands.world import structure_cmdset as structure_cmdset

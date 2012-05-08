@@ -2,7 +2,7 @@
 """
 Set up the evennia system. A first startup consists of giving
 the command './manage syncdb' to setup the system and create
-the database. 
+the database.
 """
 
 import sys
@@ -15,24 +15,31 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Get Evennia version
 #------------------------------------------------------------
 try:
-    VERSION = open("%s%s%s" % (os.pardir, os.sep, 'VERSION')).readline().strip()
+    with open(os.pardir + os.sep + 'VERSION') as f:
+        VERSION = "%s-r%s" % (f.read().strip(), os.popen("hg id -i").read().strip())
 except IOError:
     VERSION = "Unknown version"
 
 #------------------------------------------------------------
-# Check so session file exists in the current dir- if not, create it. 
+# Check so session file exists in the current dir- if not, create it.
 #------------------------------------------------------------
 
-_CREATED_SETTINGS = False    
+_CREATED_SETTINGS = False
 if not os.path.exists('settings.py'):
     # If settings.py doesn't already exist, create it and populate it with some
     # basic stuff.
+
+    # make random secret_key.
+    import random, string
+    secret_key = list((string.letters + string.digits + string.punctuation).replace("'",'"'))
+    random.shuffle(secret_key)
+    secret_key = "".join(secret_key[:40])
 
     settings_file = open('settings.py', 'w')
     _CREATED_SETTINGS = True
 
     string = \
-    """# 
+    """#
 # Evennia MU* server configuration file
 #
 # You may customize your setup by copy&pasting the variables you want
@@ -43,64 +50,73 @@ if not os.path.exists('settings.py'):
 # (also, the master config file may change with server updates).
 #
 
-from src.settings_default import * 
+from src.settings_default import *
 
-###################################################
-# Evennia base server config 
-###################################################
+######################################################################
+# Evennia base server config
+######################################################################
 
-###################################################
-# Evennia Database config 
-###################################################
+######################################################################
+# Evennia Database config
+######################################################################
 
-###################################################
+######################################################################
 # Evennia pluggable modules
-###################################################
+######################################################################
 
-###################################################
-# Default command sets 
-###################################################
+######################################################################
+# Default command sets
+######################################################################
 
-###################################################
-# Typeclasses 
-###################################################
+######################################################################
+# Typeclasses
+######################################################################
 
-###################################################
-# Batch processors 
-###################################################
+######################################################################
+# Batch processors
+######################################################################
 
-###################################################
+######################################################################
 # Game Time setup
-###################################################
+######################################################################
 
-###################################################
+######################################################################
 # In-game access
-###################################################
+######################################################################
 
-###################################################
+######################################################################
 # In-game Channels created from server start
-###################################################
+######################################################################
 
-###################################################
+######################################################################
 # External Channel connections
-###################################################
+######################################################################
 
-###################################################
+######################################################################
 # Config for Django web features
-###################################################
+######################################################################
 
-###################################################
+######################################################################
 # Evennia components
-###################################################
-"""
+######################################################################
+
+######################################################################
+# SECRET_KEY was randomly seeded when settings.py was first created.
+# Don't share this with anybody. Warning: if you edit SECRET_KEY
+# *after* creating any accounts, your users won't be able to login,
+# since SECRET_KEY is used to salt passwords.
+######################################################################
+SECRET_KEY = '%s'
+
+""" % secret_key
 
     settings_file.write(string)
     settings_file.close()
 
     # obs - this string cannot be under i18n since settings didn't exist yet.
     print """
-    Welcome to Evennia (version %(version)s)! 
-    We created a fresh settings.py file for you.""" % {'version': VERSION} 
+    Welcome to Evennia (version %(version)s)!
+    We created a fresh settings.py file for you.""" % {'version': VERSION}
 
 
 #------------------------------------------------------------
@@ -113,19 +129,22 @@ try:
 except Exception:
     import traceback
     string = "\n" + traceback.format_exc()
-    string += _("""\n
-    Error: Couldn't import the file 'settings.py' in the directory 
-    containing %(file)r. There are usually two reasons for this: 
-    1) You moved your settings.py elsewhere. In that case move it back or 
-       create a link to it from this folder. 
+
+    # note - if this fails, ugettext will also fail, so we cannot translate this string.
+
+    string += """\n
+    Error: Couldn't import the file 'settings.py' in the directory
+    containing %(file)r. There are usually two reasons for this:
+    1) You moved your settings.py elsewhere. In that case move it back or
+       create a link to it from this folder.
     2) The settings module is where it's supposed to be, but contains errors.
-       Review the traceback above to resolve the problem, then try again. 
-    3) If you get errors on finding DJANGO_SETTINGS_MODULE you might have 
+       Review the traceback above to resolve the problem, then try again.
+    3) If you get errors on finding DJANGO_SETTINGS_MODULE you might have
        set up django wrong in some way. If you run a virtual machine, it might be worth
-       to restart it to see if this resolves the issue. Evennia should not require you 
-       to define any environment variables manually. 
-    """) % {'file': __file__}
-    print string 
+       to restart it to see if this resolves the issue. Evennia should not require you
+       to define any environment variables manually.
+    """ % {'file': __file__}
+    print string
     sys.exit(1)
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'game.settings'
@@ -135,8 +154,8 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'game.settings'
 #------------------------------------------------------------
 if __name__ == "__main__":
 
-    # checks if the settings file was created this run 
-    if _CREATED_SETTINGS: 
+    # checks if the settings file was created this run
+    if _CREATED_SETTINGS:
         print _("""
     Edit your new settings.py file as needed, then run
     'python manage syncdb' and follow the prompts to
@@ -145,7 +164,7 @@ if __name__ == "__main__":
         sys.exit()
 
     # run the standard django manager, if dependencies match
-    from src.utils.utils import check_evennia_dependencies    
+    from src.utils.utils import check_evennia_dependencies
     if check_evennia_dependencies():
-        from django.core.management import execute_manager    
+        from django.core.management import execute_manager
         execute_manager(settings)

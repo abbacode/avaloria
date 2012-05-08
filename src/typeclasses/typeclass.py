@@ -7,16 +7,18 @@ with a 'normal' Python class. The only restrictions is that
 the typeclass must inherit from TypeClass and not reimplement
 the get/setters defined below. There are also a few properties
 that are protected, so as to not overwrite property names
-used by the typesystem or django itself. 
+used by the typesystem or django itself.
 """
 
-from src.utils import logger
+from src.utils.logger import log_trace, log_errmsg
 from django.conf import settings
 
+__all__ = ("TypeClass",)
+
 # these are called so many times it's worth to avoid lookup calls
-GA = object.__getattribute__
-SA = object.__setattr__
-DA = object.__delattr__
+_GA = object.__getattribute__
+_SA = object.__setattr__
+_DA = object.__delattr__
 
 # To ensure the sanity of the model, there are a
 # few property names we won't allow the admin to
@@ -44,10 +46,10 @@ class MetaTypeClass(type):
         super(MetaTypeClass, mcs).__init__(*args, **kwargs)
         mcs.typename = mcs.__name__
         mcs.path = "%s.%s" % (mcs.__module__, mcs.__name__)
-        
+
     def __str__(cls):
         return "%s" % cls.__name__
-    
+
 class TypeClass(object):
     """
     This class implements a 'typeclass' object. This is connected
@@ -55,14 +57,14 @@ class TypeClass(object):
     the TypeClass allows for all customization.
     Most of the time this means that the admin never has to
     worry about database access but only deal with extending
-    TypeClasses to create diverse objects in the game. 
+    TypeClasses to create diverse objects in the game.
 
     The ObjectType class has all functionality for wrapping a
-    database object transparently. 
+    database object transparently.
 
     It's up to its child classes to implement eventual custom hooks
-    and other functions called by the engine. 
-    
+    and other functions called by the engine.
+
     """
     __metaclass__ = MetaTypeClass
 
@@ -70,18 +72,18 @@ class TypeClass(object):
         """
         Initialize the object class. There are two ways to call this class.
         o = object_class(dbobj) : this is used to initialize dbobj with the class name
-        o = dbobj.object_class(dbobj) : this is used when dbobj.object_class is already set. 
-        
+        o = dbobj.object_class(dbobj) : this is used when dbobj.object_class is already set.
+
         """
         # typecheck of dbobj - we can't allow it to be added here
         # unless it's really a TypedObject.
-        dbobj_cls = GA(dbobj, '__class__')
-        dbobj_mro = GA(dbobj_cls, '__mro__')
+        dbobj_cls = _GA(dbobj, '__class__')
+        dbobj_mro = _GA(dbobj_cls, '__mro__')
         if not any('src.typeclasses.models.TypedObject' in str(mro) for mro in dbobj_mro):
             raise Exception("dbobj is not a TypedObject: %s: %s" % (dbobj_cls, dbobj_mro))
 
         # store the reference to the database model instance
-        SA(self, 'dbobj', dbobj) 
+        _SA(self, 'dbobj', dbobj)
 
     def __getattribute__(self, propname):
         """
@@ -90,105 +92,98 @@ class TypeClass(object):
         self.dbobj. Note that dbobj properties have
         priority, so if you define a same-named
         property on the class, it will NOT be
-        accessible through getattr. 
+        accessible through getattr.
         """
-        try:
-            dbobj = GA(self, 'dbobj')
-        except AttributeError:
-            dbobj = None 
-            logger.log_trace("This is probably due to an unsafe reload.")            
-            raise 
         if propname == 'dbobj':
-            return dbobj
+            return _GA(self, 'dbobj')
         if propname.startswith('__') and propname.endswith('__'):
             # python specials are parsed as-is (otherwise things like
             # isinstance() fail to identify the typeclass)
-            return GA(self, propname)
-        #print "get %s (dbobj:%s)" % (propname, type(dbobj))        
+            return _GA(self, propname)
+        #print "get %s (dbobj:%s)" % (propname, type(dbobj))
         try:
-            return GA(self, propname)
+            return _GA(self, propname)
         except AttributeError:
             try:
-                return GA(dbobj, propname)
+                dbobj = _GA(self, 'dbobj')
+            except AttributeError:
+                log_trace("Typeclass CRITICAL ERROR! dbobj not found for Typeclass %s!" % self)
+                raise
+            try:
+                return _GA(dbobj, propname)
             except AttributeError:
                 try:
-                    if propname == 'ndb':
-                        # get non-persistent data (getattr raises AttributeError)
-                        return getattr(GA(dbobj, 'ndb'), propname)
-                    else: 
-                        return GA(dbobj,"get_attribute_raise")(propname)
+                    return _GA(dbobj,"get_attribute_raise")(propname)
                 except AttributeError:
                     string = "Object: '%s' not found on %s(%s), nor on its typeclass %s."
-                    raise AttributeError(string % (propname, dbobj,
-                                                   dbobj.dbref,
-                                                   dbobj.typeclass_path,))
-                    
+                    raise AttributeError(string % (propname, dbobj, dbobj.dbref, dbobj.typeclass_path))
+
     def __setattr__(self, propname, value):
         """
         Transparently save data to the dbobj object in
         all situations. Note that this does not
         necessarily mean storing it to the database
         unless data is stored into a propname
-        corresponding to a field on ObjectDB model. 
+        corresponding to a field on ObjectDB model.
         """
         #print "set %s -> %s" % (propname, value)
         if propname in PROTECTED:
-            string = "%s: '%s' is a protected attribute name." 
+            string = "%s: '%s' is a protected attribute name."
             string += " (protected: [%s])" % (", ".join(PROTECTED))
-            logger.log_errmsg(string % (self.name, propname))
-            return 
+            log_errmsg(string % (self.name, propname))
+            return
 
         try:
-            dbobj = GA(self, 'dbobj')
+            dbobj = _GA(self, 'dbobj')
         except AttributeError:
-            dbobj = None 
-            logger.log_trace("This is probably due to an unsafe reload.")            
- 
-        if dbobj: 
+            dbobj = None
+            log_trace("This is probably due to an unsafe reload.")
+
+        if dbobj:
             try:
-                # only set value on propname if propname already exists 
+                # only set value on propname if propname already exists
                 # on dbobj. __getattribute__ will raise attribute error otherwise.
-                GA(dbobj, propname)
-                SA(dbobj, propname, value)
+                _GA(dbobj, propname)
+                _SA(dbobj, propname, value)
             except AttributeError:
                 dbobj.set_attribute(propname, value)
         else:
-            SA(self, propname, value)
+            _SA(self, propname, value)
 
         def __eq__(self, other):
             """
             dbobj-recognized comparison
-            """            
+            """
             try:
-                return other == self or other == GA(self, dbobj) or other == GA(self, dbobj).user
+                return other == self or other == _GA(self, dbobj) or other == _GA(self, dbobj).user
             except AttributeError:
                 # if self.dbobj.user fails it means the two previous comparisons failed already
                 return False
-    
+
 
     def __delattr__(self, propname):
         """
         Transparently deletes data from the typeclass or dbobj by first searching on the typeclass,
         secondly on the dbobj.db.
-        Will not allow deletion of properties stored directly on dbobj. 
+        Will not allow deletion of properties stored directly on dbobj.
         """
         if propname in PROTECTED:
-            string = "%s: '%s' is a protected attribute name." 
+            string = "%s: '%s' is a protected attribute name."
             string += " (protected: [%s])" % (", ".join(PROTECTED))
-            logger.log_errmsg(string % (self.name, propname))
-            return 
+            log_errmsg(string % (self.name, propname))
+            return
 
         try:
-            DA(self, propname)
+            _DA(self, propname)
         except AttributeError:
             # not on typeclass, try to delete on db/ndb
             try:
-                dbobj = GA(self, 'dbobj')
+                dbobj = _GA(self, 'dbobj')
             except AttributeError:
-                logger.log_trace("This is probably due to an unsafe reload.")            
-                return # ignore delete                
+                log_trace("This is probably due to an unsafe reload.")
+                return # ignore delete
             try:
-                dbobj.del_attribute_raise(propname) 
+                dbobj.del_attribute_raise(propname)
             except AttributeError:
                 string = "Object: '%s' not found on %s(%s), nor on its typeclass %s."
                 raise AttributeError(string % (propname, dbobj,

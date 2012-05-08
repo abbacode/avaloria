@@ -1,11 +1,12 @@
 import random
 import time
 from collections import deque
-from game.gamesrc.objects.baseobjects import Character, Object
+from prettytable import PrettyTable
+from ev import Object, Character, Character, utils, create_object
 from game.gamesrc.objects.world.items import Item
 from game.gamesrc.scripts.world_scripts import character_class_scripts as cscripts
 from game.gamesrc.scripts.world_scripts import combat_scripts as combat_scripts
-from src.utils import utils, create
+#from src.utils import utils, create
 from game.gamesrc.objects.menusystem import *
 from game.gamesrc.commands.world import character_cmdset as character_cmdset
 from game.gamesrc.commands.world import combat_cmdset as combat_cmdset
@@ -62,35 +63,35 @@ class CharacterClass(Character):
         self.db.grouped = False
         self.db.target = None
         #player item creation
-        lair = create.create_object("game.gamesrc.objects.world.lair.Lair", key="%s's Lair" % self.key)
+        lair = create_object("game.gamesrc.objects.world.lair.Lair", key="%s's Lair" % self.key)
         lair.db.owner = self.dbref
         self.db.lair = lair
         self.db.lair_id = lair.dbref
         self.home = lair
         self.location = lair
-        starter_chest = create.create_object("game.gamesrc.objects.world.storage.StorageItem", key="Blessed Chest", location=lair)
+        starter_chest = create_object("game.gamesrc.objects.world.storage.StorageItem", key="Blessed Chest", location=lair)
         starter_chest.locks.add("open:holds(Deity Seal)")
         starter_chest.desc = "A medium sized chest with a very noticeable indendation where the locking mechanism would be.\n"
         starter_chest.desc += "Upon closer examination of the chest, you notice it is sealed with powerful magic." 
-        training_manual_kick = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", key="Training Manual: Kick", location=starter_chest)
+        training_manual_kick = create_object("game.gamesrc.objects.world.skills.TrainingBook", key="Training Manual: Kick", location=starter_chest)
         training_manual_kick.db.skill = 'kick'
         training_manual_kick.db.level_requirement = 1
         self.db.prelogout_location = self.db.lair_id
-        structure_manager = create.create_object("game.gamesrc.objects.world.structures.StructureManager", key="Stone Pedestal", location=self.location)
-        dungeon_manager = create.create_object("game.gamesrc.objects.world.structures.DungeonManager", key="Stone Summoning Circle", location=self.location)
+        structure_manager = create_object("game.gamesrc.objects.world.structures.StructureManager", key="Stone Pedestal", location=self.location)
+        dungeon_manager = create_object("game.gamesrc.objects.world.structures.DungeonManager", key="Stone Summoning Circle", location=self.location)
         dungeon_manager.db.lair_id = self.db.lair_id
-        generator = create.create_object("game.gamesrc.objects.world.generators.DungeonGenerator", location=dungeon_manager, key="Pulsing Red Stone")
+        generator = create_object("game.gamesrc.objects.world.generators.DungeonGenerator", location=dungeon_manager, key="Pulsing Red Stone")
         generator.locks.add("get:none()")
         generator.manager = dungeon_manager
         dungeon_manager.db.generator = generator
         structure_manager.db.lair_id = self.db.lair_id
         structure_manager.gen_ids()
         lair.db.structure_manager_id = structure_manager.dbref
-        questlog = create.create_object("game.gamesrc.objects.world.quests.QuestManager", key="Adventurer's Journal", location=self)
+        questlog = create_object("game.gamesrc.objects.world.quests.QuestManager", key="Adventurer's Journal", location=self)
         questlog.db.character = self
-        skill_log = create.create_object("game.gamesrc.objects.world.skills.SkillManager", key="Heavy Leather Tome", location=self)
+        skill_log = create_object("game.gamesrc.objects.world.skills.SkillManager", key="Heavy Leather Tome", location=self)
         skill_log.db.character = self
-        spellbook = create.create_object("game.gamesrc.objects.world.spells.SpellManager", key="Spellbook", location=self)
+        spellbook = create_object("game.gamesrc.objects.world.spells.SpellManager", key="Spellbook", location=self)
         spellbook.db.character = self
         self.db.spellbook = spellbook
         self.db.skill_log = skill_log
@@ -98,7 +99,7 @@ class CharacterClass(Character):
         #effect_manager = create.create_object("game.gamesrc.objects.world.spells.EffectManager", key="%s_effect_manager" % self.name, location=lair)
         #effect_manager.db.model = self
         #self.db.effect_manager = effect_manager
-        player_lair_exit = create.create_object("game.gamesrc.objects.world.rooms.PlayerLairExit", location=lair)
+        player_lair_exit = create_object("game.gamesrc.objects.world.rooms.PlayerLairExit", location=lair)
 
 
     def character_summary(self):
@@ -110,6 +111,8 @@ class CharacterClass(Character):
     def at_object_receive(self, moved_obj, source_location):
         quest_log = self.db.quest_log
         if moved_obj.db.quest_item is not False:
+            quest_log.check_quest_flags(mob=None, item=moved_obj)
+        if 'rare' in moved_obj.db.lootset:
             quest_log.check_quest_flags(mob=None, item=moved_obj)
            
     def at_post_login(self): 
@@ -144,16 +147,20 @@ class CharacterClass(Character):
     def at_disconnect(self):
         self.cmdset.clear()
         self.scripts.delete("character_sentinel")
-        self.scripts.delete("character_first_login")
-        self.scripts.delete("buff_sentinel")
    
     def at_first_login(self): 
         if self.dbref == 2:
             return
         aspect = self.search("Aspect of An'Karith", global_search=False, location=self.location, ignore_errors=True)[0]
-        print aspect.name
-        aspect.name = 'Aspect of %s' % self.db.attributes['deity']
+        aspect.aliases = [aspect.name]
+        aspect.name = '{Y!{n Aspect of %s' % self.db.attributes['deity'].title()
         aspect.do_dialog(caller=self, type='greeting')
+        self.cmdset.add(character_cmdset.CharacterCommandSet)
+        self.cmdset.add(combat_cmdset.DefaultCombatSet)
+        self.cmdset.add(structure_cmdset.BuildCmdSet)
+        self.cmdset.add(skills_cmdset.CombatSkillCmdSet)
+        self.cmdset.add(spells_cmdset.SpellsCmdSet)
+
 
     def refresh_attribute(self, attributes):
         """
@@ -239,10 +246,14 @@ class CharacterClass(Character):
         return
         
     def begin_attack(self, opponent):
-        self.db.target = opponent
-        opponent.db.in_combat = True
-        opponent.db.target = self
-        self.scripts.add(combat_scripts.InCombatState)
+        if hasattr(opponent, 'mob_type'):
+            self.db.target = opponent
+            opponent.db.in_combat = True
+            opponent.db.target = self
+            self.scripts.add(combat_scripts.InCombatState)
+        else:
+            self.msg("That is not able to be attacked.")
+            return
     
         
     def unbalance(self, phase):
@@ -351,21 +362,21 @@ class CharacterClass(Character):
             attributes['strength'] += 1
             attributes['intelligence'] += 5
             self.db.attributes = attributes
-            self.msg("{rYou are now a devout follower of the Eternal Nightbringer, An'Karith.  You have received {b+1{n to strength and {b+5{n to intelligence.{n")
+            self.msg("{RYou are now a devout follower of the Eternal Nightbringer, An'Karith.  You have received {b +1 {R to strength and {b +5 {R to intelligence.{n")
             self.refresh_attributes()
         elif 'slyth' in deity:
             attributes['deity'] = "slyth"
             attributes['dexterity'] += 5
             attributes['constitution'] += 2
             self.db.attributes = attributes
-            self.msg("{rYou are now a devout follower of the new God, Slyth of the Glade.  You have received {b+5{n to dexterity and {b+2{n to constitution.{n")
+            self.msg("{RYou are now a devout follower of the new God, Slyth of the Glade.  You have received {b +5 {R to dexterity and {b +2 {R to constitution.{n")
             self.refresh_attributes() 
         elif 'green warden' in deity:
             attributes['deity'] = "green warden"
             attributes['intelligence'] += 5
             attributes['constitution'] += 3
             self.db.attributes = attributes
-            self.msg("{rYou are now a devout follower of the The Green Warden, God and protector of the forests. You have received {b+5{n {rto intelligence and {b+3{n {rto constitution.{n")
+            self.msg("{RYou are now a devout follower of the The Green Warden, God and protector of the forests. You have received {b +5 {n {Rto intelligence and {b +3 {n {Rto constitution.{n")
             self.refresh_attributes()
         elif 'kaylynne' in deity:
             attributes['deity'] = "kaylynne"
@@ -373,8 +384,8 @@ class CharacterClass(Character):
             attributes['strength'] += 2
             self.db.attributes = attributes
             
-            msg = "{rYou are now a devout follower of Kaylynne, bolstering her small following of disciples.\n"
-            msg += "You receive {b+5{n {rto intelligence and {b+2{n {r to strength.{n"
+            msg = "{RYou are now a devout follower of Kaylynne, bolstering her small following of disciples.\n"
+            msg += "You receive {b +5 {n {R to intelligence and {b +2 {n {R to strength.{n"
             self.msg(msg)
             self.refresh_attributes()
 
@@ -388,7 +399,7 @@ class CharacterClass(Character):
         attributes['alignment'] = alignment
         self.db.attributes = attributes
         self.move_to(self.db.lair, quiet=True)
-        self.at_post_login()
+        self.at_first_login()
 
     def equip_item(self, ite=None, slot=None):
         """ 
@@ -545,6 +556,54 @@ class CharacterClass(Character):
         self.db.equipment = equipment
         
             
+
+    def pretty_table(self, type='Attributes'):
+        table = PrettyTable()
+        str_bonus = self.db.attributes['temp_strength'] - self.db.attributes['strength']
+        #int_bonus = self.db.attributes['temp_intelligence'] - self.db.attributes['intelligence']
+        #con_bonus = self.db.attributes['temp_constitution'] - self.db.attributes['constitution']
+        dex_bonus = self.db.attributes['temp_dexterity'] - self.db.attributes['dexterity']
+        not_equipped = ""
+        if type == 'Attributes':
+            table._set_field_names(["Attributes", "Value", "Bonus"])
+            table.align["Attributes"] = "r"
+            table.align["Value"] = "l"
+            table.add_row(["Name:", self.db.attributes['name'], "None"]) 
+            table.add_row(["Race:", self.db.attributes['race'], "None"])
+            table.add_row(["Gender:", self.db.attributes['gender'],"None"])
+            table.add_row(["Level:", self.db.attributes['level'], "None"])
+            table.add_row(["Strength:", self.db.attributes['temp_strength'], "+%s" % str_bonus])
+            table.add_row(["Intelligence:", self.db.attributes['intelligence'], "None"])
+            table.add_row(["Constitution:", self.db.attributes['constitution'], "None"])
+            table.add_row(["Dexterity:", self.db.attributes['temp_dexterity'], "+%s" % dex_bonus])
+            table.add_row(["Health:", self.db.attributes['temp_health'], "None"])
+            table.add_row(["Mana:", self.db.attributes['temp_mana'], "None"])
+        elif type == 'Stats':
+            armor_diff = self.db.attributes['temp_armor_rating'] - (self.db.attributes['dexterity'] / 5) 
+            table._set_field_names(["Other Stats", "Value", "Bonuses"])
+            table.add_row(["Gold:", self.db.attributes['gold'], "N/A"])
+            table.add_row(["Armor Rating:", self.db.attributes['temp_armor_rating'], "+%s" % armor_diff])
+            table.add_row(["Attack Rating:", self.db.attributes['attack_rating'], 0])
+            table.add_row(["Experience Made:", self.db.attributes['experience_made'], "N/A"])
+            table.add_row(["Experience Needed:", self.db.attributes['experience_needed'], "N/A"])
+            table.add_row(["Total Experience:", self.db.attributes['total_exp_made'], "N/A"])
+            table.add_row(["Experience Currency:", self.db.attributes['experience_currency'], "N/A"])
+            table.align["Other Stats"] = "r"
+        elif type == 'Equipment':
+            equipment = self.db.equipment
+            not_equipped = ""
+            table._set_field_names(["Item", "Slot", "Bonuses", "Value"])
+            for slot in equipment:
+                if equipment['%s' % slot] is not None:
+                    table.add_row(['%s' % equipment['%s' % slot].name, "%s" % slot, '%s' % equipment['%s' % slot].attribute_bonuses, '%s' % equipment['%s' % slot].db.value])
+                else:
+                    not_equipped += '%s, ' % slot
+        not_equipped = not_equipped.rstrip(', ') 
+        string = table.get_string()
+        self.msg(string)
+        if not_equipped != "":
+            self.msg("{CSlots unused: [ {n%s{C ]{n" % not_equipped)
+ 
     def display_attributes(self, feedback=True):
         table = ['Name', 'Race', 'Gender', 'Level', 'Strength', 'Intelligence', 'Constitution', 'Dexterity', 'Health', 'Mana']
         self.easy_display(table, "Attributes")
@@ -556,7 +615,7 @@ class CharacterClass(Character):
     def display_equipped(self, feedback=True):
         table = ['Armor', 'Weapon', 'Left Finger', 'Right Finger', 'Shield', 'Trinket', 'Back',]
         self.easy_display(table, "Equipment")
-    
+   
     def easy_display(self, table, title):
         if 'Skills' in title:
             m ='{{c{0:<9} {1:<32} {2:<10} {3:<10}{{n'.format("Name", "Description", "Damage", "Level")
@@ -832,7 +891,7 @@ Which attributes would you like to improve?
             group = caller.db.group
             group.join(caller, self)
         else:
-            group = create.create_object("game.gamesrc.objects.world.character.CharacterGroup")
+            group = create_object("game.gamesrc.objects.world.character.CharacterGroup")
             group.generate_initial_members(caller, self)
         self.cmdset.add("game.gamesrc.commands.world.character_cmdset.GroupCommandSet")
         self.db.grouped = True
@@ -977,7 +1036,7 @@ class CharacterGroup(Object):
         
     def create_comm_channels(self):
         try:
-            party_chat = create.create_channel("Party Chat [%s]" % self.id, 'Party Chat', locks="send:attr(group, %s);listen:attr(group, %s)" % (self.name, self.name)) 
+            party_chat = create_channel("Party Chat [%s]" % self.id, 'Party Chat', locks="send:attr(group, %s);listen:attr(group, %s)" % (self.name, self.name)) 
             self.db.channel = party_chat
         except:
             for member in members:

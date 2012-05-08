@@ -1,4 +1,4 @@
-from game.gamesrc.objects.baseobjects import Room
+from ev import Room
 from game.gamesrc.scripts.world_scripts import structure_scripts as structure_scripts
 import random
 

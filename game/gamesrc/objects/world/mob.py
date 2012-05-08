@@ -1,7 +1,7 @@
 import random
+from ev import Object
 from collections import deque
 from src.utils import create
-from game.gamesrc.objects.baseobjects import Object
 
 class Mob(Object):
     """
@@ -141,11 +141,13 @@ class Mob(Object):
             looker.msg(m)
 
     def death(self):
+        if self.db.corpse:
+            return
         self.db.pre_death_desc = self.db.desc
         self.db.pre_death_name = self.name
         self.db.desc = "A dead %s." % self.key
         self.key = "{rCorpse of %s{n" % self.key
-        self.aliases = ['corpse', 'Corpse of %s' % self.key, self.key.lower()]
+        self.aliases = ['corpse', self.key.lower()]
         self.db.lootable = True
         if self.db.reanimator:
             self.db.reanimate = True
@@ -438,7 +440,7 @@ class Mob(Object):
             if rn < .10:
                 dialogue = self.db.dialogue
                 d_msg = random.choice(dialogue)
-                self.location.msg_contents(dmsg)
+                self.location.msg_contents(d_msg)
         except AttributeError:
             pass
                 

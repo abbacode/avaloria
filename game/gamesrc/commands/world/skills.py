@@ -1,5 +1,5 @@
 from src.utils import utils
-from src.commands.cmdset import CmdSet
+from ev import CmdSet
 from game.gamesrc.commands.basecommand import Command, MuxCommand
 
 

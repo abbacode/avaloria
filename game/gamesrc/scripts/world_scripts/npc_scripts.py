@@ -1,6 +1,6 @@
 import time, random
 from src.utils import create
-from game.gamesrc.scripts.basescript import Script
+from ev import Script
 from game.gamesrc.objects.world.items import Armor, Weapon, Potion
 from game.gamesrc.objects.world.skills import TrainingBook
 

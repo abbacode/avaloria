@@ -1,7 +1,8 @@
 import random
 from src.utils import create
 from gamesrc.objects.menusystem import *
-from gamesrc.objects.baseobjects import Object
+from prettytable import PrettyTable
+from ev import Object
 
 class SkillManager(Object):
     """
@@ -35,20 +36,21 @@ class SkillManager(Object):
         self.db.skills = skills
 
     def display_skills(self, caller):
+        table = PrettyTable()
+        table._set_field_names(["Skill", "Level", "Description", "Damage"])
         skills = self.db.skills
-        msg = "{{c{0:<15} {1:<4} {2:<60} {3:<4}{{n".format("Skill", "Level", "Description", "Damage")
-        caller.msg(msg)
-        msg = "{C----------------------------------------------------------------------------------------------------------{n"
-        caller.msg(msg)
+        if len(skills) < 1:
+            caller.msg("You have no skills trained.  Try finding or buying some Training Manuals!")
+            return
+            
         for skill in skills:
-            skill_obj = skills[skill]
-            if skill_obj.db.damage is None:
+            obj = skills[skill]
+            if obj.db.damage is None:
                 damage = "Passive"
             else:
-                damage = skill_obj.db.damage
-            msg = "{{C{0:<15}{{n {1:<5} {2:<60} {3:<5}{{n".format(skill_obj.name, skill_obj.db.rank, skill_obj.db.desc, damage)
-            caller.msg(msg)
-        msg = "{C----------------------------------------------------------------------------------------------------------{n"   
+                damage = obj.db.damage
+            table.add_row(['%s' % obj.name, '%s' % obj.db.rank, '%s' % obj.db.desc, '%s' % damage])
+        msg = table.get_string()
         caller.msg(msg)
     
     def generate_skill_menu(self,caller):

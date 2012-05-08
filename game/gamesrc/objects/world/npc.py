@@ -1,6 +1,6 @@
 import random
 from src.utils import utils, create
-from gamesrc.objects.baseobjects import Object
+from ev import Object
 from gamesrc.objects.menusystem import *
 from gamesrc.objects.world.mob import Mob
 
@@ -149,6 +149,10 @@ class Npc(Object):
             #try dialogue
             if len(self.db.dialogue.keys()) < 1:
                 self.tell_character(caller, "I have nothing to say to the likes of you!")
+            elif self.db.quest_giver:
+                self.create_quest_menu(caller)
+            elif self.db.merchant:
+                self.create_merchant_menutree()
             else:
                 self.do_dialog(caller, type='greeting')
         

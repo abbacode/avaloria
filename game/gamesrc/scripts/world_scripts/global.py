@@ -1,4 +1,4 @@
-from game.gamesrc.scripts.basescript import Script
+from ev import Script
 from src.utils import search
 
 class MobRunner(Script):

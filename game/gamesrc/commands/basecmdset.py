@@ -20,7 +20,8 @@ new cmdset class.
 
 from src.commands.cmdset import CmdSet
 from src.commands.default import cmdset_default, cmdset_unloggedin, cmdset_ooc
-from game.gamesrc.commands.basecommand import Command
+from ev import Command
+#from game.gamesrc.commands.basecommand import Command
 from contrib import menusystem, lineeditor
 from contrib import chargen
 

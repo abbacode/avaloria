@@ -1,6 +1,6 @@
 import random, time
 from collections import deque
-from game.gamesrc.objects.baseobjects import Object
+from ev import Object
 
 class CombatManager(Object):
     """

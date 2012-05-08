@@ -1,6 +1,7 @@
 import random
+from ev import Object
 from src.utils import create,search
-from game.gamesrc.objects.baseobjects import Object
+#from game.gamesrc.objects.baseobjects import Object
 from game.gamesrc.objects.world.dungeons import DungeonRoom
 from game.gamesrc.objects import copyreader
 

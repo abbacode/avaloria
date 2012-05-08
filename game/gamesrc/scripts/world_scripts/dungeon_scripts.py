@@ -84,6 +84,7 @@ class DarkState(Script):
         self.key = "darkness_state"
         self.desc = "A dark room"
         self.persistent = True         
+        self.interval = 1
 
     def at_start(self): 
         "called when the script is first starting up."
@@ -96,14 +97,14 @@ class DarkState(Script):
 
     def is_valid(self):
         "is valid only as long as noone in the room has lit the lantern." 
-        return not self.obj.is_lit()
+        return  self.obj.is_lit()
 
     def at_stop(self):
         "Someone turned on a light. This state dies. Switch to LightState."
         for char in [char for char in self.obj.contents if char.has_player]:        
             char.cmdset.delete("game.gamesrc.commands.world.character_cmdset.DarkCmdSet")        
         self.obj.db.is_dark = False
-        self.obj.scripts.add(LightState)
+        self.obj.scripts.add("game.gamesrc.scripts.world_scripts.dungeon_scripts.LightState")
 
 class LightState(Script):
     """
@@ -114,6 +115,7 @@ class LightState(Script):
         self.key = "tutorial_light_state"
         self.desc = "A room lit up"
         self.persistent = True 
+        self.interval = 1
 
     def is_valid(self):
         "This state is only valid as long as there is an active light source in the room."        

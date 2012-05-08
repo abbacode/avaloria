@@ -1,5 +1,5 @@
 import random
-from game.gamesrc.objects.baseobjects import Object
+from ev import Object
 from src.utils import utils
 
 
@@ -40,22 +40,23 @@ class LightSource(Item):
     """
     def at_object_creation(self):
         Item.at_object_creation(self)
-        self.db.desc = "A typical, simple torch."
         self.db.burntime = 60*5
         self.db.is_active = False
+        self.db.desc = "A simple wooden stick, with flammable material tarred to the top of it."
    
-    def reset(self):
-        if self.db.burntime < 0:
-            self.db.is_active = False
-        try:
-            loc = self.location.location
-        except AttributeError:
-            loc = self.location
-        loc.msg_contents("{R%s has burned out." % self.name)
-        try:
-            self.location.location.scripts.validate()
-        except AttributeError:
-            self.location.scripts.validate()
+    def reset(self, caller_triggered=False):
+        if not self.db.is_active and not caller_triggered:
+            try:
+                loc = self.location.location
+            except AttributeError:
+                loc = self.location
+            loc.msg_contents("{R%s has burned out." % self.name)
+            try:
+                self.location.location.scripts.validate()
+            except AttributeError:
+                self.location.scripts.validate()
+        else:
+            return
 
 
 

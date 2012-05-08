@@ -1,7 +1,6 @@
 import random
 from src.utils import utils
-from src.commands.cmdset import CmdSet
-from game.gamesrc.commands.basecommand import Command
+from ev import CmdSet, Command
 from game.gamesrc.objects.menusystem import *
 
 class CmdCon(Command):
@@ -99,7 +98,11 @@ class CmdAttack(Command):
         obj = self.caller.search(self.what, use_nicks=True)
         if obj is not None:
             #if we found an object then start fighting it
-            self.caller.begin_attack(opponent=obj)
+            if hasattr(obj, 'mob_type'):
+                self.caller.begin_attack(opponent=obj)
+            else:
+                self.caller.msg("Thats probably a bad idea...")
+                return
         else:
             self.caller.msg("I don't see anything around here named: %s" % self.what)
             return

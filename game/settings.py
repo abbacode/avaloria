@@ -42,7 +42,7 @@ SERVERNAME = "Avaloria"
 ###################################################
 # Default command sets 
 ###################################################
-
+CMDSET_OOC = "game.gamesrc.commands.basecmdset.OOCCmdSet"
 ###################################################
 # Default Object typeclasses 
 ##################################################

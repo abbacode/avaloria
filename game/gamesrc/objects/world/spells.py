@@ -1,6 +1,6 @@
 import random
 from src.utils import create, utils 
-from game.gamesrc.objects.baseobjects import Object
+from ev import Object
 
 
 class SpellManager(Object):

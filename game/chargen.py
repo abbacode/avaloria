@@ -238,8 +238,8 @@ Please select which gender you would like to be:
                                         linktexts=['Male', 'Female'])
                 nodes.append(gender_node)
             elif 'alignment' in option:
-                confirm_good = MenuNode("confirm-good", links=['END'], linktexts=['Begin your journey.'], text="{rYou begin your journey down the path of light.{n", code="self.caller.set_alignment('good')")
-                confirm_evil = MenuNode("confirm-evil", links=['END'], linktexts=['Begin your journey.'], text="{rYou begin your journey down the path of darkness.{n", code="self.caller.set_alignment('evil')")
+                confirm_good = MenuNode("confirm-good",  text="{rYou begin your journey down the path of light.{n", code="self.caller.set_alignment('good')")
+                confirm_evil = MenuNode("confirm-evil", text="{rYou begin your journey down the path of darkness.{n", code="self.caller.set_alignment('evil')")
                 nodes.append(confirm_good)
                 nodes.append(confirm_evil)
                 text = """
@@ -257,7 +257,6 @@ Which path to do you desire to walk?
         self.obj.msg("{mDEBUG: nodes: %s{n" % node_string)
         menutree = MenuTree(caller=self.obj, nodes=nodes)
         menutree.start()
-        self.obj.at_first_login()
 
 
 class OOCCmdSetCharGen(OOCCmdSet):

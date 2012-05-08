@@ -1,4 +1,4 @@
-from game.gamesrc.objects.baseobjects import Room, Object
+from ev import Room, Object
 from src.utils import create, search, utils
 import random, string
 
@@ -99,23 +99,20 @@ class DarkRoom(DungeonRoom):
         self.db.hidden_treasure = True
         self.db.player_map = {}
         self.db.dungeon_type = 'dungeon'
-        self.db.is_dark = True
+        self.db.is_lit = False
         self.scripts.add("game.gamesrc.scripts.world_scripts.dungeon_scripts.DarkState")
          
     def is_lit(self):
         """
         Checks for a lightsource on all characters in the room.
         """
-        return False
-        """
         return any([any([True for obj in char.contents 
-                        if utils.inherits_from(obj, LightSource) and obj.is_active]) 
+                        if utils.inherits_from(obj, "game.gamesrc.objects.world.items.LightSource") and obj.is_active]) 
                 for char in self.contents if char.has_player])
-        """
+    
     def at_object_receive(self, character, source_location):
-        if character.has_player:
-            if not self.is_lit():
-                character.cmdset.add("game.gamesrc.commands.world.character_cmdset.DarkCmdSet")
+        if not self.is_lit():
+            character.cmdset.add("game.gamesrc.commands.world.character_cmdset.DarkCmdSet")
         self.scripts.validate()              
         
     def at_object_leave(self, character, source_location):

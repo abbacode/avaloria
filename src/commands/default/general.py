@@ -9,7 +9,13 @@ from src.utils import utils
 from src.objects.models import ObjectNick as Nick
 from src.commands.default.muxcommand import MuxCommand
 
-AT_SEARCH_RESULT = utils.mod_import(*settings.SEARCH_AT_RESULT.rsplit('.', 1))
+# limit symbol import for API
+__all__ = ("CmdHome", "CmdLook", "CmdPassword", "CmdNick",
+           "CmdInventory", "CmdGet", "CmdDrop", "CmdQuit", "CmdWho",
+           "CmdSay", "CmdPose", "CmdEncoding", "CmdAccess",
+           "CmdOOCLook", "CmdIC", "CmdOOC")
+
+AT_SEARCH_RESULT = utils.variable_from_module(*settings.SEARCH_AT_RESULT.rsplit('.', 1))
 BASE_PLAYER_TYPECLASS = settings.BASE_PLAYER_TYPECLASS
 
 class CmdFriend(MuxCommand):
@@ -43,20 +49,22 @@ class CmdHome(MuxCommand):
     home
 
     Usage:
-      home 
+      home
 
-    Teleports the player to their home.
+    Teleports you to your home location.
     """
-    
+
     key = "home"
-    locks = "cmd:perm(home) or perm(Builders)"    
+    locks = "cmd:perm(home) or perm(Builders)"
 
     def func(self):
         "Implement the command"
-        caller = self.caller        
+        caller = self.caller
         home = caller.home
         if not home:
-            caller.msg("You have no home set.")
+            caller.msg("You have no home!")
+        elif home == caller.location:
+            caller.msg("You are already home!")
         else:
             caller.move_to(home)
             caller.msg("There's no place like home ...")
@@ -67,7 +75,7 @@ class CmdLook(MuxCommand):
 
     Usage:
       look
-      look <obj> 
+      look <obj>
       look *<player>
 
     Observes your location or objects in your vicinity.
@@ -79,27 +87,27 @@ class CmdLook(MuxCommand):
 
     def func(self):
         """
-        Handle the looking. 
+        Handle the looking.
         """
         caller = self.caller
-        args = self.args        
+        args = self.args
         if args:
             # Use search to handle duplicate/nonexistant results.
             looking_at_obj = caller.search(args, use_nicks=True)
             if not looking_at_obj:
-                return        
+                return
         else:
             looking_at_obj = caller.location
             if not looking_at_obj:
                 caller.msg("You have no location to look at!")
                 return
-            
+
         if not hasattr(looking_at_obj, 'return_appearance'):
             # this is likely due to us having a player instead
-            looking_at_obj = looking_at_obj.character    
+            looking_at_obj = looking_at_obj.character
         if not looking_at_obj.access(caller, "view"):
             caller.msg("Could not find '%s'." % args)
-            return 
+            return
         # get object's appearance
         caller.msg(looking_at_obj.return_appearance(caller))
         # the object's at_desc() method.
@@ -113,16 +121,16 @@ class CmdPassword(MuxCommand):
       @password <old password> = <new password>
 
     Changes your password. Make sure to pick a safe one.
-    """    
-    key = "@password"    
+    """
+    key = "@password"
     locks = "cmd:all()"
 
     def func(self):
         "hook function."
 
-        caller = self.caller 
+        caller = self.caller
         if hasattr(caller, "player"):
-            caller = caller.player 
+            caller = caller.player
 
         if not self.rhs:
             caller.msg("Usage: @password <oldpass> = <newpass>")
@@ -151,32 +159,36 @@ class CmdNick(MuxCommand):
       nick[/switches] <nickname> = [<string>]
       alias             ''
 
-    Switches:      
+    Switches:
       object   - alias an object
-      player   - alias a player 
+      player   - alias a player
       clearall - clear all your aliases
-      list     - show all defined aliases 
-      
-    If no switch is given, a command alias is created, used
-    to replace strings before sending the command. Give an empty
-    right-hand side to clear the nick
-      
-    Creates a personal nick for some in-game object or
-    string. When you enter that string, it will be replaced
-    with the alternate string. The switches dictate in what
-    situations the nick is checked and substituted. If string
-    is None, the alias (if it exists) will be cleared.
-    Obs - no objects are actually changed with this command,
-    if you want to change the inherent aliases of an object,
-    use the @alias command instead. 
+      list     - show all defined aliases (also "nicks" works)
+
+    Examples:
+      nick hi = say Hello, I'm Sarah!
+      nick/object tom = the tall man
+
+    A 'nick' is a personal shortcut you create for your own use. When
+    you enter the nick, the alternative string will be sent instead.
+    The switches control in which situations the substitution will
+    happen. The default is that it will happen when you enter a
+    command. The 'object' and 'player' nick-types kick in only when
+    you use commands that requires an object or player as a target -
+    you can then use the nick to refer to them.
+
+    Note that no objects are actually renamed or changed by this
+    command - the nick is only available to you. If you want to
+    permanently add keywords to an object for everyone to use, you
+    need build privileges and to use the @alias command.
     """
     key = "nick"
     aliases = ["nickname", "nicks", "@nick", "alias"]
-    locks = "cmd:all()"    
+    locks = "cmd:all()"
 
     def func(self):
         "Create the nickname"
-        
+
         caller = self.caller
         switches = self.switches
 
@@ -198,20 +210,20 @@ class CmdNick(MuxCommand):
         if 'clearall' in switches:
             nicks.delete()
             caller.msg("Cleared all aliases.")
-            return         
+            return
         if not self.args or not self.lhs:
             caller.msg("Usage: nick[/switches] nickname = [realname]")
-            return                        
+            return
         nick = self.lhs
-        real = self.rhs     
+        real = self.rhs
 
         if real == nick:
             caller.msg("No point in setting nick same as the string to replace...")
-            return 
-        
+            return
+
         # check so we have a suitable nick type
         if not any(True for switch in switches if switch in ("object", "player", "inputline")):
-            switches = ["inputline"] 
+            switches = ["inputline"]
         string = ""
         for switch in switches:
             oldnick = Nick.objects.filter(db_obj=caller.dbobj, db_nick__iexact=nick, db_type__iexact=switch)
@@ -224,14 +236,14 @@ class CmdNick(MuxCommand):
                 else:
                     string += "\nNo nick '%s' found, so it could not be removed." % nick
             else:
-                # creating new nick 
+                # creating new nick
                 if oldnick:
                     string += "\nNick %s changed from '%s' to '%s'." % (nick, oldnick[0].db_real, real)
                 else:
                     string += "\nNick set: '%s' = '%s'." % (nick, real)
-                caller.nicks.add(nick, real, nick_type=switch)            
+                caller.nicks.add(nick, real, nick_type=switch)
         caller.msg(string)
-        
+
 class CmdInventory(MuxCommand):
     """
     inventory
@@ -239,9 +251,9 @@ class CmdInventory(MuxCommand):
     Usage:
       inventory
       inv
-      
-    Shows a player's inventory.
-    """    
+
+    Shows your inventory.
+    """
     key = "inventory"
     aliases = ["inv", "i"]
     locks = "cmd:all()"
@@ -255,7 +267,7 @@ class CmdInventory(MuxCommand):
             # format item list into nice collumns
             cols = [[],[]]
             for item in items:
-                cols[0].append(item.name)                
+                cols[0].append(item.name)
                 desc = item.db.desc
                 if not desc:
                     desc = ""
@@ -267,19 +279,19 @@ class CmdInventory(MuxCommand):
                 string += "\n " + "{C%s{n - %s" % (row[0], row[1])
         self.caller.msg(string)
 
-class CmdGet(MuxCommand):            
+class CmdGet(MuxCommand):
     """
     get
 
     Usage:
       get <obj>
-      
+
     Picks up an object from your location and puts it in
     your inventory.
     """
     key = "get"
     aliases = "grab"
-    locks = "cmd:all()"    
+    locks = "cmd:all()"
 
     def func(self):
         "implements the command."
@@ -307,13 +319,13 @@ class CmdGet(MuxCommand):
 
         obj.move_to(caller, quiet=True)
         caller.msg("You pick up %s." % obj.name)
-        caller.location.msg_contents("%s picks up %s." % 
-                                        (caller.name, 
-                                         obj.name), 
+        caller.location.msg_contents("%s picks up %s." %
+                                        (caller.name,
+                                         obj.name),
                                          exclude=caller)
         # calling hook method
         obj.at_get(caller)
-        
+
 
 class CmdDrop(MuxCommand):
     """
@@ -321,14 +333,14 @@ class CmdDrop(MuxCommand):
 
     Usage:
       drop <obj>
-      
-    Lets you drop an object from your inventory into the 
+
+    Lets you drop an object from your inventory into the
     location you are currently in.
     """
-    
+
     key = "drop"
     locks = "cmd:all()"
-    
+
     def func(self):
         "Implement command"
 
@@ -338,17 +350,17 @@ class CmdDrop(MuxCommand):
             return
 
         results = caller.search(self.args, ignore_errors=True)
-        # we process the results ourselves since we want to sift out only 
-        # those in our inventory. 
+        # we process the results ourselves since we want to sift out only
+        # those in our inventory.
         results = [obj for obj in results if obj in caller.contents]
         # now we send it into the handler.
         obj = AT_SEARCH_RESULT(caller, self.args, results, False)
         if not obj:
-            return 
-        
+            return
+
         obj.move_to(caller.location, quiet=True)
         caller.msg("You drop %s." % (obj.name,))
-        caller.location.msg_contents("%s drops %s." % 
+        caller.location.msg_contents("%s drops %s." %
                                          (caller.name, obj.name),
                                          exclude=caller)
         # Call the object script's at_drop() method.
@@ -360,33 +372,33 @@ class CmdQuit(MuxCommand):
     quit
 
     Usage:
-      @quit 
+      @quit
 
     Gracefully disconnect from the game.
     """
     key = "@quit"
-    locks = "cmd:all()"    
+    locks = "cmd:all()"
 
     def func(self):
-        "hook function"  
+        "hook function"
         for session in self.caller.sessions:
             session.msg("{RQuitting{n. Hope to see you soon again.")
             session.session_disconnect()
-            
+
 class CmdWho(MuxCommand):
     """
     who
 
     Usage:
-      who 
-      doing 
+      who
+      doing
 
     Shows who is currently online. Doing is an alias that limits info
     also for those with all permissions.
     """
 
     key = "who"
-    aliases = "doing" 
+    aliases = "doing"
     locks = "cmd:all()"
 
     def func(self):
@@ -406,7 +418,7 @@ class CmdWho(MuxCommand):
             table = [["Player Name"], ["On for"], ["Idle"], ["Room"], ["Cmds"], ["Host"]]
         else:
             table = [["Player Name"], ["On for"], ["Idle"]]
-            
+
         for session in session_list:
             if not session.logged_in:
                 continue
@@ -416,12 +428,12 @@ class CmdWho(MuxCommand):
             plr_pobject = session.get_character()
             if not plr_pobject:
                 plr_pobject = session.get_player()
-                show_session_data = False 
+                show_session_data = False
                 table = [["Player Name"], ["On for"], ["Idle"]]
             if show_session_data:
                 table[0].append(plr_pobject.name[:25])
                 table[1].append(utils.time_format(delta_conn, 0))
-                table[2].append(utils.time_format(delta_cmd, 1))                     
+                table[2].append(utils.time_format(delta_cmd, 1))
                 table[3].append(plr_pobject.location.id)
                 table[4].append(session.cmd_total)
                 table[5].append(session.address[0])
@@ -441,7 +453,7 @@ class CmdWho(MuxCommand):
             else:
                 string += "\n" + "".join(row)
         nplayers = (SESSIONS.player_count())
-        if nplayers == 1:            
+        if nplayers == 1:
             string += '\nOne player logged in.'
         else:
             string += '\n%d players logged in.' % nplayers
@@ -454,14 +466,14 @@ class CmdSay(MuxCommand):
 
     Usage:
       say <message>
-      
-    Talk to those in your current location. 
+
+    Talk to those in your current location.
     """
-    
+
     key = "say"
     aliases = ['"', "'"]
     locks = "cmd:all()"
-    
+
     def func(self):
         "Run the say command"
 
@@ -478,13 +490,13 @@ class CmdSay(MuxCommand):
 
         # Feedback for the object doing the talking.
         caller.msg('You say, "%s{n"' % speech)
-        
+
         # Build the string to emit to neighbors.
-        emit_string = '{c%s{n says, "%s{n"' % (caller.name, 
+        emit_string = '{c%s{n says, "%s{n"' % (caller.name,
                                                speech)
-        caller.location.msg_contents(emit_string, 
+        caller.location.msg_contents(emit_string,
                                      exclude=caller)
-        
+
 
 class CmdPose(MuxCommand):
     """
@@ -497,13 +509,13 @@ class CmdPose(MuxCommand):
     Example:
       pose is standing by the wall, smiling.
        -> others will see:
-     Tom is standing by the wall, smiling.    
+      Tom is standing by the wall, smiling.
 
-    Describe an script being taken. The pose text will
-    automatically begin with your name. 
+    Describe an action being taken. The pose text will
+    automatically begin with your name.
     """
     key = "pose"
-    aliases = [":", "emote"]    
+    aliases = [":", "emote"]
     locks = "cmd:all()"
 
     def parse(self):
@@ -511,7 +523,7 @@ class CmdPose(MuxCommand):
         Custom parse the cases where the emote
         starts with some special letter, such
         as 's, at which we don't want to separate
-        the caller's name and the emote with a 
+        the caller's name and the emote with a
         space.
         """
         args = self.args
@@ -520,33 +532,33 @@ class CmdPose(MuxCommand):
         self.args = args
 
     def func(self):
-        "Hook function"        
+        "Hook function"
         if not self.args:
-            msg = "Do what?"
+            msg = "What do you want to do?"
             self.caller.msg(msg)
         else:
             msg = "%s%s" % (self.caller.name, self.args)
             self.caller.location.msg_contents(msg)
-        
+
 class CmdEncoding(MuxCommand):
     """
     encoding - set a custom text encoding
 
-    Usage: 
+    Usage:
       @encoding/switches [<encoding>]
 
     Switches:
       clear - clear your custom encoding
 
-           
-    This sets the text encoding for communicating with Evennia. This is mostly an issue only if 
+
+    This sets the text encoding for communicating with Evennia. This is mostly an issue only if
     you want to use non-ASCII characters (i.e. letters/symbols not found in English). If you see
     that your characters look strange (or you get encoding errors), you should use this command
-    to set the server encoding to be the same used in your client program. 
-    
+    to set the server encoding to be the same used in your client program.
+
     Common encodings are utf-8 (default), latin-1, ISO-8859-1 etc.
-    
-    If you don't submit an encoding, the current encoding will be displayed instead. 
+
+    If you don't submit an encoding, the current encoding will be displayed instead.
     """
 
     key = "@encoding"
@@ -559,7 +571,7 @@ class CmdEncoding(MuxCommand):
         """
         caller = self.caller
         if hasattr(caller, 'player'):
-            caller = caller.player 
+            caller = caller.player
 
         if 'clear' in self.switches:
             # remove customization
@@ -571,22 +583,22 @@ class CmdEncoding(MuxCommand):
             del caller.db.encoding
         elif not self.args:
             # just list the encodings supported
-            pencoding = caller.db.encoding                        
+            pencoding = caller.db.encoding
             string = ""
-            if pencoding: 
-                string += "Default encoding: {g%s{n (change with {w@encoding <encoding>{n)" % pencoding                
+            if pencoding:
+                string += "Default encoding: {g%s{n (change with {w@encoding <encoding>{n)" % pencoding
             encodings = settings.ENCODINGS
             if encodings:
-                string += "\nServer's alternative encodings (tested in this order):\n   {g%s{n" % ", ".join(encodings)            
+                string += "\nServer's alternative encodings (tested in this order):\n   {g%s{n" % ", ".join(encodings)
             if not string:
                 string = "No encodings found."
-        else:            
-            # change encoding 
+        else:
+            # change encoding
             old_encoding = caller.db.encoding
             encoding = self.args
             caller.db.encoding = encoding
             string = "Your custom text encoding was changed from '%s' to '%s'." % (old_encoding, encoding)
-        caller.msg(string.strip())                    
+        caller.msg(string.strip())
 
 class CmdAccess(MuxCommand):
     """
@@ -595,7 +607,7 @@ class CmdAccess(MuxCommand):
     Usage:
       access
 
-    This command shows you the permission hierarchy and 
+    This command shows you the permission hierarchy and
     which permission groups you are a member of.
     """
     key = "access"
@@ -607,8 +619,8 @@ class CmdAccess(MuxCommand):
 
         caller = self.caller
         hierarchy_full = settings.PERMISSION_HIERARCHY
-        string = "\n{wPermission Hierarchy{n (climbing):\n %s" % ", ".join(hierarchy_full)        
-        hierarchy = [p.lower() for p in hierarchy_full]
+        string = "\n{wPermission Hierarchy{n (climbing):\n %s" % ", ".join(hierarchy_full)
+        #hierarchy = [p.lower() for p in hierarchy_full]
 
         if self.caller.player.is_superuser:
             cperms = "<Superuser>"
@@ -623,7 +635,7 @@ class CmdAccess(MuxCommand):
             string += "\nPlayer {c%s{n: %s" % (caller.player.key, pperms)
         caller.msg(string)
 
-# OOC commands 
+# OOC commands
 
 class CmdOOCLook(CmdLook):
     """
@@ -634,8 +646,8 @@ class CmdOOCLook(CmdLook):
 
     This is an OOC version of the look command. Since a
     Player doesn't have an in-game existence, there is no
-    concept of location or "self". If we are controlling 
-    a character, pass control over to normal look. 
+    concept of location or "self". If we are controlling
+    a character, pass control over to normal look.
 
     """
 
@@ -651,7 +663,7 @@ class CmdOOCLook(CmdLook):
         if utils.inherits_from(self.caller, "src.objects.objects.Object"):
             # An object of some type is calling. Convert to player.
             #print self.caller, self.caller.__class__
-            self.character = self.caller 
+            self.character = self.caller
             if hasattr(self.caller, "player"):
                 self.caller = self.caller.player
 
@@ -662,20 +674,20 @@ class CmdOOCLook(CmdLook):
         else:
             self.caller = self.character # we have to put this back for normal look to work.
             super(CmdOOCLook, self).func()
-            
+
 class CmdIC(MuxCommand):
     """
     Switch control to an object
-    
+
     Usage:
       @ic <character>
-      
-    Go in-character (IC) as a given Character. 
+
+    Go in-character (IC) as a given Character.
 
     This will attempt to "become" a different object assuming you have
     the right to do so.  You cannot become an object that is already
     controlled by another player. In principle <character> can be
-    any in-game object as long as you have access right to puppet it. 
+    any in-game object as long as you have access right to puppet it.
     """
 
     key = "@ic"
@@ -691,7 +703,7 @@ class CmdIC(MuxCommand):
         if utils.inherits_from(caller, "src.objects.objects.Object"):
             caller = caller.player
 
-        new_character = None 
+        new_character = None
         if not self.args:
             new_character = caller.db.last_puppet
             if not new_character:
@@ -702,19 +714,19 @@ class CmdIC(MuxCommand):
             new_character = caller.search(self.args, global_search=True)
         if not new_character:
             # the search method handles error messages etc.
-            return 
+            return
         if new_character.player:
             if new_character.player == caller:
                 caller.msg("{RYou already are {c%s{n." % new_character.name)
             else:
-                caller.msg("{c%s{r is already acted by another player.{n" % new_character.name)                
-            return 
+                caller.msg("{c%s{r is already acted by another player.{n" % new_character.name)
+            return
         if not new_character.access(caller, "puppet"):
             caller.msg("{rYou may not become %s.{n" % new_character.name)
             return
-        old_char = None 
+        old_char = None
         if caller.character:
-            # save the old character. We only assign this to last_puppet if swap is successful. 
+            # save the old character. We only assign this to last_puppet if swap is successful.
             old_char = caller.character
         if caller.swap_character(new_character):
             new_character.msg("\n{gYou become {c%s{n.\n" % new_character.name)
@@ -724,7 +736,7 @@ class CmdIC(MuxCommand):
                 loc = new_character.db.prelogout_location
                 if not loc: # still no location; use home
                     loc = new_character.home
-                new_character.location = loc 
+                new_character.location = loc
                 if new_character.location:
                     new_character.location.msg_contents("%s has entered the game." % new_character.key, exclude=[new_character])
                     new_character.location.at_object_receive(new_character, new_character.location)
@@ -735,10 +747,10 @@ class CmdIC(MuxCommand):
 class CmdOOC(MuxCommand):
     """
     @ooc - go ooc
-    
+
     Usage:
       @ooc
-      
+
     Go out-of-character (OOC).
 
     This will leave your current character and put you in a incorporeal OOC state.
@@ -750,8 +762,8 @@ class CmdOOC(MuxCommand):
     help_category = "General"
 
     def func(self):
-        "Implement function"        
-        
+        "Implement function"
+
         caller = self.caller
 
         if utils.inherits_from(caller, "src.objects.objects.Object"):
@@ -760,18 +772,18 @@ class CmdOOC(MuxCommand):
         if not caller.character:
             string = "You are already OOC."
             caller.msg(string)
-            return 
+            return
 
         caller.db.last_puppet = caller.character
         # save location as if we were disconnecting from the game entirely.
         if caller.character.location:
             caller.character.location.msg_contents("%s has left the game." % caller.character.key, exclude=[caller.character])
             caller.character.db.prelogout_location = caller.character.location
-            caller.character.location = None 
-        
-        # disconnect         
+            caller.character.location = None
+
+        # disconnect
         caller.character.player = None
-        caller.character = None 
+        caller.character = None
 
         caller.msg("\n{GYou go OOC.{n\n")
         caller.execute_cmd("look")

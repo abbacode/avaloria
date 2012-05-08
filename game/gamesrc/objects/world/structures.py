@@ -1,6 +1,6 @@
 from math import ceil
 from src.utils import create, utils
-from game.gamesrc.objects.baseobjects import Object
+from ev import Object
 
 class Structure(Object):
     """
@@ -376,7 +376,9 @@ class DungeonManager(Object):
     
     def on_use(self,caller):
         self.location.msg_contents("{rAs you touch the glowing red stone, a portal begins to emerge..{n")
-        utils.run_async(self.create_dungeon)
+        utils.run_async(self.create_dungeon, at_return=self.at_return)
+
+    def at_return(self,r):
         self.location.msg_contents("{bA glowing red portal swirls into existence.{n")
 
     def delete_previous_dungeon(self):
