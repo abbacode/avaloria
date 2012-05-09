@@ -1,4 +1,5 @@
 import random
+from prettytable import PrettyTable
 from src.utils import create, utils 
 from ev import Object
 
@@ -38,15 +39,12 @@ class SpellManager(Object):
 
     def display_spells(self,caller):
         spells = self.db.spells
-        msg = "{{c{0:<25} {1:<65} {2:<15} {3:<5}{{n".format("Spell Name", "Description", "School", "Level")
-        caller.msg(msg)
-        msg = "{C-----------------------------------------------------------------------------------------------------------------{n"
-        caller.msg(msg)
+        table = PrettyTable()
+        table._set_field_names(["Spell Name", "Description", "School", "Level"])
         for spell in spells:
-            spell_obj = spells[spell]
-            msg = "{{C{0:<25}{{n {1:<65} {2:<15} {3:<5}{{n".format(spell_obj.name, utils.crop(spell_obj.db.desc, width=65), spell_obj.db.school, spell_obj.db.level) 
-            caller.msg(msg)
-        msg = "{C-----------------------------------------------------------------------------------------------------------------{n"
+            obj = spells[spell]
+            table.add_row(["%s" % obj.name, "%s" % obj.db.desc, "%s" % obj.db.school, "%s" % obj.db.level])
+        msg = table.get_string()
         caller.msg(msg)
  
 class Spell(Object):

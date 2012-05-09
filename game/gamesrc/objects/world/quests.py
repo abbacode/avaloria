@@ -1,4 +1,5 @@
 import random
+from prettytable import PrettyTable
 from src.utils import create, utils
 from ev import Object
 from game.gamesrc.objects import copyreader
@@ -154,15 +155,14 @@ class QuestManager(Object):
         if len(active_quests) < 1:
             caller.msg("You have no active quests currently.")
             return
-        titles = '{{c{0:<25} {1:<65} {2:<5}{{n'.format('Name', 'Description', 'Level')
-        caller.msg(titles)
-        caller.msg('{C-----------------------------------------------------------------------------------------------------{n')
-        m = ""
+        table = PrettyTable()
+        table._set_field_names(["Name", "Description", "Level", "Objectives"])
         for quest in active_quests:
-            quest_obj = active_quests[quest]
-            m += '{{C{0:<25}{{n {1:<65} {2}\n{{n'.format(utils.crop(quest_obj.name,width=25), quest_obj.db.short_description, quest_obj.db.quest_level) 
-        caller.msg(m)
-        caller.msg('{C-----------------------------------------------------------------------------------------------------{n')
+            obj = active_quests[quest]
+            objective_string = obj.format_objectives()
+            table.add_row(["%s" % obj.name, "%s" % obj.db.short_description, "%s" % obj.db.quest_level, "%s" % objective_string])
+        msg = table.get_string()
+        caller.msg(msg)
         caller.msg("For more detailed information, try help <questname>")
    
     def completed_quests_view(self, caller):
@@ -273,6 +273,9 @@ class Quest(Object):
         objectives = self.db.objectives
         m = ""
         for objective in objectives:
-            m += '{{C{0:<30}{{n {{r{1}/{2}{{n\n'.format(objectives[objective]['objective_name'], objectives[objective]['counter'], objectives[objective]['threshold'])
-        return m 
+            if len(objectives) < 2:
+                m += '{0:<30} {1}/{2}'.format(objectives[objective]['objective_name'], objectives[objective]['counter'], objectives[objective]['threshold'])
+            else:
+                m += '{0:<30} {1}/{2}\n'.format(objectives[objective]['objective_name'], objectives[objective]['counter'], objectives[objective]['threshold'])
+        return m.rstrip('\n') 
     

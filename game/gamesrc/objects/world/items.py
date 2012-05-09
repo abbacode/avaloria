@@ -259,6 +259,7 @@ class Potion(Item):
         self.db.type = 'potion'
         self.db.effect = 'buff' #heal,mana_regen,buff etc
         self.db.attribute_affected = 'hp'#str,con,int,dex,hp,mp
+        self.db.attribute_affected_display = 'Health'
         self.db.amount_affected = random.randrange(10,20)#amount of healing/buffing done by the object
         self.db.level = 1 #used to determine amount_affected.
         self.db.duration = 120 #immediate OR an amount of seconds
@@ -312,6 +313,7 @@ class Potion(Item):
                     caller.db.attributes = character_attributes
                     self.delete()
             elif 'buff' in self.db.effect:
+                self.db.attribute_affected_display = "Mana"
                 caller.add_effect(self)
                 character_attributes['buffed_mana'] = character_attributes['mana'] + self.db.amount_affected
                 caller.msg("{bAs you drink the %s, you feel your mana pool grow.{n" % self.name)

@@ -1,5 +1,6 @@
 import random
 import re
+from prettytable import PrettyTable
 from ev import CmdSet, Command
 from game.gamesrc.commands.basecommand import MuxCommand
 from src.utils import utils, create

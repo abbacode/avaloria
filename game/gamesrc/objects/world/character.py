@@ -2,7 +2,7 @@ import random
 import time
 from collections import deque
 from prettytable import PrettyTable
-from ev import Object, Character, Character, utils, create_object
+from ev import Object, Character, utils, create_object
 from game.gamesrc.objects.world.items import Item
 from game.gamesrc.scripts.world_scripts import character_class_scripts as cscripts
 from game.gamesrc.scripts.world_scripts import combat_scripts as combat_scripts
@@ -568,26 +568,26 @@ class CharacterClass(Character):
             table._set_field_names(["Attributes", "Value", "Bonus"])
             table.align["Attributes"] = "r"
             table.align["Value"] = "l"
-            table.add_row(["Name:", self.db.attributes['name'], "None"]) 
-            table.add_row(["Race:", self.db.attributes['race'], "None"])
-            table.add_row(["Gender:", self.db.attributes['gender'],"None"])
-            table.add_row(["Level:", self.db.attributes['level'], "None"])
+            table.add_row(["Name:", self.db.attributes['name'], " "]) 
+            table.add_row(["Race:", self.db.attributes['race'], " "])
+            table.add_row(["Gender:", self.db.attributes['gender']," "])
+            table.add_row(["Level:", self.db.attributes['level'], " "])
             table.add_row(["Strength:", self.db.attributes['temp_strength'], "+%s" % str_bonus])
-            table.add_row(["Intelligence:", self.db.attributes['intelligence'], "None"])
-            table.add_row(["Constitution:", self.db.attributes['constitution'], "None"])
+            table.add_row(["Intelligence:", self.db.attributes['intelligence'], " "])
+            table.add_row(["Constitution:", self.db.attributes['constitution'], " "])
             table.add_row(["Dexterity:", self.db.attributes['temp_dexterity'], "+%s" % dex_bonus])
-            table.add_row(["Health:", self.db.attributes['temp_health'], "None"])
-            table.add_row(["Mana:", self.db.attributes['temp_mana'], "None"])
+            table.add_row(["Health:", self.db.attributes['temp_health'], " "])
+            table.add_row(["Mana:", self.db.attributes['temp_mana'], " "])
         elif type == 'Stats':
             armor_diff = self.db.attributes['temp_armor_rating'] - (self.db.attributes['dexterity'] / 5) 
             table._set_field_names(["Other Stats", "Value", "Bonuses"])
-            table.add_row(["Gold:", self.db.attributes['gold'], "N/A"])
+            table.add_row(["Gold:", self.db.attributes['gold'], " "])
             table.add_row(["Armor Rating:", self.db.attributes['temp_armor_rating'], "+%s" % armor_diff])
-            table.add_row(["Attack Rating:", self.db.attributes['attack_rating'], 0])
-            table.add_row(["Experience Made:", self.db.attributes['experience_made'], "N/A"])
-            table.add_row(["Experience Needed:", self.db.attributes['experience_needed'], "N/A"])
-            table.add_row(["Total Experience:", self.db.attributes['total_exp_made'], "N/A"])
-            table.add_row(["Experience Currency:", self.db.attributes['experience_currency'], "N/A"])
+            table.add_row(["Attack Rating:", self.db.attributes['attack_rating'],  " "])
+            table.add_row(["Experience Made:", self.db.attributes['experience_made'], " "])
+            table.add_row(["Experience Needed:", self.db.attributes['experience_needed'], " "])
+            table.add_row(["Total Experience:", self.db.attributes['total_exp_made'], " "])
+            table.add_row(["Experience Currency:", self.db.attributes['experience_currency'], " "])
             table.align["Other Stats"] = "r"
         elif type == 'Equipment':
             equipment = self.db.equipment
@@ -907,7 +907,7 @@ Which attributes would you like to improve?
     """
     def add_effect(self, to_add):
         effects = self.db.effects
-        effect = { 'name': to_add.name, 'description': to_add.db.desc, 'attribute_affected': to_add.db.attribute_affected_display }
+        effect = { 'name': to_add.name, 'description': to_add.db.desc, 'attribute_affected': to_add.db.attribute_affected_display, 'duration': (to_add.db.duration / 60) }
         effects['%s_buff' % to_add.db.attribute_affected] = effect
         self.db.effects = effects
     
@@ -922,23 +922,18 @@ Which attributes would you like to improve?
             return effect
         else:
             return None
+
     def display_effects(self):
         effects = self.db.effects
         if len(effects.keys()) < 1:
             self.msg("{cNothing is affecting you currently.{n")
             return
-        m ='{{c{0:<20} {1:<100} {2:<10}{{n'.format("Name", "Description", "Attr Affected", )
-        self.msg(m)
-        m = "{C----------------------------------------------------------------------------------------------------------------------------------------------{n"
-        self.msg(m)
-        m = ""
+        table = PrettyTable()
+        table._set_field_names(["Name", "Description", "Attribute Affected", "Duration"])
         for effect in effects:
-            m += "{{c{0:<20}{{n {1:<100} {2:<10}{{n\n".format( effects[effect]['name'], effects[effect]['description'], effects[effect]['attribute_affected'],)
-        self.msg(m)
-        m = "{C----------------------------------------------------------------------------------------------------------------------------------------------{n"
-        self.msg(m)
-
-        
+            table.add_row(["%s" % effects[effect]['name'], "%s" % effects[effect]['description'], "%s" % effects[effect]['attribute_affected'], "%s minutes" % effects[effect]['duration']])
+        msg = table.get_string()
+        self.msg(msg)
 
 
 class FriendList(Object):
