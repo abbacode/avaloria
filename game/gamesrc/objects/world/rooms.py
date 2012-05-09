@@ -224,10 +224,13 @@ class Zone(Object):
         mob_map = {}
         for mob in mobs:
             cell = mob.location
-            mob_map["%s" % mob.dbref] = cell
+            if cell is None:
+                continue
+            else:
+                mob_map["%s" % mob.dbref] = cell
         for key in path_map:
             try:
-                if key in self.db.mob_counters.keys():
+                if key in self.db.mob_counters.keys() and key is not None:
                     try:
                         counters['%s' % key] += 1
                     except KeyError:
@@ -246,6 +249,8 @@ class Zone(Object):
         print "%s: %s (counters)" % (self.name, counters )
         for counter in counters:
             print counters[counter]
+            if counter is None:
+                continue
             if int(counters[counter]) < 3:
                 self.replenish_mobs(counter) 
     

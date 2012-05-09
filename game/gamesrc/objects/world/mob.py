@@ -398,8 +398,12 @@ class Mob(Object):
 
         if self.db.corpse is True:
             return
+
+        if self.location is None:
+            return
+
         things_around_me = self.location.contents
-        characters = self.db.characters
+        #characters = self.db.characters
         if len(things_around_me) >= 1:
             characters = [thing for thing in things_around_me if thing.has_player is not False]
         else:
@@ -430,7 +434,16 @@ class Mob(Object):
         #effect_manager = self.obj.db.effect_manager
         #follow_list = self.obj.db.follow_list
         #effect_manager.check_effects()
+        print self.location
+        print self.dbref
+        if self.location is None:
+            return
+
         zone_manager = self.location.db.manager
+        print zone_manager
+
+        if zone_manager is None:
+            return
         player_map = zone_manager.db.player_map
         
         if self.location.db.cell_number not in [ value for value in player_map.values()]:

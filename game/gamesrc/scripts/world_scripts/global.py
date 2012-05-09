@@ -19,8 +19,10 @@ class MobRunner(Script):
         
     def at_repeat(self):
         self.ndb.mobs = search.objects('mob_runner')
-        [mob.update() for mob in self.ndb.mobs if mob.db.should_update ]
-        [mob.kos_tick() for mob in self.ndb.mobs if mob.db.is_kos and mob.db.should_update ]
+        print "update()"
+        [mob.update() for mob in self.ndb.mobs if mob.db.should_update and mob is not None]
+        print "kos_tick(()"
+        [mob.kos_tick() for mob in self.ndb.mobs if mob.db.is_kos and mob.db.should_update and mob is not None]
 
     def at_stop(self):
         self.db.mobs = [mob.dbref for mob in self.ndb.mobs]
