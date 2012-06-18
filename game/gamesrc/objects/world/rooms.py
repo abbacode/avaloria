@@ -231,15 +231,10 @@ class Zone(Object):
                 continue
             else:
                 mob_map["%s" % mob.dbref] = cell
-<<<<<<< HEAD
         print mob_map
         for key in path_map:
             try:
                 if key in self.db.mob_counters.keys() and key is not 'None':
-=======
-        for key in path_map:
-            try:
-                if key in self.db.mob_counters.keys() and key is not None:
                     try:
                         counters['%s' % key] += 1
                     except KeyError:
@@ -269,11 +264,6 @@ class Zone(Object):
                 print "Continuing with %s" % counter
                 if int(counters[counter]) < 3:
                     self.replenish_mobs(counter) 
-            print counters[counter]
-            if counter is None:
-                continue
-            if int(counters[counter]) < 3:
-                self.replenish_mobs(counter) 
     
         self.db.mob_map = mob_map
         self.db.mob_counters = counters
