@@ -6,6 +6,8 @@ System commands
 
 import traceback
 import os, datetime, time
+from sys import getsizeof
+import sys
 import django, twisted
 
 from django.conf import settings
@@ -13,12 +15,17 @@ from src.server.sessionhandler import SESSIONS
 from src.scripts.models import ScriptDB
 from src.objects.models import ObjectDB
 from src.players.models import PlayerDB
-from src.utils import logger, utils, gametime
+from src.utils import logger, utils, gametime, create
 from src.commands.default.muxcommand import MuxCommand
+
+# delayed imports
+_resource = None
+_idmapper = None
+_attribute_cache = None
 
 # limit symbol import for API
 __all__ = ("CmdReload", "CmdReset", "CmdShutdown", "CmdPy",
-           "CmdScripts", "CmdObjects", "CmdService", "CmdVersion",
+           "CmdScripts", "CmdObjects", "CmdService", "CmdAbout",
            "CmdTime", "CmdServerLoad")
 
 class CmdReload(MuxCommand):
@@ -210,12 +217,13 @@ def format_script_list(scripts):
 
 class CmdScripts(MuxCommand):
     """
-    Operate on scripts.
+    Operate and list global scripts, list all scrips.
 
     Usage:
-      @scripts[/switches] [<obj or scriptid>]
+      @scripts[/switches] [<obj or scriptid or script.path>]
 
     Switches:
+      start - start a script (must supply a script path)
       stop - stops an existing script
       kill - kills a script - without running its cleanup hooks
       validate - run a validation on the script(s)
@@ -225,9 +233,11 @@ class CmdScripts(MuxCommand):
     will be searched for all scripts defined on it, or an script name
     or dbref. For using the /stop switch, a unique script dbref is
     required since whole classes of scripts often have the same name.
+
+    Use @script for managing commands on objects.
     """
     key = "@scripts"
-    aliases = "@listscripts"
+    aliases = ["@globalscript", "@listscripts"]
     locks = "cmd:perm(listscripts) or perm(Wizards)"
     help_category = "System"
 
@@ -239,6 +249,14 @@ class CmdScripts(MuxCommand):
 
         string = ""
         if args:
+            if "start" in self.switches:
+                # global script-start mode
+                new_script = create.create_script(args)
+                if new_script:
+                    caller.msg("Global script %s was started successfully." % args)
+                else:
+                    caller.msg("Global script %s could not start correctly. See logs." % args)
+                return
 
             # test first if this is a script match
             scripts = ScriptDB.objects.get_all_scripts(key=args)
@@ -457,27 +475,51 @@ class CmdService(MuxCommand):
             caller.msg("Starting service '%s'." % self.args)
             service.startService()
 
-class CmdVersion(MuxCommand):
+class CmdAbout(MuxCommand):
     """
-    @version - game version
+    @about - game engine info
 
     Usage:
-      @version
+      @about
 
-    Display the game version info.
+    Display info about the game engine.
     """
 
-    key = "@version"
+    key = "@about"
+    aliases = "@version"
+    locks = "cmd:all()"
     help_category = "System"
 
     def func(self):
         "Show the version"
-        version = utils.get_evennia_version()
-        string = "-" * 50 + "\n\r"
-        string += " {cEvennia{n %s\n\r" % version
-        string += " (Django %s, " % (django.get_version())
-        string += " Twisted %s)\n\r" % (twisted.version.short())
-        string += "-" * 50
+        try:
+            import south
+            sversion = "{wSouth{n %s" % south.__version__
+        except ImportError:
+            sversion = "{wSouth{n <not installed>"
+
+        string = """
+         {cEvennia{n %s{n
+         MUD/MUX/MU* development system
+
+         {wLicence{n Artistic Licence/GPL
+         {wWeb{n http://www.evennia.com
+         {wIrc{n #evennia on FreeNode
+         {wForum{n http://www.evennia.com/discussions
+         {wMaintainer{n (2010-)   Griatch (griatch AT gmail DOT com)
+         {wMaintainer{n (2006-10) Greg Taylor
+
+         {wOS{n %s
+         {wPython{n %s
+         {wDjango{n %s
+         {wTwisted{n %s
+         %s
+        """ % (utils.get_evennia_version(),
+               os.name,
+               sys.version.split()[0],
+               django.get_version(),
+               twisted.version.short(),
+               sversion)
         self.caller.msg(string)
 
 class CmdTime(MuxCommand):
@@ -522,14 +564,34 @@ class CmdTime(MuxCommand):
 
 class CmdServerLoad(MuxCommand):
     """
-    server load statistics
+    server load and memory statistics
 
     Usage:
        @serverload
 
-    Show server load statistics in a table.
+    This command shows server load statistics and dynamic memory
+    usage.
+
+    Some Important statistics in the table:
+
+    {wServer load{n is an average of processor usage. It's usually
+    between 0 (no usage) and 1 (100% usage), but may also be
+    temporarily higher if your computer has multiple CPU cores.
+
+    The {wResident/Virtual memory{n displays the total memory used by
+    the server process.
+
+    Evennia {wcaches{n all retrieved database entities when they are
+    loaded by use of the idmapper functionality. This allows Evennia
+    to maintain the same instances of an entity and allowing
+    non-persistent storage schemes. The total amount of cached objects
+    are displayed plus a breakdown of database object types. Finally,
+    {wAttributes{n are cached on-demand for speed. The total amount of
+    memory used for this type of cache is also displayed.
+
     """
-    key = "@serverload"
+    key = "@server"
+    aliases = ["@serverload", "@serverprocess"]
     locks = "cmd:perm(list) or perm(Immortals)"
     help_category = "System"
 
@@ -543,9 +605,17 @@ class CmdServerLoad(MuxCommand):
         if not utils.host_os_is('posix'):
             string = "Process listings are only available under Linux/Unix."
         else:
+            global _resource, _idmapper, _attribute_cache
+            if not _resource:
+                import resource as _resource
+            if not _idmapper:
+                from src.utils.idmapper import base as _idmapper
+            if not _attribute_cache:
+                from src.typeclasses.models import _ATTRIBUTE_CACHE as _attribute_cache
+
             import resource
             loadavg = os.getloadavg()
-            psize = resource.getpagesize()
+            psize = _resource.getpagesize()
             pid = os.getpid()
             rmem = float(os.popen('ps -p %d -o %s | tail -1' % (pid, "rss")).read()) / 1024.0
             vmem = float(os.popen('ps -p %d -o %s | tail -1' % (pid, "vsz")).read()) / 1024.0
@@ -568,8 +638,8 @@ class CmdServerLoad(MuxCommand):
                       "%s (%gs)" % (utils.time_format(rusage.ru_utime), rusage.ru_utime),
                       #"%10d shared" % rusage.ru_ixrss,
                       #"%10d pages" % rusage.ru_maxrss,
-                      "%10d Mb" % rmem,
-                      "%10d Mb" % vmem,
+                      "%10.2f MB" % rmem,
+                      "%10.2f MB" % vmem,
                       "%10d hard" % rusage.ru_majflt,
                       "%10d reads" % rusage.ru_inblock,
                       "%10d in" % rusage.ru_msgrcv,
@@ -600,6 +670,22 @@ class CmdServerLoad(MuxCommand):
             for row in ftable:
                 string += "\n " + "{w%s{n" % row[0] + "".join(row[1:])
 
+            # object cache size
+            cachedict = _idmapper.cache_size()
+            totcache = cachedict["_total"]
+            string += "\n{w Database entity (idmapper) cache usage:{n %5.2f MB (%i items)" % (totcache[1], totcache[0])
+            sorted_cache = sorted([(key, tup[0], tup[1]) for key, tup in cachedict.items() if key !="_total" and tup[0] > 0],
+                                    key=lambda tup: tup[2], reverse=True)
+            table = [[tup[0] for tup in sorted_cache],
+                     ["%5.2f MB" % tup[2] for tup in sorted_cache],
+                     ["%i item(s)" % tup[1] for tup in sorted_cache]]
+            ftable = utils.format_table(table, 5)
+            for row in ftable:
+                string += "\n  " + row[0] + row[1] + row[2]
+            # attribute cache
+            size = sum([sum([getsizeof(obj) for obj in dic.values()]) for dic in _attribute_cache.values()])/1024.0
+            count = sum([len(dic) for dic in _attribute_cache.values()])
+            string += "\n{w On-entity Attribute cache usage:{n %5.2f MB (%i items)" % (size, count)
         caller.msg(string)
 
 # class CmdPs(MuxCommand):

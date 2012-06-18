@@ -1,0 +1,14 @@
+Now that you have built some basic structures, you should begin to level them up.
+The way to do this is to deposit your gold you have earned in to them, once enough
+gold has been deposited the structure will level increasing its attributes, and it's
+attribute bonuses.
+
+You should have enough gold to level your gold mine, and definitely enough to level 
+our defenses.
+
+To do this use the @construct/deposit command.  Help @construct for more information.
+
+{gObjectives{n:
+    - Deposit enough gold into a structure to make it increase in level.
+
+Level a structure.

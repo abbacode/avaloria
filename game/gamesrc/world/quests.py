@@ -26,20 +26,35 @@ copy_dir = '/var/mud/evennia/game/gamesrc/copy/'
 
 slythain_nuisance = create.create_object(Quest, key="Have You Met The Slythain?", location=storage)
 slythain_nuisance.set_description("%s/quests/slythain_nuisance.txt" % copy_dir)
-slythain_nuisance.db.gold_reward = 15
-slythain_nuisance.db.exp_reward = 50
+slythain_nuisance.short_description = "Kill Slythain Soldiers"
+slythain_nuisance.db.level = 3
+slythain_nuisance.db.gold_reward = 45
+slythain_nuisance.db.exp_reward = 255
 slythain_nuisance.db.faction = 'warden'
 slythain_nuisance.db.faction_reward = 15
 slythain_nuisance.db.exclusions = "deity:slyth"
 objective = { 'objective_name': 'Kill 3 Slythain', 'counter': 0, 'threshold': 3, 'completed': False, 'type': 'kill_slythain' }
 slythain_nuisance.add_objective(objective)
 
+quest = create.create_object(Quest, key="Hunt The Hunters", location=storage)
+quest.db.short_description = "Kill Slythain Hunters"
+quest.set_description('%s/quests/hunt_the_hunters.txt' % copy_dir)
+quest.db.level = 3
+quest.db.gold_reward = 75
+quest.db.exp_reward = 450
+quest.db.faction = 'warden'
+quest.db.faction_reward = 30
+quest.db.exclusions = "deity:slyth"
+quest.db.prereq = "Have You Met The Slythain?"
+objective = {'objective_name': 'Kill 5 Slythain Hunters', 'counter': 0, 'threshold': 5, 'completed': False, 'type': ['kill_young slythain hunter', 'kill_mature slythain hunter', 'kill adolescent_slythain hunter'] }
+quest.add_objective(objective)
 
 warden_nuisance = create.create_object(Quest, key="Have You Met The Green Warden?", location=storage)
 warden_nuisance.db.short_description = 'Kill Warden soldiers'
 warden_nuisance.set_description('%s/quests/warden_nuisance.txt' % copy_dir)
-warden_nuisance.db.gold_reward = 15
-warden_nuisance.db.exp_reward = 50
+warden_nuisance.db.level = 3
+warden_nuisance.db.gold_reward = 45
+warden_nuisance.db.exp_reward = 255
 warden_nuisance.db.faction = 'slyth'
 warden_nuisance.db.faction_reward = 15
 warden_nuisance.db.exclusions = "deity:green warden"
@@ -50,6 +65,7 @@ find_necklace = create.create_object(Quest, key="An Item Of Importance", locatio
 find_necklace.db.short_description = 'Find the Family heirloom.'
 find_necklace.set_description('%s/quests/item_of_importance.txt' % copy_dir)
 find_necklace.db.gold_reward = 100
+find_necklace.db.level = 4
 find_necklace.db.prereq = 'Have You Met The Slythain?;Have You Met The Green Warden?'
 find_necklace.db.exp_reward = 300
 find_necklace.db.faction = ['karith', 'warden', 'kaylynne', 'slyth']
@@ -62,8 +78,9 @@ light_in_the_dark = create.create_object(Quest, key="Light In The Dark", locatio
 light_in_the_dark.short_description = 'Kill Creatures in Marshlands.'
 light_in_the_dark.aliases = ['light in the dark', 'light in', 'Light In The Dark']
 light_in_the_dark.set_description("%s/quests/light_in_the_dark.txt" % copy_dir)
-light_in_the_dark.db.gold_reward = 20
-light_in_the_dark.db.exp_reward = 70
+light_in_the_dark.db.level = 4
+light_in_the_dark.db.gold_reward = 40
+light_in_the_dark.db.exp_reward = 300
 light_in_the_dark.db.exclusions = "none:none"
 light_in_the_dark.db.faction = 'karith'
 light_in_the_dark.db.faction_reward = 20
@@ -75,9 +92,10 @@ kill_synesh.short_description = 'Kill Synesh Algreense'
 kill_synesh.aliases = ['kill_synesh algreense', 'a terrible menace', 'A TERRIBLE MENACE']
 kill_synesh.set_description("%s/quests/a_terrible_menace.txt" % copy_dir)
 kill_synesh.db.prereq = 'Light In The Dark'
-kill_synesh.db.gold_reward = 45
+kill_synesh.db.gold_reward = 125
+kill_synesh.db.level = 5
 kill_synesh.db.exclusions = "deity:slyth"
-kill_synesh.db.exp_reward = 250
+kill_synesh.db.exp_reward = 450
 kill_synesh.db.faction = 'warden'
 kill_synesh.db.faction_reward = 40
 objective = {'objective_name': 'Kill Synesh Algreense', 'counter': 0, 'threshold': 1, 'completed': False, 'type': 'kill_synesh algreense',}
@@ -115,6 +133,7 @@ unnatural_things.aliases = ['unnatural things']
 unnatural_things.set_description('%s/quests/unnatural_things.txt' % copy_dir)
 unnatural_things.db.prereq = 'Dark Places'
 unnatural_things.db.gold_reward = 150
+unnatural_things.db.level = 2
 unnatural_things.db.exclusions = "none:none"
 unnatural_things.db.repeatable = True
 unnatural_things.db.exp_reward = 250
@@ -129,6 +148,7 @@ kill_heroes.aliases = ['few good men']
 kill_heroes.set_description('%squests/a_few_good_men.txt' % copy_dir)
 kill_heroes.db.prereq = 'Dark Places'
 kill_heroes.db.gold_reward = 65
+kill_heroes.db.level = 2
 kill_heroes.db.exclusions = "none:none"
 kill_heroes.db.exp_reward = 300
 kill_heroes.db.faction = 'karith'
@@ -155,11 +175,42 @@ structure_quest = create.create_object(Quest, key="Construct a Training Grounds"
 structure_quest.short_description = "Build the Training Grounds"
 structure_quest.aliases = ['structure quests']
 structure_quest.set_description("%squests/build_training_grounds.txt" % copy_dir)
-structure_quest.db.gold_award = 50
+structure_quest.db.gold_reward = 50
 structure_quest.db.prereq = 'Construct A Mine'
-structure_quest.db.exp_award = 200
+structure_quest.db.level = 2
+structure_quest.db.exp_reward = 200
 structure_quest.db.exclusions = "none:none"
 structure_quest.db.faction = ['warden', 'slyth', 'karith', 'kaylynne']
 structure_quest.db.faction_reward = 85
 objective = {'objective_name': 'Build a Training Grounds', 'counter': 0, 'threshold': 1, 'completed': False, 'type': 'build_training_ground'}
 structure_quest.add_objective(objective)
+
+structure_quest = create.create_object(Quest, key="Improve Defenses", location=storage)
+structure_quest.short_description = "Build Defenses and Fortifications"
+structure_quest.aliases = ['structure quests']
+structure_quest.set_description('%squests/build_defenses.txt' % copy_dir)
+structure_quest.db.gold_reward = 75
+structure_quest.db.prereq = 'Construct a Training Grounds'
+structure_quest.db.exp_reward = 300
+structure_quest.db.level = 2
+structure_quest.db.exclusions = "none:none"
+structure_quest.db.faction = ['warden', 'slyth', 'karith', 'kaylynne']
+structure_quest.db.faction_reward = 110
+objective = {'objective_name': 'Improve your defenses!', 'counter': 0, 'threshold': 1, 'completed': False, 'type': 'build_defenses' }
+structure_quest.add_objective(objective)
+
+structure_quest = create.create_object(Quest, key="Structures Need Love Too", location=storage)
+structure_quest.short_description = "Level one of your structures."
+structure_quest.aliases = ['structure quests']
+structure_quest.set_description('%squests/structures_need_love.txt' % copy_dir)
+structure_quest.db.gold_reward = 100
+structure_quest.db.prereq = 'Construct a Training Grounds'
+structure_quest.db.exp_reward = 400
+structure_quest.db.level = 2
+structure_quest.db.exclusions = "none:none"
+structure_quest.db.faction = ['warden', 'slyth', 'karith', 'kaylynne']
+structure_quest.db.faction_reward = 150
+objective = {'objective_name': 'Level a structure!', 'counter': 0, 'threshold': 1, 'completed': False, 'type': 'level_structure' }
+structure_quest.add_objective(objective)
+
+

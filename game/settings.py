@@ -13,7 +13,8 @@ from src.settings_default import *
 
 ###################################################
 # Evennia base server config 
-###################################################
+#f##################################################
+CONNECTION_SCREEN_MODULE = "gamesrc.conf.connection_screen"
 
 ###################################################
 # Evennia Database config 
@@ -47,6 +48,7 @@ CMDSET_OOC = "game.gamesrc.commands.basecmdset.OOCCmdSet"
 # Default Object typeclasses 
 ##################################################
 BASE_CHARACTER_TYPECLASS = "game.gamesrc.objects.world.character.CharacterClass"
+BASE_PLAYER_TYPECLASS = "game.gamesrc.objects.baseobjects.Player"
 CMDSET_UNLOGGEDIN = "contrib.menu_login.UnloggedInCmdSet"
 
 ###################################################

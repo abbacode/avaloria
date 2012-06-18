@@ -136,8 +136,17 @@ class QuestManager(Object):
                         if 'gold_mine' in quest_objectives[objective]['type']:
                             if "Gold Mine" in structure_manager.db.already_built:
                                 quest_obj.tick_counter_objective(objective, caller=character)
-
-                    
+                        elif 'training_ground' in quest_objectives[objective]['type']:
+                            if 'Training Grounds' in structure_manager.db.already_built:
+                                quest_obj.tick_counter_objective(objective, caller=character)
+                        elif 'defenses' in quest_objectives[objective]['type']:
+                            if 'Defenses' in structure_manager.db.already_built:
+                                quest_obj.tick_counter_objective(objective, caller=character)
+                    elif 'level_structure' in quest_objectives[objective]['type']:
+                        for struct in structure_manager.db.structures:
+                            if structure_manager.db.structures[struct].db.level > 1:
+                                quest_obj.tick_counter_objective(objective, caller=character)
+                                break
         self.cleanup_completed_quests()
                             
 #    def check_prereqs(self):

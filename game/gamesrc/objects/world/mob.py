@@ -24,7 +24,7 @@ class Mob(Object):
     """
     def at_object_creation(self):
         blackhole = self.search("blackhole", global_search=True)
-        self.home = blackhole
+        self.db.home = blackhole
         self.db.desc = "Some sort of creature."
         self.db.attributes = { 'level': 1, 'strength': 5, 'constitution': 5, 'dexterity': 5, 'intelligence': 5 }
         attributes = self.db.attributes
@@ -41,6 +41,7 @@ class Mob(Object):
         attributes['total_ex_made'] = 0
         self.db.equipment = { 'weapon': None, 'armor': None } 
         self.db.combat_queue = deque([])
+        self.db.percentages = { 'dodge': 0.05 }
         attributes['exp_award'] = None #exp awarded if killed
         attributes['gold'] = None
         self.aliases = ['mob']
@@ -393,14 +394,21 @@ class Mob(Object):
                 return
 
     def kos_tick(self):
+        print "kos_tick: starting run"
         if self.db.in_combat is True:
             return
 
         if self.db.corpse is True:
             return
+
+        if self.location is None:
+            return
+
         things_around_me = self.location.contents
         characters = self.db.characters
+        print "kos_tick: checking characters"
         if len(things_around_me) >= 1:
+            print "kos_tick: Found Characters."
             characters = [thing for thing in things_around_me if thing.has_player is not False]
         else:
             return
@@ -413,7 +421,7 @@ class Mob(Object):
             if character_check is None:
                 return
             chance = random.random()
-            if chance < 0.10:
+            if chance < 0.85:
                 if character:
                     if character.db.in_combat is True:
                         return
@@ -430,7 +438,14 @@ class Mob(Object):
         #effect_manager = self.obj.db.effect_manager
         #follow_list = self.obj.db.follow_list
         #effect_manager.check_effects()
+        if self.location is None:
+            return
+
         zone_manager = self.location.db.manager
+
+        if zone_manager is None:
+            return
+
         player_map = zone_manager.db.player_map
         
         if self.location.db.cell_number not in [ value for value in player_map.values()]:

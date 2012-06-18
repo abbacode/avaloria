@@ -9,6 +9,8 @@ from game.gamesrc.objects.world.items import Weapon, Armor, Potion
 storage = search.objects('storage', global_search=True)[0]
 hammer = create.create_object(Weapon, key="An\'Karith's Hammer", location=storage, aliases=['epic_hammer'])
 hammer.db.damage = "4d10"
+hammer.db.crit_range = "18-20"
+
 hammer.db.attribute_bonuses = {'strength': 20, 'constitution': 15, 'dexterity': 15, 'intelligence': 10}
 hammer.db.desc = "This giant two handed hammer looks impossible to lift, but is quite light in hand.  Runes are carved up and down the stone handle"
 hammer.db.desc += " and hammer head.  They periodically flash a bright red."
@@ -16,17 +18,20 @@ hammer.db.value = 3490
 hammer.db.item_level = "artifact"
 hammer.db.weapon_type = 'hammer'
 hammer.db.lootset = 'boss'
+hammer.db.skill_used = "bludgeon"
 
 caller.msg("An\'Karith's hammer created, id: %s" % hammer.dbref)
 
 aot = create.create_object(Weapon, key="Arm of the Tyrant", location=storage, aliases=['epic_sword'])
 aot.db.damage = "3d12"
+aot.db.crit_range = "18-20"
 aot.db.attribute_bonuses = {'strength': 25, 'constitution': 10, 'dexterity': 10, 'intelligence': 5}
 aot.db.desc = "A giant two handed sword that looks near impossible to lift, though you do notice the presense of magical runes on the hilt."
 aot.db.value = 4890
 aot.db.item_level = "artifact"
 aot.db.weapon_type = "sword"
 aot.db.lootset = 'boss'
+aot.db.skill_used = "blades"
 
 caller.msg("Arm of the Tyrant created, id: %s" % aot.dbref)
 #begin rare weapon item creation
@@ -39,6 +44,7 @@ axe.db.value = 500
 axe.db.item_level = "rare"
 axe.db.weapon_type = "axe"
 axe.db.lootset = "miniboss;rare"
+axe.db.skill_used = "blades"
 
 caller.msg("Bloodletter Axe Created, id: %s" % axe.dbref)
 
@@ -50,6 +56,7 @@ sword.db.value = 289
 sword.db.item_level = "rare"
 sword.db.weapon_type = "sword"
 sword.db.lootset = "rare"
+sword.db.skill_used = "blades"
 
 caller.msg("Masterforged Short Sword created, id: %s" % sword.dbref)
 
@@ -61,6 +68,7 @@ dagger.db.value = 309
 dagger.db.item_level = "rare"
 dagger.db.weapon_type = "dagger"
 dagger.db.lootset = "rare"
+dagger.db.skill_used = "blades"
 
 caller.msg("Gut Ripper created, id: %s" % dagger.dbref)
 
@@ -72,6 +80,7 @@ pa.db.value = 330
 pa.db.item_level = "rare"
 pa.db.weapon_type = "polearm"
 pa.db.lootset = "rare"
+pa.db.skill_used = "heavy"
 
 caller.msg("Heroic Polearm created, id: %s" % pa.dbref)
 
@@ -84,6 +93,7 @@ sword.db.value = random.randrange(13, 39)
 sword.db.item_level = "uncommon"
 sword.db.weapon_type = "sword"
 sword.db.lootset = "uncommon"
+sword.db.skill_used = "blades"
 
 caller.msg("Longsword of the Bear create, id: %s" % sword.dbref)
 
@@ -95,6 +105,7 @@ sword.db.desc = "A normal, run of the mill longsword."
 sword.db.value = random.randrange(2,6)
 sword.db.item_level = "common"
 sword.db.weapon_type = "sword"
+sword.db.skill_used = "blades"
 
 mob_sword = create.create_object(Weapon, key="Cruel Blade", location=storage, aliases=['mob_weapons', 'mob_blade'])
 mob_sword.db.damage = '1d8'
@@ -103,4 +114,5 @@ mob_sword.db.desc = "A typical sword used by the mean spirited denziens of Avalo
 mob_sword.db.value = random.randrange(2,6)
 mob_sword.db.item_level = 'common'
 mob_sword.db.weapon_type = sword
+sword.db.skill_used = "blades"
 

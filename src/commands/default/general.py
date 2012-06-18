@@ -5,7 +5,7 @@ now.
 import time
 from django.conf import settings
 from src.server.sessionhandler import SESSIONS
-from src.utils import utils
+from src.utils import utils, search
 from src.objects.models import ObjectNick as Nick
 from src.commands.default.muxcommand import MuxCommand
 
@@ -711,7 +711,7 @@ class CmdIC(MuxCommand):
                 return
         if not new_character:
             # search for a matching character
-            new_character = caller.search(self.args, global_search=True)
+            new_character = search.search_objects(self.args, global_search=True)[0]
         if not new_character:
             # the search method handles error messages etc.
             return
@@ -741,6 +741,7 @@ class CmdIC(MuxCommand):
                     new_character.location.msg_contents("%s has entered the game." % new_character.key, exclude=[new_character])
                     new_character.location.at_object_receive(new_character, new_character.location)
             new_character.execute_cmd("look")
+            new_character.at_post_login()
         else:
             caller.msg("{rYou cannot become {C%s{n." % new_character.name)
 

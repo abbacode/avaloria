@@ -11,8 +11,8 @@ class CmdFireball(Command):
     
     key = 'fireball'
     locks = "cmd:holds(fireball)"
-    aliases = ['FIREBALL', 'Fireball']
     help_category = 'Spells'
+    aliases = ['fb']
 
     def func(self):
         if self.caller.db.in_combat:
@@ -33,7 +33,7 @@ class CmdMagicMissile(Command):
 
     key = "magic missile"
     locks = "cmd:holds(magic missile)"
-    aliases = ['mm', 'MAGIC MISSILE', 'Magic Missile']
+    aliases = ['mm']
     help_category = 'Spells'
 
     def func(self):

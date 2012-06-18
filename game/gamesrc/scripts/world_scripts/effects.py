@@ -28,8 +28,11 @@ class CastDelay(Script):
         self.obj.db.caller.msg("{CYou begin to mutter your incantations for: {c%s.{n" % self.obj.name.title())
 
     def at_stop(self):
+        character = self.obj.db.caller
         self.obj.db.caller.msg("{CYou cast the spell: {c%s{n!" % self.obj.name.title())
-        if self.obj.db.target:
+        if character.db.target:
+            self.obj.on_cast(self.obj.db.caller, character.db.target)
+        elif self.obj.db.target:
             self.obj.on_cast(self.obj.db.caller, self.obj.db.target)
         else:
             self.obj.on_cast(self.obj.db.caller)
@@ -115,8 +118,8 @@ class RendEffect(Effect):
             dmg = rend_skill.get_effect()
             target = self.obj
             target.take_damage(dmg)
-            target.location.msg_contents("{c %s's wounds are gushing blood!{n" % target.name)
-            character.msg("{C %s bleeds for {R%s {Cpoints of damage.{n" % (target.name, dmg))
+            target.location.msg_contents("{c %s's wounds are gushing blood!{n" % target.name, exclude=[character])
+            character.msg("{C%s bleeds for {R%s {Cpoints of damage.{n" % (target.name, dmg))
             
             
 

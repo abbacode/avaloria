@@ -114,6 +114,7 @@ class Npc(Object):
         if self.db.merchant:
             self.db.potions = self.search('storage_potions', global_search=True, ignore_errors=True)
             self.db.weapons = self.search('storage_weapons', global_search=True, ignore_errors=True)
+            self.db.skills = self.search('storage_skills', global_search=True, ignore_errors=True)
             if len(self.contents) < 1:
                 if 'potions' in self.db.merchant_type:
                     for item in self.potions:
@@ -125,6 +126,12 @@ class Npc(Object):
                         merchant_copy = item.copy()
                         merchant_copy.name = item.name
                         merchant_copy.move_to(destination=self)
+                elif 'skills' in self.db.merchant_type:
+                    for item in self.db.skills:
+                        merchant_copy = item.copy()
+                        merchant_copy.name = item.name
+                        merchant_copy.move_to(destination=self)
+                        
 
             rn = random.random()
             if rn < .02:
@@ -224,10 +231,13 @@ class Npc(Object):
         menu.start()
 
     def sell_item(self, item, caller):
-        if caller.db.attributes['gold'] < item.db.value:
-            return
+        print "Hit sell_item"
+        #if caller.db.attributes['gold'] < item.db.value:
+        #    print "not enough gold?"
+        #    return
         msg = "{bYou purchase the {n%s {bfor {y%s{n{b gold.{n" % (item.name, item.db.value)
         self.tell_character(caller, msg)
+        print "trying to move item"
         item.move_to(caller, quiet=False)
     
     def create_quest_menu(self, caller):
@@ -253,7 +263,7 @@ class Npc(Object):
                         if item in completed_quests.keys():
                             continue
                 else:
-                    if quest_obj.db.prereq.title() not in completed_quests.keys():
+                    if quest_obj.db.prereq.title() not in [key.title() for key in completed_quests.keys()]:
                         continue 
             if quest_obj.db.repeatable:
                 checked_quests.append(quest)

@@ -249,7 +249,7 @@ class MageShield(Spell):
             caller.msg("{rNot enough mana!{n")         
             return
         character_attributes['temp_mana'] = character_attributes['temp_mana'] - self.db.mana_cost
-        if target is not None:
+        if target is not None and not target.db.corpse:
             if hasattr(target, 'mob_type'):
                 caller.msg("You can't cast this on an enemy.")
             if hasattr(target, 'attributes'):

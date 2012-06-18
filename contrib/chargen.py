@@ -182,7 +182,7 @@ class CmdOOCCharacterCreate(Command):
             attributes = new_character.db.attributes
             nodes = []
             copy_dir = '/var/mud/evennia/game/gamesrc/copy/'
-            for option in ['race', 'deity', 'alignment', 'gender']:
+            for option in ['race', 'deity', 'alignment', 'gender', 'weapon skills', 'armor skills']:
                 if 'race' in option:
                     for race in ['bardok', 'erelania', 'the unknowns', 'earthen', 'gerdling']:
                         confirm_node = MenuNode("confirm-%s" % race, links=['deity'], linktexts=['Choose your deity.'], code="self.caller.set_race('%s')" % race)
@@ -227,8 +227,8 @@ class CmdOOCCharacterCreate(Command):
                         linktexts=['An\'Karith', 'Slyth of the Glade', 'The Green Warden', 'Kaylynne'])
                     nodes.append(root_deity_node)
                 elif 'gender' in option:
-                    confirm_male = MenuNode("confirm-gender-male", links=['alignment'], linktexts=['Choose the path you walk.'], code="self.caller.set_gender('male')")
-                    confirm_female = MenuNode("confirm-gender-female", links=['alignment'], linktexts=['Choose the path you walk.'], code="self.caller.set_gender('female')")
+                    confirm_male = MenuNode("confirm-gender-male", links=['weapons'], linktexts=['Choose which weapon to specialize in.'], code="self.caller.set_gender('male')")
+                    confirm_female = MenuNode("confirm-gender-female", links=['weapons'], linktexts=['Choose which weapon to specialize in.'], code="self.caller.set_gender('female')")
                     nodes.append(confirm_male)
                     nodes.append(confirm_female)
                     text = """
@@ -239,6 +239,51 @@ Please select which gender you would like to be:
                     gender_node = MenuNode("gender", text=text, links=['confirm-gender-male', 'confirm-gender-female'],
                                         linktexts=['Male', 'Female'])
                     nodes.append(gender_node)
+                elif 'weapon skills' in option:
+                    confirm_blades = MenuNode("confirm-blades", links=['armor'], linktexts=['Choose Armor Specialization .'], code="self.caller.set_weapon_skill('blades')")
+                    confirm_heavy = MenuNode("confirm-heavy", links=['armor'], linktexts=['Choose Armor Specialization'], code="self.caller.set_weapon_skill('heavy')")
+                    confirm_bludgeon = MenuNode("confirm-bludgeon", links=['armor'], linktexts=['Choose Armor Specialization.'], code="self.caller.set_weapon_skill('bludgeon')")
+                    nodes.append(confirm_blades)
+                    nodes.append(confirm_heavy)
+                    nodes.append(confirm_bludgeon)
+                    text = """
+--{rWeapon Type Selection{n--
+Please select which weapon type you would like to specialize in:
+
+{GTypes:{n
+
+{cBludgeoning{n - Weapons that bash and smash. (Maces, hammers, staves).
+{cBladed{n - Weapons that slash and cut. (Swords, daggers, axes).
+{cHeavy{n - Large, often two handed weaponry. (Bastard sword, Great Axe, Polearm).
+
+Using weaponry you are not skilled in will result is an increased chance of scoring
+only glancing blows on a target (damage / 2).  You may also take large and more
+consistent balance reduction.
+                    """
+                    weapons_node = MenuNode("weapons", links=['confirm-bludgeon', 'confirm-blades', 'confirm-heavy'], linktexts=['Bludgeoning Weapons', 'Bladed Weapons', 'Heavy Weapons'], text=text)
+                    nodes.append(weapons_node)
+                elif 'armor skills' in option:
+                    confirm_light = MenuNode("confirm-lightarmor", links=['alignment'], linktexts=['Choose the path you walk.'], code="self.caller.set_armor_skill('light')")
+                    confirm_medium = MenuNode("confirm-mediumarmor", links=['alignment'], linktexts=['Choose the path you walk'], code="self.caller.set_armor_skill('medium')")
+                    confirm_heavy = MenuNode("confirm-heavyarmor", links=['alignment'], linktexts=['Choose the path you walk'], code="self.caller.set_armor_skill('heavy')")  
+                    nodes.append(confirm_light)
+                    nodes.append(confirm_medium)
+                    nodes.append(confirm_heavy)
+                    text = """
+--{rArmor Specilization{n--
+Please select which armory type you would like to specialize in:
+
+{GTypes:{n
+
+{cLight{n - Lightweight, mobile armors. (leather, cloth).
+{cMedium{n - Moderate weight, semi-mobile armor. (scalemail, ring mail, chainmail).
+{cHeavy{n - Heavy weight, hard to move in armor. (plate and half plate)
+
+Using armor you are not specialized in, will result in large balance loss which
+in turn will result in stat loss and most likely death.
+                    """
+                    armor_node = MenuNode("armor", links=['confirm-lightarmor', 'confirm-mediumarmor', 'confirm-heavyarmor'], linktexts=['Light Armor', 'Medium Armor', 'Heavy Armor'], text=text)
+                    nodes.append(armor_node)
                 elif 'alignment' in option:
                     confirm_good = MenuNode("confirm-good", links=['END'], linktexts=['Begin your journey.'], text="{rYou begin your journey down the path of light.{n", code="self.caller.set_alignment('good')")
                     confirm_evil = MenuNode("confirm-evil", links=['END'], linktexts=['Begin your journey.'], text="{rYou begin your journey down the path of darkness.{n", code="self.caller.set_alignment('evil')")

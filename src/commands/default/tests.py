@@ -33,8 +33,8 @@ from src.objects.models import ObjectDB
 # ------------------------------------------------------------
 
 # print all feedback from test commands (can become very verbose!)
-VERBOSE = False
-
+VERBOSE = True
+NOMANGLE = True # mangle command input for extra testing
 
 def cleanup():
     User.objects.all().delete()
@@ -82,6 +82,7 @@ class FakeSession(serversession.ServerSession):
     def lineReceived(self, raw_string):
         pass
     def msg(self, message, data=None):
+        global VERBOSE
         if message.startswith("Traceback (most recent call last):"):
             #retval = "Traceback last line: %s" % message.split('\n')[-4:]
             raise AssertionError(message)
@@ -103,6 +104,7 @@ class FakeSession(serversession.ServerSession):
                 raise AssertionError(retval)
         if VERBOSE:
             print message
+# setting up objects
 
 class CommandTest(TestCase):
     """
@@ -112,14 +114,10 @@ class CommandTest(TestCase):
     Inherit new tests from this.
     """
 
-    NOMANGLE = True # mangle command input for extra testing
-
     def setUp(self):
         "sets up the testing environment"
         #ServerConfig.objects.conf("default_home", 2)
-
         self.addCleanup(cleanup)
-
         self.room1 = create.create_object(settings.BASE_ROOM_TYPECLASS, key="room1")
         self.room2 = create.create_object(settings.BASE_ROOM_TYPECLASS, key="room2")
         # create a faux player/character for testing.
@@ -128,18 +126,18 @@ class CommandTest(TestCase):
         self.char1.lock_storage = ""
         self.char1.locks = LockHandler(self.char1)
         self.char1.ndb.return_string = None
-        sess = FakeSession()
-        sess.connectionMade()
-        sess.session_login(self.char1.player)
+        self.sess1 = FakeSession()
+        self.sess1.connectionMade()
+        self.sess1.session_login(self.char1.player)
         # create second player
         self.char2 = create.create_player("TestChar2", "testplayer2@test.com", "testpassword2", character_location=self.room1)
         self.char2.player.user.is_superuser = False
         self.char2.lock_storage = ""
         self.char2.locks = LockHandler(self.char2)
         self.char2.ndb.return_string = None
-        sess2 = FakeSession()
-        sess2.connectionMade()
-        sess2.session_login(self.char2.player)
+        self.sess2 = FakeSession()
+        self.sess2.connectionMade()
+        self.sess2.session_login(self.char2.player)
         # A non-player-controlled character
         self.char3 = create.create_object(settings.BASE_CHARACTER_TYPECLASS, key="TestChar3", location=self.room1)
         # create some objects
@@ -147,17 +145,6 @@ class CommandTest(TestCase):
         self.obj2 = create.create_object(settings.BASE_OBJECT_TYPECLASS, key="obj2", location=self.room1)
         self.exit1 = create.create_object(settings.BASE_EXIT_TYPECLASS, key="exit1", location=self.room1)
         self.exit2 = create.create_object(settings.BASE_EXIT_TYPECLASS, key="exit2", location=self.room2)
-
-    def tearDown(self):
-        "Cleans up testing environment after test has run."
-        User.objects.all().delete()
-        PlayerDB.objects.all().delete()
-        ObjectDB.objects.all().delete()
-        Channel.objects.all().delete()
-        Msg.objects.all().delete()
-        PlayerChannelConnection.objects.all().delete()
-        ExternalChannelConnection.objects.all().delete()
-        ServerConfig.objects.all().delete()
 
     def get_cmd(self, cmd_class, argument_string=""):
         """
@@ -178,7 +165,7 @@ class CommandTest(TestCase):
         This also mangles the input in various ways to test if the command
         will be fooled.
         """
-        if not nomangle and not VERBOSE and not self.NOMANGLE:
+        if not nomangle and not VERBOSE and not NOMANGLE:
             # only mangle if not VERBOSE, to make fewer return lines
             test1 = re.sub(r'\s', '', raw_string) # remove all whitespace inside it
             test2 = "%s/åäö öäö;-:$£@*~^' 'test" % raw_string # inserting weird characters in call
@@ -200,7 +187,6 @@ class BuildTest(CommandTest):
     it creates arbitrary objects that mess up tests later.
     """
     NOMANGLE = True
-
 
 
 #------------------------------------------------------------
@@ -352,7 +338,7 @@ class TestSet(BuildTest):
 class TestCpAttr(BuildTest):
     def test_call(self):
         self.execute_cmd("@set obj1/test = value")
-        self.execute_cmd("@set me/test2 = value2")
+        self.execute_cmd("@set obj2/test2 = value2")
         self.execute_cmd("@cpattr obj1/test = obj2/test")
         self.execute_cmd("@cpattr test2 = obj2")
         self.assertEqual(self.obj2.db.test, u"value")
@@ -408,7 +394,7 @@ class TestCmdSets(BuildTest):
     def test_call(self):
         self.execute_cmd("@cmdsets")
         self.execute_cmd("@cmdsets obj1")
-class TestDesc(BuildTest):
+class TestName(BuildTest):
     def test_call(self):
         self.execute_cmd("@name obj1 = Test object", "Object's name changed to 'Test object'.")
         self.assertEqual(self.obj1.key, u"Test object")
@@ -416,15 +402,15 @@ class TestOpen(BuildTest):
     def test_call(self):
         self.execute_cmd("@dig room4;roomalias4")
         self.execute_cmd("@open testexit4;aliasexit4 = roomalias4", "Created new Exit")
-class TestScript(BuildTest):
+class TestTypeclass(BuildTest):
     def test_call(self):
         self.execute_cmd("@typeclass obj1 = src.objects.objects.Character", "obj's type is now")
         self.assertEqual(self.obj1.db_typeclass_path, u"src.objects.objects.Character")
-class TestScript(BuildTest):
+class TestSet(BuildTest):
     def test_call(self):
         self.execute_cmd("@set box1/test = value")
         self.execute_cmd("@wipe box1", "Wiped")
-        self.assertEqual(self.obj1.db.all(), [])
+        self.assertEqual(self.obj1.db.all, [])
 class TestLock(BuildTest):
     # lock functionality itseld is tested separately
     def test_call(self):

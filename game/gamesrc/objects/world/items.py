@@ -14,7 +14,7 @@ class Item(Object):
         
         self.db.desc = "A generic item, why it actually looks like...nothing at all"
         blackhole = self.search("blackhole", global_search=True)
-        self.home = blackhole
+        self.db.home = blackhole
         self.db.quest_item = False
         self.db.item_level = None
         self.db.value = None
@@ -74,7 +74,10 @@ class Weapon(Item):
         self.db.type = 'weapon'
         self.db.desc = "A weapon type object, its shape still unseen"
         self.db.damage = "2d6"
+        self.db.crit_rate = "x2"
+        self.db.crit_range = "19-20"
         self.db.weapon_type = None
+        self.db.skill_used = None
         self.db.slot = 'weapon'
         self.db.equipable = True
 
@@ -146,6 +149,15 @@ class Weapon(Item):
         self.location.db.attributes = character_attributes
         self.db.is_equipped = False
         self.location.refresh_attributes(health_and_mana=False, base_stats=True)
+
+    def critical(self, damage_roll):
+        """
+        returns critical damage.
+        """
+        crit_rate = self.db.crit_rate.split('x')[1]
+        damage = damage_roll * int(crit_rate)
+        return damage
+         
 
 
 #Armor item class

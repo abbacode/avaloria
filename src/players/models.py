@@ -46,16 +46,23 @@ from django.contrib.auth.models import User
 from django.utils.encoding import smart_str
 from django.contrib.contenttypes.models import ContentType
 
+from src.typeclasses.models import _get_cache, _set_cache, _del_cache
 from src.server.sessionhandler import SESSIONS
 from src.players import manager
 from src.typeclasses.models import Attribute, TypedObject, TypeNick, TypeNickHandler
-from src.utils import logger, utils
+from src.typeclasses.typeclass import TypeClass
 from src.commands.cmdsethandler import CmdSetHandler
 from src.commands import cmdhandler
+from src.utils import logger, utils
+from src.utils.utils import inherits_from
 
 __all__  = ("PlayerAttribute", "PlayerNick", "PlayerDB")
 
 _AT_SEARCH_RESULT = utils.variable_from_module(*settings.SEARCH_AT_RESULT.rsplit('.', 1))
+
+_GA = object.__getattribute__
+_SA = object.__setattr__
+_DA = object.__delattr__
 
 #------------------------------------------------------------
 #
@@ -186,7 +193,7 @@ class PlayerDB(TypedObject):
     #@property
     def obj_get(self):
         "Getter. Allows for value = self.obj"
-        return self.db_obj
+        return _get_cache(self, "obj")
     #@obj.setter
     def obj_set(self, value):
         "Setter. Allows for self.obj = value"
@@ -194,16 +201,14 @@ class PlayerDB(TypedObject):
         if isinstance(value, TypeClass):
             value = value.dbobj
         try:
-            self.db_obj = value
-            self.save()
+            _set_cache(self, "obj", value)
         except Exception:
             logger.log_trace()
             raise Exception("Cannot assign %s as a player object!" % value)
     #@obj.deleter
     def obj_del(self):
         "Deleter. Allows for del self.obj"
-        self.db_obj = None
-        self.save()
+        _del_cache(self, "obj")
     obj = property(obj_get, obj_set, obj_del)
 
     # whereas the name 'obj' is consistent with the rest of the code,
@@ -212,18 +217,20 @@ class PlayerDB(TypedObject):
     #@property
     def character_get(self):
         "Getter. Allows for value = self.character"
-        return self.db_obj
+        return _get_cache(self, "obj")
     #@character.setter
-    def character_set(self, value):
+    def character_set(self, character):
         "Setter. Allows for self.character = value"
-        self.obj = value
+        if inherits_from(character, TypeClass):
+            character = character.dbobj
+        _set_cache(self, "obj", character)
     #@character.deleter
     def character_del(self):
         "Deleter. Allows for del self.character"
-        self.db_obj = None
-        self.save()
+        _del_cache(self, "obj")
     character = property(character_get, character_set, character_del)
     # cmdset_storage property
+    # This seems very sensitive to caching, so leaving it be for now /Griatch
     #@property
     def cmdset_storage_get(self):
         "Getter. Allows for value = self.name. Returns a list of cmdset_storage."
@@ -254,10 +261,10 @@ class PlayerDB(TypedObject):
     #
 
     def __str__(self):
-        return smart_str("%s(player %i)" % (self.name, self.id))
+        return smart_str("%s(player %s)" % (self.name, self.dbid))
 
     def __unicode__(self):
-        return u"%s(player#%i)" % (self.name, self.id)
+        return u"%s(player#%s)" % (self.name, self.dbid)
 
     # this is required to properly handle attributes and typeclass loading
     _typeclass_paths = settings.PLAYER_TYPECLASS_PATHS
@@ -265,22 +272,39 @@ class PlayerDB(TypedObject):
     _db_model_name = "playerdb" # used by attributes to safely store objects
     _default_typeclass_path = settings.BASE_PLAYER_TYPECLASS or "src.players.player.Player"
 
-        # name property (wraps self.user.username)
+    _name_cache = None
+    # name property (wraps self.user.username)
     #@property
     def name_get(self):
         "Getter. Allows for value = self.name"
-        return self.user.username
+        if not self._name_cache:
+            self._name_cache = self.user.username
+        return self._name_cache
     #@name.setter
     def name_set(self, value):
         "Setter. Allows for player.name = newname"
         self.user.username = value
         self.user.save() # this might be stopped by Django?
+        self._name_cache = value
     #@name.deleter
     def name_del(self):
         "Deleter. Allows for del self.name"
         raise Exception("Player name cannot be deleted!")
     name = property(name_get, name_set, name_del)
     key = property(name_get, name_set, name_del)
+
+    _uid_cache = None
+    #@property
+    def uid_get(self):
+        "Getter. Retrieves the user id"
+        if not self._uid_cache:
+            self._uid_cache = self.user.id
+        return self._uid_cache
+    def uid_set(self, value):
+        raise Exception("User id cannot be set!")
+    def uid_del(self):
+        raise Exception("User id cannot be deleted!")
+    uid = property(uid_get, uid_set, uid_del)
 
     # sessions property
     #@property
@@ -298,9 +322,12 @@ class PlayerDB(TypedObject):
     sessions = property(sessions_get, sessions_set, sessions_del)
 
     #@property
+    _is_superuser_cache = None
     def is_superuser_get(self):
         "Superusers have all permissions."
-        return self.user.is_superuser
+        if self._is_superuser_cache == None:
+            self._is_superuser_cache = self.user.is_superuser
+        return self._is_superuser_cache
     is_superuser = property(is_superuser_get)
 
     #
@@ -359,25 +386,17 @@ class PlayerDB(TypedObject):
                 break
         return cmdhandler.cmdhandler(self.typeclass, raw_string)
 
-    def search(self, ostring, global_search=False, attribute_name=None, use_nicks=False,
-               location=None, ignore_errors=False, player=False):
+    def search(self, ostring, return_character=False):
         """
-        A shell method mimicking the ObjectDB equivalent, for easy inclusion from
-        commands regardless of if the command is run by a Player or an Object.
-        """
+        This is similar to the ObjectDB search method but will search for Players only. Errors
+        will be echoed, and None returned if no Player is found.
 
-        if self.character:
-            # run the normal search
-            return self.character.search(ostring, global_search=global_search, attribute_name=attribute_name,
-                                         use_nicks=use_nicks, location=location,
-                                         ignore_errors=ignore_errors, player=player)
-        if player:
-            # seach for players
-            matches = self.__class__.objects.player_search(ostring)
-        else:
-            # more limited player-only search. Still returns an Object.
-            ObjectDB = ContentType.objects.get(app_label="objects", model="objectdb").model_class()
-            matches = ObjectDB.objects.object_search(ostring, caller=self, global_search=global_search)
-        # deal with results
-        matches = _AT_SEARCH_RESULT(self, ostring, matches, global_search=global_search)
+        return_character - will try to return the character the player controls instead of
+                           the Player object itself. If no Character exists (since Player is
+                           OOC), None will be returned.
+        """
+        matches = self.__class__.objects.player_search(ostring)
+        matches = _AT_SEARCH_RESULT(self, ostring, matches, global_search=True)
+        if matches and return_character and hasattr(matches, "character"):
+           return matches.character
         return matches

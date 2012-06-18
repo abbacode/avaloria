@@ -158,6 +158,30 @@ class Lair(Room):
         
         self.db.available_henchman = []
 
+    def assign_henchman(henchman, structure, quantity, caller):
+        """
+        assign's a given henchman to the given structure.
+        """
+        structure_manager = self.search(self.structure_manager_id, global_search=False)
+        structure_obj = structure_manager.find(structure)
+        if structure_obj:
+            henchmen = structure_obj.db.henchmen
+            if henchman['count'] < quantity:
+                caller.msg("You do not have enough followers to assing that many.")
+                return 
+            if henchman['name'] in henchmen:
+                henchmen[henchman['name']]['count'] += quantity
+            else:
+                henchmen[henchman['name']] = henchman
+                henchmen[henchman['name']]['count'] = quantity
+            structure_obj.after_henchmen_assignment(henchmen[henchman['name']]['count'])
+        else:
+            return
+            
+            
+        
+        
+        
                 
     def display_summary(self, caller):
         structure_manager = self.search(self.structure_manager_id, global_search=False)

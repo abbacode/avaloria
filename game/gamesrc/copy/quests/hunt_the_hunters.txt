@@ -1,0 +1,9 @@
+The slythain are becoming more and more of a threat every day, especially to this small settlement.
+Recently we have been spotting their hunters very close to the camp's perimeter.  We can not let 
+these creatures scout our camp looking for weaknesses in our defenses.  Please, go to the marshlands
+and hunt down the Slythain Hunters.  Bring the fight to them.  Hunt the hunters young adventurer.
+
+    {GObjectives{n:
+        - Kill 5 Slythain Hunters of any age.
+
+Kill the Slythain hunters around the Crossroads.

@@ -33,21 +33,22 @@ class InCombatState(Script):
         cm.defender_queue = cm.defender.db.combat_queue
         cm.db.rounds += 1
         character_balance = cm.attacker.db.attributes['temp_balance']
-        #self.obj.msg("{gNew Round.{n Rounds Fought: %s" % cm.db.rounds)
+        self.obj.msg("{CNew Round.{n Rounds Fought: {G%s{n" % cm.db.rounds)
 
-        if character_balance == 1:
+        if character_balance == 2:
             if self.db.unbalanced_message_sent is not True:
-                self.obj.msg("You feel slightly off balance.")
+                self.obj.msg("{CYou feel slightly off balance.{n")
                 self.db.unbalanced_message_sent = True
             self.obj.unbalance(phase=1)
-        elif character_balance == 0:
+        elif character_balance == 1:
             if self.db.unbalanced_message_sent is not False:
-                self.obj.msg("You are exhausted, any use of combat skills will result in a further, and further decrease in: attack rating, dexterity, and strength.")
+                self.obj.msg("{RYou are exhausted, any use of combat skills will result in a further,\n and further decrease in: attack rating, dexterity, and strength.{n")
                 self.db.unbalanced_message_sent = False
             self.obj.unbalance(phase=2)
-        elif character_balance == -1:
+        elif character_balance ==  0:
             if self.db.unbalanced_message_sent is not True:
-                self.obj.msg("You are so exhausted you are on the brink of passing out.")
+                self.obj.msg("{rYou are so exhausted you are on the brink of passing out. {n")
+                self.db.unbalanced_message_sent = True
             self.obj.unbalance(phase=3)
 
         if self.obj.db.attributes['temp_health'] > 0 and cm.defender.db.attributes['temp_health'] > 0:
@@ -65,17 +66,11 @@ class InCombatState(Script):
             self.obj.death()
     
     def at_stop(self):
-        print "At stop method"
         cm = self.obj.db.cm_id
         if cm is not None:
-            print "Deleting cm."
             cm.delete()
-        else:
-            print "no cm found, i should stop"
 
     def is_valid(self):
-        print "Checking Validity"
-        print "Returning: %s" % self.obj.db.in_combat
         return self.obj.db.in_combat
 
 class UnbalancedState(Script):

@@ -17,7 +17,7 @@ class LootGenerator(Object):
         self.db.rare_weapon_prefixes = ['Masterwork Steel', 'Masterwork Iron', 'Masterwork Steel', 
                                             'Diamond', 'Masterwork Bronze', 'Polished Obsidian', 'Masterwork Carbon Steel', 'Blessed', 'Lightbound' ]
         self.db.art_weapon_prefixes = ['Demon Forged', 'Angel Forged', 'God Forged', 'Demi-god Forged', 'Blessed', 'Cursed', 'Spellbound']
-        self.db.weapon_choices = ['Longsword', 'Axe', 'Broadsword', 'Bastard Sword', 'Dagger', 'Short Sword', 'Polearm', ]
+        self.db.weapon_choices = ['Longsword', 'Axe', 'Broadsword', 'Bastard Sword', 'Dagger', 'Short Sword', 'Polearm', 'Mace', 'Hammer', 'Cudgel' ]
         #armor
         self.db.avg_armor_prefixes = ['Tattered', 'Worn', 'Battlescarred', 'Patched', 'Military Issue', 'Militia Issue', 'Ratty', 'Stained']
         self.db.unc_armor_prefixes = ['Finely Stitched', 'Family Heirloom', 'Standard', 'Finely Crafted', 'Good', 'Fitted']
@@ -36,26 +36,38 @@ class LootGenerator(Object):
    
     def set_armor_type(self, armor, armortype):
         if 'plate' in armortype or 'Plate' in armortype:
-            armor.db.armor_type = 'plate' 
+            armor.db.armor_type = 'heavy armor' 
         elif 'Mithril' in armortype:
-            armor.db.armor_type = 'plate'
+            armor.db.armor_type = 'heavy armor'
         elif 'Leather' in armortype or 'Padded' in armortype:
-            armor.db.armor_type = 'leather'
+            armor.db.armor_type = 'light armor'
         elif 'mail' in armortype or 'Mail' in armortype:
-            armor.db.armor_type = 'mail'
+            armor.db.armor_type = 'medium armor'
         elif 'Cloth' in armortype or 'Robe' in armortype:
-            armor.db.armor_type = 'cloth'
+            armor.db.armor_type = 'light armor'
         return armor
 
     def set_weapon_type(self, weapon, weapontype):
         if 'sword' in weapontype or 'Sword' in weapontype:
             weapon.db.weapon_type = 'sword'
+            weapon.aliases.append('blades')
+            weapon.db.skill_used = 'blades'
         elif 'axe' in weapontype or 'Axe' in weapontype:
             weapon.db.weapon_type = 'axe'
+            weapon.aliases.append('blades')
+            weapon.db.skill_used = 'blades'
         elif 'dagger' in weapontype or 'Dagger' in weapontype:
             weapon.db.weapon_type = 'dagger'
+            weapon.aliases.append('short blades')
+            weapon.db.skill_used = 'blades'
         elif 'polearm' in weapontype or 'Polearm' in weapontype:
             weapon.db.weapon_type = 'polearm' 
+            weapon.aliases.append('heavy')
+            weapon.db.skill_used = "heavy"
+        elif weapontype in [ 'Mace', 'Hammer', 'Cudgel']:
+            weapon.db.weapon_type = 'mace'
+            weapon.aliases.append('bludgeon')
+            weapon.db.skill_used = "bludgeon"
         return weapon
     
     def set_ring_type(self, ring, ringtype):
@@ -67,41 +79,33 @@ class LootGenerator(Object):
 
     def set_armor_rating(self, armor):
         if 'average' in self.db.loot_rating:
-            if 'plate' in armor.db.armor_type:
+            if 'heavy' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(6,9)
-            elif 'mail' in armor.db.armor_type:
+            elif 'medium' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(3,6)
-            elif 'leather' in armor.db.armor_type:
+            elif 'light' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(2,4)
-            elif 'cloth' in armor.db.armor_type:
-                armor.db.armor_rating = random.randrange(1,3)
         elif 'uncommon' in self.db.loot_rating:
-            if 'plate' in armor.db.armor_type:
+            if 'heavy' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(8,14)
-            elif 'mail' in armor.db.armor_type:
+            elif 'medium' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(3,9)
-            elif 'leather' in armor.db.armor_type:
+            elif 'light' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(4,6)
-            elif 'cloth' in armor.db.armor_type:
-                armor.db.armor_rating = random.randrange(3,5)
         elif 'rare' in self.db.loot_rating:
-            if 'plate' in armor.db.armor_type:
+            if 'heavy' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(10,16)
-            elif 'mail' in armor.db.armor_type:
+            elif 'medium' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(5,11)
-            elif 'leather' in armor.db.armor_type:
+            elif 'light' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(6,9)
-            elif 'cloth' in armor.db.armor_type:
-                armor.db.armor_rating = random.randrange(4,7)
         elif 'artifact' in self.db.loot_rating:
-            if 'plate' in armor.db.armor_type:
+            if 'heavy' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(15,20)
-            elif 'mail' in armor.db.armor_type:
+            elif 'medium' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(7,14)
-            elif 'leather' in armor.db.armor_type:
+            elif 'light' in armor.db.armor_type:
                 armor.db.armor_rating = random.randrange(8,11)
-            elif 'cloth' in armor.db.armor_type:
-                armor.db.armor_rating = random.randrange(5,10)
         return armor
 
     def set_weapon_damage(self, weapon):
@@ -113,6 +117,8 @@ class LootGenerator(Object):
             weapon.db.damage = "1d4"
         elif 'polearm' in weapon.db.weapon_type:
             weapon.db.damage = "1d12"
+        elif 'mace' in weapon.db.weapon_type:
+            weapon.db.damage = "1d8"
         return weapon
  
     def set_ring_bonuses(self, ring):
@@ -406,6 +412,10 @@ class MobGenerator(Object):
         self.db.mob_set = []
 
     def generate_mob_type(self):
+        split_level_range = self.location.db.zone_level.split(';')
+        low = int(split_level_range[0])
+        high = int(split_level_range[1])
+        level = random.randrange(low, high)
         if 'crypt' in self.db.dungeon_type:
             self.db.ratings = ['average', 'strong']
             self.db.skeleton_prefixes = [ 'Charred', 'Darkbone', 'Earthen', 'Frail']
@@ -429,7 +439,7 @@ class MobGenerator(Object):
                 mob.desc = copyreader.read_file("gamesrc/copy/mobs/%s_%s.txt" % (prefix.lower(), mob_name.lower()))
             except:
                 mob.desc = "Placeholder, no desc written"
-            mob.db.level = self.location.db.level
+            mob.db.attributes['level'] = level
             mob.db.rating = random.choice(self.db.ratings)
             mob.db.is_kos = True
             mob.db.mob_type = 'undead'
@@ -449,9 +459,10 @@ class MobGenerator(Object):
             mob_name = "%s %s" % (prefix, mob_name_original)
             mob = create.create_object("game.gamesrc.objects.world.mob.Mob", key="%s" % mob_name, location=self.location)
             mob.aliases = ['kill_dungeon_mobs','mob_runner', 'irregular_runner', 'ruins_mobs', 'kill_ruins_mobs', 'kill_%s' % mob_name_original.lower()]
-            mob.db.level = self.location.db.level
+            mob.db.attributes['level'] = level
             mob.db.rating = random.choice(self.db.ratings)
             mob.db.mob_type = '%s' % mob_name_original.lower()
+            mob.db.is_kos= True
         elif 'marshlands' in self.db.dungeon_type:
             self.db.ratings = ['average', 'strong', 'hero']
             self.db.slythain_prefixes = [ 'Young', 'Mature', 'Adolescent' ]
@@ -480,8 +491,6 @@ class MobGenerator(Object):
             mob.db.deity = deity
             mob.desc = desc
             mob.aliases = ['kill_%s' % deity, 'kill_%s' % mob_name.lower(), 'mob_runner', 'irregular_runner','kill_marshlands', 'kill_%s' % mob_name_original.lower(), 'marshlands_mobs']
-            split = self.db.level.split(';')
-            level = random.randrange(int(split[0]), int(split[1]))
             mob.db.attributes['level'] = level
             mob.db.rating = random.choice(self.db.ratings)
             mob.db.is_kos = True
@@ -504,9 +513,11 @@ class MobGenerator(Object):
             
     def generate_mob_set(self, number_of_mobs):
         mob_set = []
+        print number_of_mobs
         for i in range(0, number_of_mobs):
             mob = self.generate_mob_type()
             mob_set.append(mob)
+            print mob
         return mob_set
 
     def generate_boss_mob(self):
@@ -572,6 +583,7 @@ class DungeonGenerator(Object):
             pass
    
     def generate_zone_manager(self):
+        self.db.dungeon_type_picked = random.choice(self.db.dungeon_types)
         zone = create.create_object('game.gamesrc.objects.world.rooms.Zone', key="%s Zone Manager" % self.db.dungeon_type_picked.title()) 
         zone.db.zone_type = self.db.dungeon_type_picked
         mg = zone.db.mob_generator
@@ -582,9 +594,16 @@ class DungeonGenerator(Object):
         zone.db.is_dungeon = True
         zone.db.quest_items = ['Deity Seal']
         self.db.zone = zone
+        self.refresh_level()
+        zone.db.zone_level = "%s;%s" % (self.db.level, (self.db.level + 3))
 
     def update_zone_manager(self, zone):
         self.db.zone = zone
+
+    def refresh_level(self):
+        lair = self.location.location
+        owner = self.search(lair.db.owner, global_search=True)
+        self.db.level = owner.db.attributes['level']
         
     def generate_rooms(self):
         """
@@ -617,7 +636,7 @@ class DungeonGenerator(Object):
         dungeon = []
         #first we build a list of rooms.
         for i in range(self.db.number_of_rooms):
-            room = create.create_object("game.gamesrc.objects.world.dungeons.DungeonRoom", key = "%s - Room %s" % (self.db.dungeon_type_picked, i))
+            room = create.create_object("game.gamesrc.objects.world.rooms.DungeonRoom", key = "%s - Room %s" % (self.db.dungeon_type_picked, i))
             self.generate_room_texts(room)
             room.db.level = self.db.level
             room.db.dungeon_type = self.db.dungeon_type_picked

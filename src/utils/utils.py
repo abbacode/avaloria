@@ -4,8 +4,8 @@ General helper functions that don't fit neatly under any given category.
 They provide some useful string and conversion methods that might
 be of use when designing your own game.
 
-
 """
+
 from inspect import ismodule
 import os, sys, imp, types, math
 import textwrap
@@ -243,9 +243,8 @@ def get_evennia_version():
     Check for the evennia version info.
     """
     try:
-        with open(settings.BASE_PATH + os.sep + "VERSION") as f:
-            return "%s-r%s" % (f.read().strip(), os.popen("hg id -i").read().strip())
-        return
+        f = open(settings.BASE_PATH + os.sep + "VERSION", 'r')
+        return "%s-r%s" % (f.read().strip(), os.popen("hg id -i").read().strip())
     except IOError:
         return "Unknown version"
 
@@ -459,7 +458,14 @@ def run_async(async_func, at_return=None, at_err=None):
     Use this function with restrain and only for features/commands
     that you know has no influence on the cause-and-effect order of your
     game (commands given after the async function might be executed before
-    it has finished).
+    it has finished). Accessing the same property from different threads can
+    lead to unpredicted behaviour if you are not careful (this is called a
+    "race condition").
+
+    Also note that some databases, notably sqlite3, don't support access from
+    multiple threads simultaneously, so if you do heavy database access from
+    your async_func under sqlite3 you will probably run very slow or even get
+    tracebacks.
 
     async_func() - function that should be run asynchroneously
     at_return(r) - if given, this function will be called when async_func returns
@@ -490,7 +496,7 @@ def check_evennia_dependencies():
     """
 
     # defining the requirements
-    python_min = '2.5'
+    python_min = '2.6'
     twisted_min = '10.0'
     django_min = '1.2'
     south_min = '0.7'

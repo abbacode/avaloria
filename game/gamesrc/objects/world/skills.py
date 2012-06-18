@@ -227,7 +227,7 @@ class TrainingBook(Object):
     def at_object_creation(self):
         self.db.desc = "An ornate leather tome, with intricate gold embossed designs.  While touching the book, you can sense it wants you to open it."
         self.db.skill = None
-        self.db.cost = None
+        self.db.value = None
         self.db.level_requirement = None
     
     def on_use(self, caller):
@@ -294,7 +294,10 @@ class TrainingBook(Object):
         caller.db.manager = manager
         self.delete()
 
-        
+"""
+BEGIN SKILL CLASS DECLARATION
+"""
+ 
 class Kick(Skill):
 
     def at_object_creation(self):
@@ -327,7 +330,7 @@ class Kick(Skill):
                 damage = self.get_effect()
                 target.take_damage(damage)
                 target.db.attributes = character_attributes
-                caller.location.msg_contents("{b%s kicks %s ferociously!{n" % (caller.name, target.name), exclude=caller)
+                caller.location.msg_contents("{b%s kicks %s ferociously!{n" % (caller.name, target.name), exclude=[caller])
                 target.msg("{b%s{n kicks you for {r%s{n points of damage!" % (caller.name, damage))
             else:
                 caller.location.msg_contents("{b%s's kick misses wildly!{n" % caller.name)
@@ -442,11 +445,185 @@ class Toughness(Skill):
         character.db.percentages = percentages
         character.refresh_attributes(health_and_mana=False)
 
+class Dodge(Skill):
+    """
+    Dodge is a percentage based buff to your innate dodge %.
+    """
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "You have honed your dexterity and can dodge attacks."
+        self.db.effect = "buff dodge by a percentage"
+        self.db.character = None
+        self.db.passive = True
+
+    def update_attributes(self):
+        character = self.db.character
+        percentages = character.db.percentages
+        modifier = self.db.rank_modifier
+        modifier += .01
+        self.db.rank_modifier = modifier
+        percentages['dodge'] = modifier + .05
+        character.db.percentages = percentages
 
 
+class Blades(Skill):
+    """
+    Blades represents your innate skill with bladed weapons.
+    """
 
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "Your innate ability to use bladed weaponry."
+        self.db.effect = "weapon failure/success rate"
+        self.db.character = None
+        self.db.passive = True
+        self.db.rank_modifier = .45
+    
+    def update_attributes(self):
+        character = self.db.character
+        percentages = character.db.percentages
+        modifier = self.db.rank_modifier
+        modifier += .01
+        self.db.rank_modifier = modifier
+        percentages['blades'] = modifier
+        character.db.percentages = percentages
     
         
+class Heavy(Skill):
+    """
+    Heavy represents your innate skill with heavy 2 handed weaponry.
+    """
+
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "Your innate ability to use heavy (2 handed) weaponry."
+        self.db.effect = "weapon failure/success rate"
+        self.db.character = None
+        self.db.passive = True
+        self.db.rank_modifier = .45
+             
+    def update_attributes(self):
+        character = self.db.character
+        percentages = character.db.percentages
+        modifier = self.db.rank_modifier
+        modifier += .01
+        self.db.rank_modifier = modifier
+        perentages['heavy'] = modifier
+        character.db.percentages = percentages
+
+class Bludgeon(Skill):
+    """
+    Represents your innate skills with Bludgeoning weaponry.
+    """
+    
+    def at_object_creations(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "Your innate ability to use Bludgeoning weaponry."
+        self.db.effect = "weapon failure/success rate"
+        self.db.character = None
+        self.db.passive = True
+        self.db.rank_modifier = .45
+        
+    def update_attributes(self):
+        character = self.db.character
+        percentages = character.db.percentages
+        modifier = self.db.rank_modifier
+        modifier += .01
+        self.db.rank_modifier = modifier
+        percentages['bludgeon'] = modifier
+        character.db.percentages = percentages
+
+class LightArmor(Skill):
+    """
+    Represents your innate ability to use light armor.
+    """
+    
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "Your innate ability to use light armor (Leather, Scale)"
+        self.db.effect = "armor exhaustion chance"
+        self.db.character = None
+        self.db.passive = True
+        self.db.rank_modifier = .50
+
+    def update_attributes(self):
+        character = self.db.character
+        percentages = character.db.percentages
+        modifier = self.db.rank_modifier
+        modifier += .01
+        self.db.rank_modifier = modifier
+        percentages['light_armor'] = modifier
+        character.db.percentages = percentages
+
+class MediumArmor(Skill):
+    """
+    Represents your innate ability to use Medium Armor.
+    """
+    
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "Your innate ability to use medium armor (chain mail, banded mail)."
+        self.db.effect = "armor exhaustion chance"
+        self.db.character = None
+        self.db.passive = True
+        self.db.rank_modifier = .50
+        
+    def update_attributes(self):
+        character = self.db.character
+        percentages = character.db.percentages
+        modifier = self.db.rank_modifier
+        modifier += .01
+        self.db.rank_modifier = modifier
+        percentages['medium_armor'] = modifier
+        character.db.percentages = percentages
+
+class HeavyArmor(Skill):
+    """
+    Represents your innate ability to use heavy armor.
+    """
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "Your innate ability to use heavy armor (plate, half plate)."
+        self.db.effect = "armor exhaustion chance"
+        self.db.character = None
+        self.db.passive = True
+        self.db.rank_modifier = .50
+       
+    def update_attributes(self):
+        character = self.db.character
+        percentages = character.db.percentages
+        modifier = self.db.rank_modifier
+        modifier += .01
+        self.db.rank_modifier = modifier
+        percentages['heavy_armor'] = modifier
+        character.db.percentages = percentages
+
+
+class Block(Skill):
+    """
+    Represents your innate ability to block melee hits with shield.
+    """
+    
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "Your innate ability to block incomming melee attacks"
+        self.db.effect = "block chance"
+        self.db.character = None
+        self.db.passive = True
+        self.db.rank_modifier = .15
+        
+    def update_attributes(self):
+        character = self.db.character
+        percentages = character.db.percentages
+        modifier = self.db.rank_modifier
+        modifier += 0.01
+        self.db.rank_modifier = modifier
+        percentages['block'] = modifier
+        character.db.percentages = percentages
+      
+
+    
+    
 class Strike(Skill):
     """
     A quick, efficient melee strike.  Requires a melee weapon to use. Quite damaging at

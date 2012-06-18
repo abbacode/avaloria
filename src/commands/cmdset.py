@@ -222,7 +222,7 @@ class CmdSet(object):
         Returns True if this cmdset contains the given command (as defined
         by command name and aliases). This allows for things like 'if cmd in cmdset'
         """
-        return any(cmd == othercmd for cmd in self.commands)
+        return othercmd in self.commands
 
     def __add__(self, cmdset_b):
         """
@@ -392,7 +392,7 @@ class CmdSet(object):
         """
         names = []
         if caller:
-            [names.extend([cmd.key] + cmd.aliases) for cmd in self.commands if cmd.access(caller)]
+            [names.extend(cmd._keyaliases) for cmd in self.commands if cmd.access(caller)]
         else:
-            [names.extend([cmd.key] + cmd.aliases) for cmd in self.commands]
+            [names.extend(cmd._keyaliases) for cmd in self.commands]
         return names

@@ -3,6 +3,7 @@ import time
 from collections import deque
 from prettytable import PrettyTable
 from ev import Object, Character, utils, create_object
+from src.objects.models import ObjAttribute
 from game.gamesrc.objects.world.items import Item
 from game.gamesrc.scripts.world_scripts import character_class_scripts as cscripts
 from game.gamesrc.scripts.world_scripts import combat_scripts as combat_scripts
@@ -29,8 +30,8 @@ class CharacterClass(Character):
         attributes['temp_mana'] = self.db.attributes['mana']
         attributes['attack_rating'] = self.db.attributes['strength'] / 5
         attributes['armor_rating'] = (self.db.attributes['dexterity'] / 5) + 10
-        attributes['balance'] = 3 
-        attributes['temp_balance'] = 3
+        attributes['balance'] = 6
+        attributes['temp_balance'] = 6
         attributes['attribute_points'] = 20
         attributes['gold'] = 0
         attributes['experience_made'] = 0
@@ -49,7 +50,7 @@ class CharacterClass(Character):
         attributes['temp_dexterity'] = self.db.attributes['dexterity']
         attributes['temp_strength'] = self.db.attributes['strength']
         self.db.factions = { 'slyth': 0, 'warden': 0, 'unknowns': 0, 'karith': 0, 'legion': 0, 'kaylynne': 0, 'molto': 0 }
-        self.db.percentages = { 'constitution_bonus': 0.0, 'spell_damage_bonus': 0.0, 'melee_damage_bonus': 0.0, 'spell_fizzle_chance': 0.25, 'spell_buff_bonus': 0.0 }
+        self.db.percentages = { 'dodge': 0.05, 'block': 0.0, 'heavy armor': 0.10, 'medium armor': 0.10, 'light armor': 0.10, 'bludgeon': 0.10, 'blades': 0.10, 'heavy': 0.10, 'constitution_bonus': 0.0, 'spell_damage_bonus': 0.0, 'melee_damage_bonus': 0.0, 'spell_fizzle_chance': 0.25, 'spell_buff_bonus': 0.0 }
         self.db.effects = {}
         self.db.group = None
         self.db.combat_queue = deque([])
@@ -64,7 +65,7 @@ class CharacterClass(Character):
         self.db.target = None
         #player item creation
         lair = create_object("game.gamesrc.objects.world.lair.Lair", key="%s's Lair" % self.key)
-        lair.db.owner = self.dbref
+        lair.db.owner = self
         self.db.lair = lair
         self.db.lair_id = lair.dbref
         self.home = lair
@@ -96,12 +97,24 @@ class CharacterClass(Character):
         self.db.spellbook = spellbook
         self.db.skill_log = skill_log
         self.db.quest_log = questlog
-        #effect_manager = create.create_object("game.gamesrc.objects.world.spells.EffectManager", key="%s_effect_manager" % self.name, location=lair)
-        #effect_manager.db.model = self
-        #self.db.effect_manager = effect_manager
+        #friends list is atteched to the player
         player_lair_exit = create_object("game.gamesrc.objects.world.rooms.PlayerLairExit", location=lair)
 
+    """
+    def rebuild_model(self):
+      #  Build a new character model to grab in new things that have been coded.
+        nc = create_object("game.gamesrc.objects.world.character.CharacterClass")
+        valid_attributes = [(attr.key, attr.value) attr for attr in ObjAttribute.objects.filter(db_obj=nc)]
+        self_attributes = [(attr.key, attr.value) attr for attr in ObjAttribute.objects.filter(db_obj=self)]
+        valid_attribute_num = len(valid_attributes)
+        my_attribute_num = len(self_attributes)
+        if valid_attribute_num != my_attribute_num:
+            print "Found Character model changes, initiating changes."
+            for attribute in valid_attributes:
+                if attribute[0] not in self.attributes:
+                new_attribute = ObjAttribute(db_obj=self, value=attribute
 
+    """
     def character_summary(self):
         """
         Detailed output of a character.  The character sheet.
@@ -109,21 +122,16 @@ class CharacterClass(Character):
         pass
 
     def at_object_receive(self, moved_obj, source_location):
-        quest_log = self.db.quest_log
-        if moved_obj.db.quest_item is not False:
-            quest_log.check_quest_flags(mob=None, item=moved_obj)
-        if 'rare' in moved_obj.db.lootset:
-            quest_log.check_quest_flags(mob=None, item=moved_obj)
+        questlog = self.db.quest_log
+        if moved_obj.db.quest_item:
+            questlog.check_quest_flags(mob=None, item=moved_obj)
+        try:
+            if 'rare' in moved_obj.db.lootset:
+                questlog.check_quest_flags(mob=None, item=moved_obj)
+        except AttributeError:
+            pass
            
     def at_post_login(self): 
-        """
-#        tutorial_npc = self.search("Weathered Old Man", global_search=False)
- #       if tutorial_npc is None:
-  #          tutorial_npc = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Weathered Old Man", location=self.db.lair)
-   #         tutorial_npc.db.desc = "An old man whose face is weathered from years, upon years of life.  His hair is white, as are his eyes."
-    #        tutorial_npc.db.target = self
-     #       tutorial_npc.scripts.add("game.gamesrc.scripts.world_scripts.npc_scripts.TutorialNpc")
-        """
         if self.db.in_combat is True:
             self.db.in_combat = False
             self.scripts.validate()
@@ -136,13 +144,6 @@ class CharacterClass(Character):
             self.cmdset.add(spells_cmdset.SpellsCmdSet)
             self.scripts.validate()
             self.scripts.add(cscripts.CharacterSentinel)
-            #self.scripts.add(cscripts.CharacterBuff)
-        else:
-#            self.scripts.add(cscripts.FirstLogin)
-            self.scripts.add(cscripts.CharacterSentinel)
-        #    self.scripts.add(cscripts.CharacterBuff)
-        #prelogout_loc = self.search(self.db.prelogout_location, global_search=True)
-        #self.location = prelogout_loc
 
     def at_disconnect(self):
         self.cmdset.clear()
@@ -160,6 +161,7 @@ class CharacterClass(Character):
         self.cmdset.add(structure_cmdset.BuildCmdSet)
         self.cmdset.add(skills_cmdset.CombatSkillCmdSet)
         self.cmdset.add(spells_cmdset.SpellsCmdSet)
+        self.scripts.add(cscripts.CharacterSentinel)
 
 
     def refresh_attribute(self, attributes):
@@ -212,6 +214,30 @@ class CharacterClass(Character):
         attack_roll = roll + self.db.attributes['temp_attack_rating']
         return attack_roll
 
+    def armor_unbalance_check(self):
+        armor = self.db.equipment['armor']
+        if armor is None:
+            return 
+        skillmanager = self.db.skill_log
+        armor_type = armor.db.armor_type
+        if armor_type.title() not in skillmanager.skills.keys():
+            armor_per = self.db.percentages[armor_type]
+            rn = random.random()
+            print "Armor Balance check: ==> roll: %s, threshold %s" % (rn, armor_per)
+            if rn > armor_per:
+                self.msg("{cYou are wearing armor you are not proficient in, causing loss of balance{n")
+                if self.db.attributes['temp_balance'] == 0:
+                    return
+                self.db.attributes['temp_balance'] -= 1
+        else:
+            return 
+
+    def do_glancing_blow(self):
+        damage = self.get_damage()
+        damage = damage / 2
+        self.msg("{cYou are using a weapon you are not proficient in, causing glancing blows.")
+        return damage
+
     def get_damage(self):
         """
         We try to get weapon dmg, if that is none then we default to our fists
@@ -232,10 +258,10 @@ class CharacterClass(Character):
             damage_roll = random.randrange(1,4)
 
         if percentages['melee_damage_bonus'] != 0.0:
-            self.msg("{mDEBUG: Damage is: %s{n" % damage_roll)
+            #self.msg("{mDEBUG: Damage is: %s{n" % damage_roll)
             increase_in_damage = int(damage_roll * percentages['melee_damage_bonus']) + 1
             damage_roll = damage_roll + increase_in_damage
-            self.msg("{mDEBUG: Damage after increase: %s{n" % damage_roll)
+            #self.msg("{mDEBUG: Damage after increase: %s{n" % damage_roll)
             
         return damage_roll
 
@@ -321,6 +347,56 @@ class CharacterClass(Character):
     End combat
     Begin setters used in menus.
     """ 
+    def set_weapon_skill(self, skill):
+        """
+        Set which weapon we specialize in.
+        """
+        manager = self.db.skill_log
+        if 'blades' in skill:
+            skill_object = create_object("game.gamesrc.objects.world.skills.Blades", key="blades")
+            skill_object.db.character = self
+            manager.add_item(skill_object.name, skill_object)
+            self.db.percentages['blades'] += skill_object.db.rank_modifier
+            self.msg("You have become proficient in bladed weaponry.")
+        elif 'heavy' in skill:
+            skill_object = create_object("game.gamesrc.objects.world.skills.Heavy", key="heavy")
+            skill_object.db.character = self
+            manager.add_item(skill_object.name, skill_object)
+            self.db.percentages['heavy'] += skill_object.db.rank_modifier
+            self.msg("You have become proficient in heavy weaponry.")
+        elif 'bludgeon' in skill:
+            skill_object = create_object("game.gamesrc.objects.world.skills.Bludgeon", key="bludgeon")
+            skill_object.db.character = self
+            manager.add_item(skill_object.name, skill_object)
+            self.db.percentages['bludgeon'] += skill_object.db.rank_modifier
+            self.msg("You have become proficient in bludgeoning weaponry.")
+
+
+    def set_armor_skill(self, skill):
+        """
+        Set armor spec.
+        """
+        manager = self.db.skill_log
+        if 'light' in skill:
+            skill_object = create_object("game.gamesrc.objects.world.skills.LightArmor", key="Light Armor")
+            skill_object.db.character = self
+            manager.add_item(skill_object.name, skill_object)
+            self.db.percentages['light armor'] += skill_object.db.rank_modifier
+            self.msg("You have become proficient in Light Armor.")
+        elif 'medium' in skill:
+            skill_object = create_object("game.gamesrc.objects.world.skills.MediumArmor", key="Medium Armor")
+            skill_object.db.character = self
+            manager.add_item(skill_object.name, skill_object)
+            self.db.percentages['medium armor'] += skill_object.db.rank_modifier
+            self.msg("You have become proficient in Medium Armor.")
+        elif 'heavy' in skill:
+            skill_object = create_object("game.gamesrc.objects.world.skills.HeavyArmor", key="Heavy Armor")
+            skill_object.db.character = self
+            manager.add_item(skill_object.name, skill_object)
+            self.db.percentages['heavy armor'] += skill_object.db.rank_modifier
+            self.msg("You have become proficient in Heavy Armor.")
+               
+            
 
     def set_race(self, race):
         attributes = self.db.attributes
@@ -603,72 +679,7 @@ class CharacterClass(Character):
         self.msg(string)
         if not_equipped != "":
             self.msg("{CSlots unused: [ {n%s{C ]{n" % not_equipped)
- 
-    def display_attributes(self, feedback=True):
-        table = ['Name', 'Race', 'Gender', 'Level', 'Strength', 'Intelligence', 'Constitution', 'Dexterity', 'Health', 'Mana']
-        self.easy_display(table, "Attributes")
     
-    def display_stats(self, feedback=True):
-        table = ['Attack_Rating', 'Temp_Armor_Rating', 'Experience_made', 'Experience_needed', 'Gold', 'total_exp_made']
-        self.easy_display(table, "Other Stats")
-    
-    def display_equipped(self, feedback=True):
-        table = ['Armor', 'Weapon', 'Left Finger', 'Right Finger', 'Shield', 'Trinket', 'Back',]
-        self.easy_display(table, "Equipment")
-   
-    def easy_display(self, table, title):
-        if 'Skills' in title:
-            m ='{{c{0:<9} {1:<32} {2:<10} {3:<10}{{n'.format("Name", "Description", "Damage", "Level")
-            self.msg(m)
-        elif 'Other Stats' in title:
-            m = '{{c{0:<22} {1:<15}{{n'.format("Statistic", "Value")
-            self.msg(m)
-        elif 'Attributes' in title:
-            m = '{{c{0:<22} {1:<15}{{n'.format("Attribute", "Value")
-            self.msg(m)
-        elif 'Equipment' in title:
-            m = '{{c{0:<22} {1:<15}{{n'.format("Slot", "Item")
-            self.msg(m)
-            
-        m = "{C--------------------------------------------------------------------{n"
-        self.msg(m)
-        m = ""
-        for field in table:
-            item = field
-            if 'Skills' in title:
-                if len(self.db.skills) < 1:
-                    self.msg("You have not trained any skills.")
-                    return
-                pass
-            else:
-                field = field.strip()
-                field_name = field.lower()
-                field += ":"
-            if 'Equipment' in title:
-                m += '{{c{0:<15}{{n {{C|{{n  {1:<25}{{C|{{n\n'.format(field.title(), self.db.equipment[field_name])
-            else:
-                if '_' in field:
-                    split_list = field.split('_')
-                    proper_field = ' '.join(split_list)
-                    if 'Temp' in proper_field:
-                        split_list = proper_field.split('Temp')
-                        proper_field = ' '.join(split_list)
-                        proper_field = proper_field.lstrip()
-                else:
-                    proper_field = field
-                try:
-                    m += '{{c{0:<22}{{n {{C|{{n  {1:<10}{{C|{{n\n'.format(proper_field.title(), self.db.attributes[field_name].title())
-                except AttributeError:
-                    try:
-                        m += '{{c{0:<22}{{n {{C|{{n  {1:<10}{{C|{{n\n'.format(proper_field.title(), self.db.attributes['temp_%s' % field_name])
-                    except KeyError:
-                        m += '{{c{0:<22}{{n {{C|{{n  {1:<10}{{C|{{n\n'.format(proper_field.title(), self.db.attributes[field_name])
-                        
-                    
-        self.msg(m)
-        self.msg("{C--------------------------------------------------------------------{n")
-            
-           
     def add_attribute_points(self, attribute, points):
         attributes = self.db.attributes
         if points > attributes['attribute_points']:
@@ -683,38 +694,6 @@ class CharacterClass(Character):
         self.display_attributes()
          
     def create_attribute_menu(self, caller):
-        """
-        attribute_points = int(self.db.attributes['attribute_points'])  
-        if int(to_add) > attribute_points:
-            self.msg("{rNot enough Attribute Points to do that! (requested: %s, you have:%s){n" % (to_add,self.db.attribute_points))
-            return
-        attr = attr.strip()
-        attributes = self.db.attributes
-        for attribute in attributes:
-            if attr in attribute:
-                attributes[attribute] = attributes[attribute] + int(to_add)
-        if 'constitution' in attr or 'con' in attr:
-            attributes['health'] = (attributes['constitution'] * 2 ) + 25
-            attributes['temp_health'] = attributes['constitution'] * 2
-        elif 'intelligence' in attr or 'int' in attr:
-            attributes['mana'] = attributes['intelligence'] * 2
-            attributes['temp_mana'] = attributes['intelligence'] * 2
-        elif 'dexterity' in attr or 'dex' in attr:
-            attributes['armor_rating'] = attributes['dexterity'] / 5
-        elif 'strength' in attr or 'str' in attr:
-            attributes['attack_rating'] = attributes['strength'] / 8
-        else:
-            self.msg("{rThe attribute you passed: %s, was invalid.{n" % attr)
-            return
-        self.db.attributes = attributes
-        
-        int_ap = int(self.db.attributes['attribute_points']) - int(to_add)
-        attributes['attribute_points'] = int_ap
-        self.db.attributes = attributes
-        m = "{b%s points added to %s.  Attribute Points Remaining: %s{n" % (to_add, attr, self.db.attributes['attribute_points'])
-        self.msg(m)
-        self.display_attributes()
-        """
         attributes = self.db.attributes
         nodes = []
         welcome_text = """
@@ -772,6 +751,7 @@ Which attributes would you like to improve?
         merchant_object = self.search(merchant, global_search=False)
         item = merchant_object.search(item, global_search=False)
         self.spend_gold(item.value)
+        print "triggering merchant.sell_item"
         merchant_object.sell_item(item, self)
             
     def level_skill(self, skill):
@@ -843,17 +823,13 @@ Which attributes would you like to improve?
                 split_list = quest_object.prereq.split(';')
                 for item in split_list:
                     item = item.strip()
-                    try:
-                        completed_keys = manager.db.completed_quests.keys()
-                        completed_keys.index(item.title())
+                    if item.title() in [key.title() for key in manager.db.completed_quests.keys()]:
                         found = 1
-                    except Exception:
-                        continue
                 if found != 1:
                     self.msg("{RPre req not met.{n")
                     return
             else:
-                if quest_object.prereq in manager.db.completed_quests.keys():
+                if quest_object.prereq.title() in [key.title() for key in manager.db.completed_quests.keys()]:
                     pass
                 else:
                     self.msg("{RPre requisite not met.{n")

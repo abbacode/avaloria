@@ -35,7 +35,17 @@ herbalist.db.quest_giver = False
 herbalist.db.trainer = False
 herbalist.db.merchant = True
 herbalist.db.merchant_type = 'potions'
- 
+
+skill_merchant = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Grisoze Farseet", location=crossroads)
+desc = "Grisoze is a very old man, who is quite obviously blind as a bat.  His hair is a mop of frizzy white curls.\n"
+desc += "His skin is a dark hue, as if he has spent every day of his life in the sun.  As you approach him, he looks\n"
+desc += "at you warmly and say, \"Well what do we have here? ...hah!\".  Oh he's also a bit mad."
+skill_merchant.desc = desc
+skill_merchant.db.quest_giver = False
+skill_merchant.db.trainer = False
+skill_merchant.db.merchant = True
+skill_merchant.db.merchant_type = "skills"
+
 quest_npc = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Julianne Veriandes", location=crossroads)
 desc = "This woman has dirt smudged on her face and through her hair, she has a look of panic painted across\n"
 desc += "her fair skinned face. Her red hair is matted and frizzy.  As you look at her she waves you down \n"
@@ -43,7 +53,7 @@ desc += "quite frantically."
 quest_npc.aliases = [quest_npc.key]
 quest_npc.name = "{Y!{n %s" % quest_npc.key
 quest_npc.desc = desc
-quest_npc.db.quests = ['An Item Of Importance','Have You Met The Slythain?', 'Have You Met The Green Warden?'] 
+quest_npc.db.quests = ['An Item Of Importance','Have You Met The Slythain?', 'Have You Met The Green Warden?', 'Hunting The Hunters'] 
 quest_npc.db.merchant = False
 quest_npc.db.trainer = False
 quest_npc.db.quest_giver = True
@@ -84,52 +94,8 @@ m += "and has begun his assertion, or attempt at assertion of power.  The neares
 m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
 m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {Cto learn more."
 aspect_of_karith.db.dialogue = { 'greeting': m }
-aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
+aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Grounds', 'A Few Good Men', 'Improve Defenses', 'Structures Need Love Too']
 aspect_of_karith.db.merchant = False
 aspect_of_karith.db.trainer = False
 aspect_of_karith.db.quest_giver = True
 
-
-aspect_of_karith = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Aspect of Slyth", location=storage)
-desc = "This transluscent visage shows an old man, hunched over with a cane.  His white beard flows to the floor.  He looks upon you kindly."
-aspect_of_karith.db.desc = desc
-m = "Welcome young one, I have been expecting you to awake for some time now.  Avaloria is in grave danger young hero.\n"
-m += "Currently the spiritual world is at war.  The newest God of our realm, Slyth has seemingly grown ever powerful\n"
-m += "and has begun his assertion, or attempt at assertion of power.  The nearest lands are those of the Green Warden\n"
-m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
-m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {mto learn more."
-aspect_of_karith.db.dialogue = { 'greeting': m }
-aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
-aspect_of_karith.db.merchant = False
-aspect_of_karith.db.trainer = False
-aspect_of_karith.db.quest_giver = True
-
-
-aspect_of_karith = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Aspect of Kaylynne", location=storage)
-desc = "This transluscent visage shows an old man, hunched over with a cane.  His white beard flows to the floor.  He looks upon you kindly."
-aspect_of_karith.db.desc = desc
-m = "Welcome young one, I have been expecting you to awake for some time now.  Avaloria is in grave danger young hero.\n"
-m += "Currently the spiritual world is at war.  The newest God of our realm, Slyth has seemingly grown ever powerful\n"
-m += "and has begun his assertion, or attempt at assertion of power.  The nearest lands are those of the Green Warden\n"
-m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
-m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {mto learn more."
-aspect_of_karith.db.dialogue = { 'greeting': m }
-aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
-aspect_of_karith.db.merchant = False
-aspect_of_karith.db.trainer = False
-aspect_of_karith.db.quest_giver = True
-
-
-aspect_of_karith = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Aspect of the Green Warden", location=storage)
-desc = "This transluscent visage shows an old man, hunched over with a cane.  His white beard flows to the floor.  He looks upon you kindly."
-aspect_of_karith.db.desc = desc
-m = "Welcome young one, I have been expecting you to awake for some time now.  Avaloria is in grave danger young hero.\n"
-m += "Currently the spiritual world is at war.  The newest God of our realm, Slyth has seemingly grown ever powerful\n"
-m += "and has begun his assertion, or attempt at assertion of power.  The nearest lands are those of the Green Warden\n"
-m += "so naturally those are the first he is attacking.  You play a very special part in all of this.  A very special\n"
-m += "part indeed.  I have some tasks for you.  Ask me about {Gquests{n {mto learn more."
-aspect_of_karith.db.dialogue = { 'greeting': m }
-aspect_of_karith.db.quests = ['Unnatural Things', 'Seal of Seals', 'Dark Places', 'Construct a Mine', 'Construct a Training Ground', 'A Few Good Men']
-aspect_of_karith.db.merchant = False
-aspect_of_karith.db.trainer = False
-aspect_of_karith.db.quest_giver = True

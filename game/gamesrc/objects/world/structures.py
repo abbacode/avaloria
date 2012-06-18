@@ -1,4 +1,5 @@
 from math import ceil
+from prettytable import PrettyTable
 from src.utils import create, utils
 from ev import Object
 
@@ -20,6 +21,7 @@ class Structure(Object):
         self.db.attribute_bonuses = {'strength': 0, 'dexterity': 0, 'constitution': 0, 'intelligence': 0}
         self.db.lair_attribute_bonuses = {}
         self.db.skill_bonuses = {}
+        self.db.assigned_henchmen = {}
 
     """
     Upkeep related functions
@@ -116,7 +118,8 @@ class Structure(Object):
         character_attributes = character.db.attributes
         lair_attributes = character.db.lair.db.attributes
         attribute_list = self.apply_attribute_bonuses(character_attributes, lair_attributes)
-        print attribute_list
+        quest_manager = character.db.quest_log
+        quest_manager.check_quest_flags(item=manager)
         character.db.attributes = attribute_list[0]
         character.db.lair.db.attributes = attribute_list[1]
         character.refresh_attributes()
@@ -178,20 +181,22 @@ class Structure(Object):
         return [character_attributes, lair_attributes]
             
     def at_inspect(self, looker):
-        msg="""
-{bStructure Inspection Details:{n
-------------------------------------
 
-Name: %s
-Level: {b%s{n
-Total Gold Spent: {y%s{n
-Gold to Level: {y%s{n
-Gold spent towards level: {y%s{n
-Gold Per Day: {y%s{n
-Attribute Bonuses:
-%s
-------------------------------------
-        """ % (self.name, self.db.level, self.db.total_gold_spent, self.db.gold_to_level, self.db.gold_put_in, self.db.gold_per_day, self.db.attribute_bonuses)
+        table = PrettyTable()
+        attr_string = ""
+        for ab in self.db.attribute_bonuses:
+            attr_string += "%s: + %s\n" % (ab, self.db.attribute_bonuses[ab])
+
+        table._set_field_names(["Structure Attribute", "Value"])
+        table.align['Structure Attribute'] = "r"
+        table.add_row(["Name:", '{n%s' % self.name])
+        table.add_row(["Level:", "%s" % self.db.level])
+        table.add_row(["Total Gold Spent:", "%s" % self.db.total_gold_spent])
+        table.add_row(["Gold Until Level:", "%s" % self.db.gold_to_level])
+        table.add_row(["Gold Spent towards next Level:", "%s" % self.db.gold_put_in])
+        table.add_row(["Gold Generated Per day:", "%s" % self.db.gold_per_day])
+        table.add_row(["Attribute Bonuses:", "%s" % attr_string])
+        msg = table.get_string()
         looker.msg(msg)
 
 #BEGIN STRUCTURE MANAGER DECLARATION    
@@ -214,9 +219,10 @@ class StructureManager(Object):
     def at_object_creation(self):
         self.desc = "You see a large, red stone gripped by an talon-like Pedestal.  As you look at the object, you hear it's voice warmly invite you to touch it."
         self.db.valid_structures = ['Gold Mine', 'Defenses', 'Reinforced Doors', 'Barracks', 'Training Grounds', 'Cave of Magi', 'Throne Room',
-                                    'Alchemist Lab', 'Topside Portal', 'Treasury', 'Merchant Stalls', 'Outpost', 'Torture Pit', 'Soul Magnet' ]
-        self.db.base_prices = { 'Gold Mine': 100, 'Defenses': 25, 'Reinforced Doors': 25, 'Barracks': 150, 'Training Grounds': 200, 'Cave of Magi': 500, 'Throne Room': 1000, 'Alchemist Lab': 650, 'Topside Portal': 1250, 'Treasury': 2000, 'Merchant Stalls': 450, 'Outpost': 500, 'Torture Pit': 2500, 'Soul Magnet': 4000 }
+                                    'Alchemist Lab', 'Treasury', 'Merchant Stalls', 'Outpost', 'Torture Pit', 'Soul Magnet' ]
+        self.db.base_prices = { 'Gold Mine': 100, 'Defenses': 25, 'Reinforced Doors': 25, 'Barracks': 150, 'Training Grounds': 200, 'Cave of Magi': 500, 'Throne Room': 1000, 'Alchemist Lab': 650, 'Treasury': 2000, 'Merchant Stalls': 450, 'Outpost': 500, 'Torture Pit': 2500, 'Soul Magnet': 4000 }
         self.db.already_built = "" 
+        self.db.structures = {}
     
     #generate necessary ids for relationships and set locks.    
     def gen_ids(self):
@@ -228,33 +234,35 @@ class StructureManager(Object):
 
     #display a list of things we can build, excluding what we already have.
     def show_buildable_list(self):
+        table = PrettyTable()
         message = "{gCurrent Buildable Structures:{n"
         self.character.msg(message)
-        m = "{b---------------------------------{n\n"
+        table._set_field_names(["Structure", "Price"])
         for struct in self.db.valid_structures:
             try:
                 already_done = self.db.already_built.index(struct)
             except ValueError:
-                m += '{{b{0:<20}{{n {{yCost: {1:<15}{{n\n'.format(struct, self.db.base_prices[struct])
-                continue    
-        self.character.msg(m)
-        m = "{b---------------------------------{n"
-        self.character.msg(m)
+                table.add_row(['%s' % struct, '%d' % self.db.base_prices[struct]])
+        msg = table.get_string()
+        self.character.msg(msg)
+
 
     #display a list of structures already built.  Uses the already_built string on the manager. 
     def show_already_built(self):
+        
         self.character.msg("{gStructures you have built:{n")
-        m = "{b---------------------------------{n"
-        self.character.msg(m)
-        m = ""
+        table = PrettyTable()
+        table._set_field_names(["Structure", "Level", "Attribute Bonuses"])
         for structure in self.db.already_built.split(';'):
+            attr_string = ""
             obj = self.location.search(structure, global_search=False)
             if obj is None:
                 break
-            m += '{{b{0:<20}{{n {{yLevel: {1:<15}{{n\n'.format(structure, obj.db.level)
-        self.character.msg(m)
-        m = "{b---------------------------------{n"
-        self.character.msg(m)
+            for ab in obj.db.attribute_bonuses:
+                attr_string += '%s: +%s' % (ab, obj.db.attribute_bonuses[ab])
+            table.add_row(["%s" % structure, "%s" % obj.db.level, "%s" %  attr_string])
+        msg = table.get_string()
+        self.character.msg(msg)
 
     def begin_construction(self, gold_to_start, structure):
         """
@@ -320,6 +328,15 @@ class StructureManager(Object):
         if structure.db.level > 0:
             structure.key = "{b%s{n" % self.struct_name
 
+    def find(self, structure):
+        """
+        pull out the actual structure object and return it if we have it built.
+        """
+        if structure in self.db.structures.keys():
+            return self.db.structures[structure]
+        else:
+            return None
+
     def post_construction(self, structure):
         if 'Mine' in structure.name:
             structure.db.desc = "A small mineshaft with a mine cart outside of it.  Looks like some sort of small creature could operate it."
@@ -351,6 +368,7 @@ class StructureManager(Object):
         else:
             pass
         
+        self.db.structures[structure.name] = structure
         character_attributes = self.character.db.attributes
         lair_attributes = self.character.db.lair.db.attributes
         attribute_list = structure.apply_attribute_bonuses(character_attributes, lair_attributes)

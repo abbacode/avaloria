@@ -32,6 +32,8 @@ try:
 except ImportError:
     import pickle
 import traceback
+from collections import defaultdict
+
 from django.db import models
 from django.conf import settings
 from django.utils.encoding import smart_str
@@ -65,7 +67,7 @@ def _get_cache(obj, name):
         if val: _SA(obj, "_cached_db_%s" % name, val)
         return val
 def _set_cache(obj, name, val):
-    "On-model Cache setter"
+    "On-model Cache setter. Also updates database."
     _SA(obj, "db_%s" % name, val)
     _GA(obj, "save")()
     _SA(obj, "_cached_db_%s" % name, val)
@@ -76,6 +78,11 @@ def _del_cache(obj, name):
         _DA(obj, "_cached_db_%s" % name)
     except AttributeError:
         pass
+
+# this cache holds the attributes loaded on objects, one dictionary
+# of attributes per object.
+_ATTRIBUTE_CACHE = defaultdict(dict)
+
 
 #------------------------------------------------------------
 #
@@ -673,6 +680,7 @@ class TypeNickHandler(object):
 #
 #------------------------------------------------------------
 
+
 class TypedObject(SharedMemoryModel):
     """
     Abstract Django model.
@@ -853,7 +861,7 @@ class TypedObject(SharedMemoryModel):
     _db_model_name = "typeclass" # used by attributes to safely store objects
 
     def __eq__(self, other):
-        return other and hasattr(other, 'id') and self.id == other.id
+        return other and hasattr(other, 'dbid') and self.dbid == other.dbid
 
     def __str__(self):
         return smart_str("%s" % self.key)
@@ -881,16 +889,56 @@ class TypedObject(SharedMemoryModel):
                 return _GA(typeclass, propname)
             else:
                 raise AttributeError
+    #@property
+    _dbid_cache = None
+    def __dbid_get(self):
+        """
+        Caches and returns the unique id of the object.
+        Use this instead of self.id, which is not cached.
+        """
+        dbid = _GA(self, "_dbid_cache")
+        if not dbid:
+            dbid = _GA(self, "id")
+            _SA(self, "_dbid_cache", dbid)
+        return dbid
+    def __dbid_set(self, value):
+        raise Exception("dbid cannot be set!")
+    def __dbid_del(self):
+        raise Exception("dbid cannot be deleted!")
+    dbid = property(__dbid_get, __dbid_set, __dbid_del)
 
     #@property
     def __dbref_get(self):
         """
-        Returns the object's dbref id on the form #NN.
-        Alternetively, use obj.id directly to get dbref
-        without any #.
+        Returns the object's dbref on the form #NN.
         """
-        return "#%s" % str(_GA(self, "id"))
-    dbref = property(__dbref_get)
+        return "#%s" % _GA(self, "_TypedObject__dbid_get")()
+    def __dbref_set(self):
+        raise Exception("dbref cannot be set!")
+    def __dbref_del(self):
+        raise Exception("dbref cannot be deleted!")
+    dbref = property(__dbref_get, __dbref_set, __dbref_del)
+
+    #@property
+    _hashid_cache = None
+    def __hashid_get(self):
+        """
+        Returns a per-class unique that combines the object's
+        class name with its idnum. This makes this id unique also
+        between different typeclassed entities such as scripts and
+        objects (which may still have the same id).
+        Primarily used by Attribute caching system.
+        """
+        hashid = _GA(self, "_hashid_cache")
+        if not hashid:
+            hashid = "%s<#%s>" % (_GA(self, "__class__"), _GA(self, "dbid"))
+            _SA(self, "_hashid_cache", hashid)
+        return hashid
+    def __hashid_set(self):
+        raise Exception("hashid cannot be set!")
+    def __hashid_del(self):
+        raise Exception("hashid cannot be deleted!")
+    hashid = property(__hashid_get, __hashid_set, __hashid_del)
 
     # typeclass property
     #@property
@@ -1200,8 +1248,14 @@ class TypedObject(SharedMemoryModel):
 
         attribute_name: (str) The attribute's name.
         """
-        return _GA(self, "_attribute_class").objects.filter(db_obj=self).filter(
-            db_key__iexact=attribute_name).count()
+        if attribute_name not in _ATTRIBUTE_CACHE[_GA(self, "hashid")]:
+            attrib_obj = _GA(self, "_attribute_class").objects.filter(db_obj=self).filter(
+                            db_key__iexact=attribute_name)
+            if attrib_obj:
+                _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name] = attrib_obj[0]
+            else:
+                return False
+        return True
 
     def set_attribute(self, attribute_name, new_value=None):
         """
@@ -1212,17 +1266,21 @@ class TypedObject(SharedMemoryModel):
         new_value: (python obj) The value to set the attribute to. If this is not
                                 a str, the object will be stored as a pickle.
         """
-        attrib_obj = None
-        attrclass = _GA(self, "_attribute_class")
-        try:
-            # use old attribute
+        attrib_obj = _ATTRIBUTE_CACHE[_GA(self, "hashid")].get("attribute_name")
+        if not attrib_obj:
+            attrclass = _GA(self, "_attribute_class")
+            # check if attribute already exists.
             attrib_obj = attrclass.objects.filter(
-                db_obj=self).filter(db_key__iexact=attribute_name)[0]
-        except IndexError:
-            # no match; create new attribute
-            attrib_obj = attrclass(db_key=attribute_name, db_obj=self)
+                                   db_obj=self).filter(db_key__iexact=attribute_name)
+            if attrib_obj:
+                # use old attribute
+                attrib_obj = attrib_obj[0]
+            else:
+                # no match; create new attribute
+                attrib_obj = attrclass(db_key=attribute_name, db_obj=self)
         # re-set an old attribute value
         attrib_obj.value = new_value
+        _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name] = attrib_obj
 
     def get_attribute(self, attribute_name, default=None):
         """
@@ -1233,12 +1291,14 @@ class TypedObject(SharedMemoryModel):
         attribute_name: (str) The attribute's name.
         default: What to return if no attribute is found
         """
-        attrib_obj = default
-        try:
+        attrib_obj = _ATTRIBUTE_CACHE[_GA(self, "hashid")].get(attribute_name)
+        if not attrib_obj:
             attrib_obj = _GA(self, "_attribute_class").objects.filter(
-                db_obj=self).filter(db_key__iexact=attribute_name)[0]
-        except IndexError:
-            return default
+                             db_obj=self).filter(db_key__iexact=attribute_name)
+            if not attrib_obj:
+                return default
+            _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name] = attrib_obj[0] #query is first evaluated here
+            return _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name].value
         return attrib_obj.value
 
     def get_attribute_raise(self, attribute_name):
@@ -1248,11 +1308,15 @@ class TypedObject(SharedMemoryModel):
 
         attribute_name: (str) The attribute's name.
         """
-        try:
-            return _GA(self, "_attribute_class").objects.filter(
-                db_obj=self).filter(db_key__iexact=attribute_name)[0].value
-        except IndexError:
-            raise AttributeError
+        attrib_obj = _ATTRIBUTE_CACHE[_GA(self, "hashid")].get(attribute_name)
+        if not attrib_obj:
+            attrib_obj = _GA(self, "_attribute_class").objects.filter(
+                    db_obj=self).filter(db_key__iexact=attribute_name)
+            if not attrib_obj:
+                raise AttributeError
+            _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name] = attrib_obj[0] #query is first evaluated here
+            return  _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name].value
+        return attrib_obj.value
 
     def del_attribute(self, attribute_name):
         """
@@ -1260,11 +1324,16 @@ class TypedObject(SharedMemoryModel):
 
         attribute_name: (str) The attribute's name.
         """
-        try:
-            _GA(self, "_attribute_class").objects.filter(
+        attr_obj = _ATTRIBUTE_CACHE[_GA(self, "hashid")].get(attribute_name)
+        if attr_obj:
+            del _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name]
+            attr_obj.delete()
+        else:
+            try:
+                _GA(self, "_attribute_class").objects.filter(
                 db_obj=self).filter(db_key__iexact=attribute_name)[0].delete()
-        except IndexError:
-            pass
+            except IndexError:
+                pass
 
     def del_attribute_raise(self, attribute_name):
         """
@@ -1273,11 +1342,17 @@ class TypedObject(SharedMemoryModel):
 
         attribute_name: (str) The attribute's name.
         """
-        try:
-            _GA(self, "_attribute_class").objects.filter(
+        attr_obj = _ATTRIBUTE_CACHE[_GA(self, "hashid")].get(attribute_name)
+        if attr_obj:
+            del _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name]
+            attr_obj.delete()
+        else:
+            try:
+                _GA(self, "_attribute_class").objects.filter(
                 db_obj=self).filter(db_key__iexact=attribute_name)[0].delete()
-        except IndexError:
-            raise AttributeError
+            except IndexError:
+                pass
+        raise AttributeError
 
     def get_all_attributes(self):
         """

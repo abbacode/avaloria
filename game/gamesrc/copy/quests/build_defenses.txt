@@ -1,0 +1,11 @@
+Our sanctuary here is quite vulnerable to attack from opposing deity forces.
+Perhaps we should invest some of our hard earned money of buffing up the defensive
+capabilities of the Stronghold?
+
+{gObjectives{n:
+    - Build up your lair defenses.
+
+
+Strenghthen your defenses.
+
+

@@ -8,7 +8,6 @@ class CmdKick(Command):
     Command used to kick a target.  Must be trained in kick.
     """
     key = "kick"
-    aliases = ['Kick', 'KICK']
     locks = "cmd:holds(kick)" 
     help_category = "Combat Skills"
 
@@ -23,7 +22,6 @@ class CmdStrike(Command):
     Command used to perform a somewhat powerful melee blow. 
     """
     key = "strike"
-    aliases = ['Strike', 'STRIKE']
     locks = "cmd:holds(strike)"
     help_category = "Combat Skills"
    
@@ -39,7 +37,6 @@ class CmdRend(Command):
     Command used to quick use the Rend skill.
     """
     key = 'rend'
-    aliases = ['Rend', 'REND']
     locks = "cmd:holds(rend)"
     help_category = "Combat Skills"
     

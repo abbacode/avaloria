@@ -376,16 +376,19 @@ def holds(accessing_obj, accessed_obj, *args, **kwargs):
         # helper function. Compares both dbrefs and keys/aliases.
         objid = str(objid)
         dbref = utils.dbref(objid)                    
-        print "checking dbrefs"
         if dbref and any((True for obj in contents if obj.id == dbref)):
             return True     
+        for obj in contents:
+            for thing in obj.contents:
+                if thing.key.lower() == objid or objid in [al.lower() for al in thing.aliases]:
+                    return True
+
         
         objid = objid.lower()
         return any((True for obj in contents 
                     if obj.key.lower() == objid or objid in [al.lower() for al in obj.aliases]))
 
     if args and args[0]:
-        print "Checking holds for %s" % args[0]
         return check_holds(args[0])
     else:        
         try:

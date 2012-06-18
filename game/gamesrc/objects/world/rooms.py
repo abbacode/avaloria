@@ -39,6 +39,7 @@ class DungeonRoom(Room):
     
     def at_object_receive(self, moved_obj, source_location):
         if moved_obj.has_player:
+            print "objects.world.rooms.DungeonRoom: Received a player."
             manager = self.db.manager
             if manager is None:
                 return
@@ -46,9 +47,12 @@ class DungeonRoom(Room):
             player_map["%s" % moved_obj.name] = self.db.cell_number
             manager.db.player_map = player_map
             self.db.manager = manager
+        else:
+            return
         self.post_object_receive(caller=moved_obj)
 
     def post_object_receive(self,caller):
+        print "objects.world.rooms.DungeonRoom: Turning Mobs On"
         for item in self.contents:
             if hasattr(item, 'mob_type'):
                 item.db.should_update = True
@@ -172,7 +176,7 @@ class Zone(Object):
 
     def spawn_enemy_npcs(self):
         for npc in self.db.enemy_npcs:
-            object = self.search('%s' % npc, global_search=True)
+            object = self.search('%s' % npc.strip(), global_search=True)
             rooms = self.search('%s_enemy_npc_spawn' % self.db.zone_type, global_search=True, ignore_errors=True)
             if rooms is None:
                 return
@@ -189,10 +193,8 @@ class Zone(Object):
             return
 
         spawn_rooms = self.search('%s_quest_item_spawn' % self.db.zone_type, global_search=True, ignore_errors=True)
-        print "spawn_rooms list: %s " % spawn_rooms
         for room in spawn_rooms:
             if room not in self.db.path_map.values():
-                print "removing %s" % room
                 spawn_rooms.remove(room)
 
         for item in self.db.quest_items:
@@ -218,25 +220,29 @@ class Zone(Object):
         self.db.path_map = path_map
 
     def calculate_mob_levels(self):
+        print "Calculating Mobs"
         mobs = self.search("%s_mobs" % self.db.zone_type, global_search=True, ignore_errors=True)
         path_map = self.db.path_map
         counters = {}
         mob_map = {}
         for mob in mobs:
             cell = mob.location
-            mob_map["%s" % mob.dbref] = cell
+            if cell is None:
+                continue
+            else:
+                mob_map["%s" % mob.dbref] = cell
+        print mob_map
         for key in path_map:
             try:
-                if key in self.db.mob_counters.keys():
+                if key in self.db.mob_counters.keys() and key is not 'None':
                     try:
                         counters['%s' % key] += 1
                     except KeyError:
                         counters['%s' % key] = 1
                 else:
-                    print "No key in mob counters"
+                    counters['%s' % key] = 1
             except AttributeError:
                 counters['%s' % key] = 0
-        print "%s: %s" % (self.name, counters)
         for key in mob_map:
             try:
                 counters['%s' % mob_map[key].db.cell_number] = counters['%s' % mob_map[key].db.cell_number] + 1
@@ -244,10 +250,20 @@ class Zone(Object):
                 counters['%s' % mob_map[key].db.cell_number] = 1
        
         print "%s: %s (counters)" % (self.name, counters )
+
+        try:
+            del counters['None']
+        except KeyError:
+            pass
+
         for counter in counters:
-            print counters[counter]
-            if int(counters[counter]) < 3:
-                self.replenish_mobs(counter) 
+            print counter
+            if counter == 'None':
+                continue
+            else:
+                print "Continuing with %s" % counter
+                if int(counters[counter]) < 3:
+                    self.replenish_mobs(counter) 
     
         self.db.mob_map = mob_map
         self.db.mob_counters = counters
@@ -266,8 +282,7 @@ class Zone(Object):
         mg.db.level = self.db.zone_level
         num_mobs = random.randrange(3,7)
         mob_set = mg.generate_mob_set(num_mobs)
-        
-        print mob_set
+       
         for mob in mob_set:
             if mob is None:
                 print "normal mob gen failed somewhere"
@@ -278,7 +293,6 @@ class Zone(Object):
         if self.db.is_dungeon is True:
             if room.db.last_room:
                 mob = mg.generate_boss_mob()
-                print "trying to move boss mob"
                 mob.move_to(room, quiet=True)    
                 self.db.mobs_spawned = True
         

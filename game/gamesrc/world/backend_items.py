@@ -24,18 +24,23 @@ large_hp_potion.generate_item_stats()
 strike = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", location=location, aliases=['storage_skills'], key="Training Manual: Strike")
 strike.db.desc = "A thick training manual which details the use and learning of a certain skill, granting the reader the ability to use said skill."
 strike.db.skill = 'strike'
+strike.db.value = 100
 rend = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", location=location, aliases=['storage_skills'], key="Training Manual: Rend")
 rend.db.skill = 'rend'
 rend.db.desc = "A thick training manual which details the use and learning of a certain skill, granting the reader the ability to use said skill."
+rend.db.value = 150
 brawling = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", location=location, aliases=['storage_skills'], key="Training Manual: Brawling")
 brawling.db.skill = 'brawling'
 brawling.db.desc = "A thick training manual which details the use and learning of a certain skill, granting the reader the ability to use said skill."
+brawling.db.value = 75
 spellweaving = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", location=location, aliases=['storage_skills'], key="Training Manual: Spellweaving")
 spellweaving.db.skill = 'spellweaving'
 spellweaving.db.desc = "A thick training manual which details the use and learning of a certain skill, granting the reader the ability to use said skill."
+spellweaving.db.value = 175
 toughness = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", location=location, aliases=['storage_skills'], key="Training Manual: Toughness")
 toughness.db.skill = 'toughness'
 toughness.db.desc = "A thick training manual which details the use and learning of a certain skill, granting the reader the ability to use said skill."
+toughness.db.value = 250
 deity_seal = create.create_object("game.gamesrc.objects.world.items.Item", location=location, aliases=['deity seal', 'DEITY SEAL', 'starter_quests_items'], key="Deity Seal")
 deity_seal.db.quest_item = True
 deity_seal.db.desc = "A Red-Gold medallion with the known seal of your deity engraved on the face."

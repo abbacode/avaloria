@@ -13,7 +13,7 @@ import os
 import sys, signal
 import cProfile
 from optparse import OptionParser
-from subprocess import Popen, call
+from subprocess import Popen
 
 # Set the Python path up so we can get to settings.py from here.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -23,6 +23,7 @@ if not os.path.exists('settings.py'):
     # make sure we have a settings.py file.
     print "    No settings.py file found. launching manage.py ..."
 
+    # this triggers the settings file creation.
     import game.manage
 
     print """
@@ -449,7 +450,6 @@ def main():
     parser.add_option('-i', '--interactive', action='store_true', dest='interactive', default=False, help="Start given processes in interactive mode (log to stdout, don't start as a daemon).")
 
     options, args = parser.parse_args()
-    inter = options.interactive
 
     if not args:
         mode = "menu"
@@ -461,10 +461,10 @@ def main():
         service = args[1]
 
     if mode not in ['menu', 'start', 'reload', 'stop']:
-        print "mode should be none or one of 'menu', 'start', 'reload' or 'stop'."
+        print "mode should be none, 'menu', 'start', 'reload' or 'stop'."
         sys.exit()
     if  service not in ['server', 'portal', 'all']:
-        print "service should be none or 'server', 'portal' or 'all'."
+        print "service should be none, 'server', 'portal' or 'all'."
         sys.exit()
 
     if mode == 'menu':
