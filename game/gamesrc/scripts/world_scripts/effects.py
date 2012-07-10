@@ -121,8 +121,29 @@ class RendEffect(Effect):
             target.location.msg_contents("{c %s's wounds are gushing blood!{n" % target.name, exclude=[character])
             character.msg("{C%s bleeds for {R%s {Cpoints of damage.{n" % (target.name, dmg))
             
-            
+           
+class CrippleEffect(Effect):
 
+    def at_script_creation(self):
+        Effect.at_script_creation(self)
+        self.interval = 60
+        self.repeats = 1 
+        self.start_delay = True
+    
+    def at_start(self):
+        mob_attributes = self.obj.db.attributes
+        reduction = int(0.10 * mob_attributes['temp_dexterity'])
+        mob_attributes['temp_dexterity'] = mob_attributes['temp_dexterity'] - reduction
+        self.obj.db.attributes = mob_attributes
+        self.obj.db.crippled = True
+        self.obj.refresh_armor_rating()
+
+    def at_repeat(self):
+        self.obj.update_stats()
+        self.obj.db.crippled = False
+    
+
+        
 class FireballDot(Effect):
 
     def at_script_creation(self):

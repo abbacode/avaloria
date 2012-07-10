@@ -41,11 +41,17 @@ toughness = create.create_object("game.gamesrc.objects.world.skills.TrainingBook
 toughness.db.skill = 'toughness'
 toughness.db.desc = "A thick training manual which details the use and learning of a certain skill, granting the reader the ability to use said skill."
 toughness.db.value = 250
+cripple = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", location=location, aliases=['storahe_skills'], key="Training Manual: Crippling Strike")
+cripple.db.skill = 'cripple'
+cripple.db.desc = "A thick training manual which details the use and learning of a certain skill, granting the reader the ability to use said skill."
+cripple.db.value = 300
 deity_seal = create.create_object("game.gamesrc.objects.world.items.Item", location=location, aliases=['deity seal', 'DEITY SEAL', 'starter_quests_items'], key="Deity Seal")
 deity_seal.db.quest_item = True
 deity_seal.db.desc = "A Red-Gold medallion with the known seal of your deity engraved on the face."
+deity_seal.db.quest = "Seal Of Seals"
 family_heirloom = create.create_object("game.gamesrc.objects.world.items.Item", location=location, aliases=['family heirloom', 'FAMILY HEIRLOOM'], key="Family Heirloom")
 family_heirloom.desc = "A very bright gold necklace with a Large Karithian ruby set in the center of it."
 family_heirloom.db.quest_item = True
+family_heirloom.db.quest = "An Item Of Importance"
 
 

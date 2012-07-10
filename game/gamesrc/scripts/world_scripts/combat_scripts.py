@@ -61,8 +61,12 @@ class InCombatState(Script):
             self.obj.award_exp(cm.defender.db.attributes['exp_award'])
             self.obj.db.target.death()
         elif self.obj.db.attributes['temp_health'] <= 0:
+            self.obj.msg("{rYou have been killed by %s!" % self.obj.db.target.name)
+            self.obj.location.msg_contents("{r%s has be slain by %s!{n" % (self.obj.name, cm.defender.name), exclude=[cm.db.attacker])
+            self.obj.db.target.db.in_combat = False
+            self.obj.db.target.db.target = None
+            print "got to death call"
             self.obj.db.in_combat = False
-            cm.defender.db.in_combat = False
             self.obj.death()
     
     def at_stop(self):

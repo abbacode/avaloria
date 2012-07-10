@@ -1,6 +1,7 @@
 import random
 from ev import Object
 from src.utils import utils
+from prettytable import PrettyTable
 
 
 class Item(Object):
@@ -26,7 +27,35 @@ class Item(Object):
         self.db.lootable = True
         self.db.attribute_bonuses = {'strength': 0, 'dexterity':0, 'intelligence': 0, 'constitution': 0 }
         self.db.lootset = None
+
+    def on_equip(self):
+        character_attributes = self.location.db.attributes
+        for bonus in self.db.attribute_bonuses:
+            if self.db.attribute_bonuses[bonus] > 0:
+                character_attributes[bonus] = self.db.attribute_bonuses[bonus] + character_attributes[bonus]
+        self.location.db.attributes = character_attributes
+        self.db.is_equipped = True
     
+    def on_unequip(self):
+        character_attributes = self.location.db.attributes
+        for bonus in self.db.attribute_bonuses:
+            if self.db.attribute_bonuses[bonus] > 0:
+                character_attributes[bonus] = character_attributes[bonus] - self.db.attribute_bonuses[bonus]
+        self.location.db.attributes = character_attributes
+        self.db.is_equipped = False
+
+    def at_inspect(self, looker):
+        table = PrettyTable()
+        table._set_field_names(['Name', 'Bonuses', 'Value', 'Rating', 'Slot'])
+        table.add_row([self.name, '%s' % self.db.attribute_bonuses, self.db.value, self.db.item_level, self.db.slot])
+        msg = table.get_string()
+        looker.msg(msg)
+        table = PrettyTable()
+        table._set_field_names(['Description'])
+        table.add_row([self.desc])
+        msg = table.get_string()
+        looker.msg(msg)
+
     def is_equipable(self):
         return self.db.equipable
 

@@ -271,6 +271,14 @@ class TrainingBook(Object):
                 caller.msg("{CYou have learned a new skill: Strike.{n")
             else:
                 caller.msg("You already know this skill.")
+        elif 'cripple' in self.db.skill:
+            if 'cripple' not in [manager.db.skills.keys()]:
+                cripple_skill_obj = create.create_object("game.gamesrc.objects.world.skills.CripplingStrike", key="crippling strike")
+                cripple_skill_obj.db.character = caller
+                manager.add_item(cripple_skill_obj.name, cripple_skill_obj)
+                caller.msg("{CYou have learned a new skill: Crippling Strike.{n")
+            else:
+                caller.msg("You already know this skill")
         elif 'spellweaving' in self.db.skill:
             if 'spellweaving' not in [ manager.db.skills.keys()]:
                 spellweaving_skill_obj = create.create_object("game.gamesrc.objects.world.skills.SpellWeaving", key='spellweaving')
@@ -291,6 +299,19 @@ class TrainingBook(Object):
                 caller.msg("{CYou have learned a new skill: Toughness{n")
             else:
                 caller.msg("You already know this skill.")
+        elif 'dodge' in self.db.skill:
+            if 'dodge' not in [manager.db.skills.key()]:
+                percentages = caller.db.percentages
+                dodge_skill_obj = create.create_object("game.gamesrc.objects.world.skills.Dodge", key="dodge")
+                dodge_skill_obj.db.character = caller
+                manager.add_item(dodge_skill_obj.name, dodge_skill_obj)
+                percentages['dodge'] += .01
+                caller.db.percentages = percentages
+                caller.msg("{CYou have learned a new skill: Dodge{n")
+            else:
+                caller.msg("{CYou already know that skill.")
+
+            
         caller.db.manager = manager
         self.delete()
 
@@ -340,6 +361,37 @@ class Kick(Skill):
         modifier = self.db.rank_modifier
         modifier += .01 
         self.db.rank_modifier = modifier
+
+class CripplingStrike(Skill):
+    """
+    A medium damage melee attack that cut's the enemies tendons, rendering them
+    crippled with a reduced dexterity.
+    """
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "A strong melee attack that reduces dexterity of the opponent."
+        self.db.damage = "1d6"
+        self.db.effect = "attack for %s and debuff"
+        self.db.character = None
+
+    def on_use(self, caller):
+        target = caller.db.target
+        attack_roll = caller.attack_roll()
+        if target.db.crippled:
+            caller.msg("{R%s is already crippled!{n" % target.name)
+            return
+        if caller.has_player:
+            if attack_roll >= target.db.attributes['temp_armor_rating']:
+                character_attributes = caller.db.attributes
+                damage = self.get_effect()
+                target.take_damage(damage)
+                character_attributes = self.unbalance(1, character_attributes)
+                caller.db.attributes = character_attributes
+                caller.msg("{CYou target %s's tendons and ligaments striking for %s damage and crippling them! (- dex){n" % (target.name, damage))
+                target.scripts.add("game.gamesrc.scripts.world_scripts.effects.CrippleEffect")
+            else:
+                caller.msg("{RYour attempted to cripple failed!{n")
+                return
 
 class Rend(Skill):
     """
@@ -654,14 +706,14 @@ class Strike(Skill):
                 character_attributes = caller.db.attributes
                 target.take_damage(total_skill_damage)
                 character_attributes = self.unbalance(1, character_attributes)
-                caller.msg("{bYou arc your weapon high, and bring it down on %s with fury for{n {r%s{n{b points of damage!{n" % (target.name, total_skill_damage))  
+                caller.msg("{CYou arc your weapon high, and bring it down on %s with fury for{n {r%s{n{C points of damage!{n" % (target.name, total_skill_damage))  
                 caller.db.attributes = character_attributes
             else:
                 caller.msg("{rYou attempted to strike %s but miss.{n" % target.name)
         else:
             if attack_roll >= target.db.armor:
                 target.take_damage(total_skill_damage)
-                caller.location.msg_contents("%s strikes %s furiously with their weapon." % (caller.name, target.name))
+                caller.location.msg_contents("{c%s strikes %s furiously with their weapon.{n" % (caller.name, target.name), exclude=caller)
             else:
                 caller.location.msg_contents("%s misses with their Strike." % caller.name)
 

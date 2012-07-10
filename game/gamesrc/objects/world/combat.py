@@ -90,12 +90,6 @@ class CombatManager(Object):
             self.attacker.msg("You take {r%s{n points of damage." % damage_amount)
             self.attacker.msg("{rHP: (%s/%s){n {bMP: (%s/%s){n" % (self.attacker.db.attributes['temp_health'], self.attacker.db.attributes['health'], 
                                         self.attacker.db.attributes['temp_mana'], self.attacker.db.attributes['mana']))
-            if self.attacker.db.attributes['temp_health'] <= 0:
-                self.attacker.msg("{rYou have been killed by %s!" % self.defender.name)
-                self.attacker.location.msg_contents("{r%s has be slain by %s!{n" % (self.attacker.name, self.defender.name), exclude=[self.db.attacker])
-                self.defender.db.target = None
-                self.defender.db.in_combat = False
-                self.attacker.death()   
             return
 
     def check_quest_flags(self):
@@ -194,7 +188,7 @@ class CombatManager(Object):
                     self.attacker.msg("{b%s and yourself seem to have defended at the same time, so you stare at each other viciously.{n" % self.defender.name)
             elif 'skill' in atk_action:
                 split = atk_action.split(':')
-                #self.attacker.msg("You prepare to use the skill: {g%s{n!" % split[1].title())
+                self.attacker.msg("You prepare to use the skill: {g%s{n!" % split[1].title())
                 #self.check_for_combo( )
                 manager = self.attacker.db.skill_log
                 character_skills = manager.db.skills

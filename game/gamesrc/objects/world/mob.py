@@ -56,6 +56,7 @@ class Mob(Object):
         self.db.spells = []
         self.db.threat = {}
         self.db.should_update = True
+        self.db.crippled = False
         self.db.follow_list = []# a list of people to track down and kill
         self.db.rating = 'average' #A rating that dictates loot levels
         self.locks.add("get:none()")#we dont want folks picking us up and walking away
@@ -154,7 +155,7 @@ class Mob(Object):
             self.db.reanimate = True
         self.db.corpse = True
         self.db.in_combat = False
-        #self.scripts.validate()
+        self.scripts.validate()
     
     def reanimate(self):
         attributes = self.db.attributes
@@ -166,6 +167,11 @@ class Mob(Object):
         attributes['temp_health'] = attributes['health']
         attributes['temp_mana'] = attributes['mana']
         self.db.attributes = attributes
+
+    def refresh_armor_rating(self):
+        temp_armor_rating = (self.db.attributes['temp_dexterity'] / 5 ) + 6
+        self.db.attributes['temp_armor_rating'] = temp_armor_rating
+
 
     def initiative_roll(self):
         roll = random.randrange(1,20)

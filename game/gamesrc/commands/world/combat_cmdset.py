@@ -44,7 +44,7 @@ class CmdFlee(Command):
     locks = "cmd:all()"
     
     def func(self):
-        if self.caller.db.in_comabat is not True:
+        if self.caller.db.in_combat is not True:
             self.caller.msg("You must be in combat to flee...")
             return
         obj = self.caller

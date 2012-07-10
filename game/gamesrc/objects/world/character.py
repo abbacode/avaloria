@@ -43,7 +43,6 @@ class CharacterClass(Character):
         attributes['healing_bonus'] = 0
         attributes['race'] = None
         attributes['deity'] = None
-        attributes['alignment'] = None
         self.db.attributes = attributes
         attributes['temp_attack_rating'] = self.db.attributes['attack_rating']
         attributes['temp_armor_rating'] = self.db.attributes['armor_rating']
@@ -136,7 +135,7 @@ class CharacterClass(Character):
             self.db.in_combat = False
             self.scripts.validate()
 
-        if self.db.attributes['alignment'] is not None or self.id == 2:
+        if self.db.attributes['deity'] is not None or self.id == 2:
             self.cmdset.add(character_cmdset.CharacterCommandSet)
             self.cmdset.add(combat_cmdset.DefaultCombatSet)
             self.cmdset.add(structure_cmdset.BuildCmdSet)
@@ -155,6 +154,7 @@ class CharacterClass(Character):
         aspect = self.search("Aspect of An'Karith", global_search=False, location=self.location, ignore_errors=True)[0]
         aspect.aliases = [aspect.name]
         aspect.name = '{Y!{n Aspect of %s' % self.db.attributes['deity'].title()
+        aspect.db.real_name = "%s" % self.db.attributes['deity'].title()
         aspect.do_dialog(caller=self, type='greeting')
         self.cmdset.add(character_cmdset.CharacterCommandSet)
         self.cmdset.add(combat_cmdset.DefaultCombatSet)
@@ -395,6 +395,8 @@ class CharacterClass(Character):
             manager.add_item(skill_object.name, skill_object)
             self.db.percentages['heavy armor'] += skill_object.db.rank_modifier
             self.msg("You have become proficient in Heavy Armor.")
+        self.move_to(self.db.lair, quiet=True)
+        self.at_first_login()
                
             
 
@@ -691,7 +693,7 @@ class CharacterClass(Character):
         self.refresh_attributes(health_and_mana=False, base_stats=True)
         self.msg("{CYou have added %s attribute points to %s.{n" % (points, attribute))
         self.msg("{CAvailable Attribute Points: %s{n" % self.db.attributes['attribute_points'])
-        self.display_attributes()
+        self.pretty_table()
          
     def create_attribute_menu(self, caller):
         attributes = self.db.attributes
@@ -877,6 +879,20 @@ Which attributes would you like to improve?
         caller = self.search(caller, global_search=False)
         caller.msg("{R%s declines your invitation.{n" % self.name)
         return
+
+    def on_quest(self, quest):
+        """
+        return true if on said quest,
+        false otherwise.
+        """
+        manager = self.db.quest_log
+        quest = manager.find_quest(quest)
+        if quest is None:
+            return False
+            self.db.on_quest = False
+        else:
+            self.db.on_quest = True
+            return True
 
     """
     Effects Management

@@ -70,7 +70,7 @@ class LootGenerator(Object):
             weapon.db.skill_used = "bludgeon"
         return weapon
     
-    def set_ring_type(self, ring, ringtype):
+    def set_ring_type(self, ring):
         choices = ['left finger', 'right finger']
         slot = random.choice(choices)
         ring.db.slot = slot
@@ -125,20 +125,22 @@ class LootGenerator(Object):
         stats = ['strength', 'dexterity', 'constitution', 'intelligence']
         choice = random.choice(stats)
         attr_bonuses = ring.db.attribute_bonuses
-        if 'average' in self.db.loot_rating:
+        print attr_bonuses
+        if 'average' in self.loot_rating:
             modifier = random.randrange(1,2)
-        elif 'uncommon' in self.db.loot_rating:
+        elif 'uncommon' in self.loot_rating:
             modifier = random.randrange(3,6)
-        elif 'rare' in self.db.loot_rating:
+        elif 'rare' in self.loot_rating:
             modifier = random.randrange(7,10)
-        elif 'artifact' in self.db.loot_rating:
+        elif 'artifact' in self.loot_rating:
             modifier = random.randrange(12,18)
         for stat in stats:
             if choice == stat:
                 attr_bonuses[choice] = modifier
             else:
-                attr_bonuses[stats] = 0
+                attr_bonuses[stat] = 0
         ring.db.attribute_bonuses = attr_bonuses
+        return ring
 
         
        
@@ -216,6 +218,63 @@ class LootGenerator(Object):
                     weapon = self.set_weapon_damage(weapon)
                     loot_set.append(weapon)
                 return loot_set
+        elif 'ring' in self.item_type:
+            if 'average' in self.loot_rating:
+                for i in range(number_of_items):
+                    prefix = random.choice(self.db.avg_ring_prefixes)
+                    suffix = random.choice(self.db.ring_choices)
+                    name = "%s %s" % (prefix, suffix)
+                    ring = create.create_object("game.gamesrc.objects.world.items.Item", key=name)
+                    ring.db.value =  random.randrange(1,15)
+                    ring.db.item_level = "common"
+                    ring = self.set_ring_type(ring)
+                    ring = self.set_ring_bonuses(ring)
+                    desc = "%s is a common ring found in Avaloria, however it does seem to have some magical properties to it." % name
+                    ring.desc = desc
+                    loot_set.append(ring)
+                return loot_set
+            elif 'uncommon' in self.loot_rating:
+                for i in range(number_of_items):
+                    prefix = random.choice(self.db.unc_ring_prefixes)
+                    suffix = random.choice(self.db.ring_choices)
+                    name = "%s %s" % (prefix, suffix)
+                    ring = create.create_object("game.gamesrc.objects.world.items.Item", key=name)
+                    ring.db.value = random.randrange(15, 60)
+                    ring.db.item_level = "uncommon"
+                    ring = self.set_ring_type(ring)
+                    ring = self.set_ring_bonuses(ring)
+                    desc = "%s is a uncommon piece of jewlery, fashioned in a more peaceful time." % name
+                    ring.desc = desc
+                    loot_set.append(ring)
+                return loot_set
+            elif 'rare' in self.loot_rating:
+                for i in range(number_of_items):
+                    prefix = random.choice(self.db.rare_ring_prefixes)
+                    suffix = random.choice(self.db.ring_choices)
+                    name = "%s %s" % (prefix, suffix)
+                    ring = create.create_object("game.gamesrc.objects.world.items.Item", key=name)
+                    ring.db.value = random.randrange(50, 160)
+                    ring.db.item_level = "rare"
+                    ring = self.set_ring_type(ring)
+                    ring = self.set_ring_bonuses(ring)
+                    desc = "%s is a rare piece of jewlery, fashioned in a more peaceful time." % name
+                    ring.desc = desc
+                    loot_set.append(ring)
+                return loot_set
+            elif 'artifact' in self.loot_rating:
+                for i in range(number_of_items):
+                    prefix = random.choice(self.db.art_ring_prefixes)
+                    suffix = random.choice(self.db.ring_choices)
+                    name = "%s %s" % (prefix, suffix)
+                    ring = create.create_object("game.gamesrc.objects.world.items.Item", key=name)
+                    ring.db.value = random.randrange(160, 300)
+                    ring.db.item_level = "rare"
+                    ring = self.set_ring_type(ring)
+                    ring = self.set_ring_bonuses(ring)
+                    desc = "%s is a extremely rare, one of a kind piece of jewlery, fashioned in a more peaceful time." % name
+                    ring.desc = desc
+                    loot_set.append(ring)
+                return loot_set
         elif 'armor' in self.item_type: 
             if 'average' in self.loot_rating:
                 for i in range(number_of_items):
@@ -271,7 +330,7 @@ class LootGenerator(Object):
                     loot_set.append(armor)
                 return loot_set 
         elif 'mixed' in self.item_type:
-            loot_choices = ['weapon', 'potion', 'armor']
+            loot_choices = ['weapon', 'potion', 'armor', 'ring']
             for i in range(number_of_items):
                 random_number = random.random()
                 if random_number < .05:
@@ -286,6 +345,9 @@ class LootGenerator(Object):
                 elif 'armor' in choice:
                     armor = self.create_loot_set(loot_rating=self.loot_rating, number_of_items=1, item_type='armor')
                     loot_set.append(armor[0])
+                elif 'ring' in choice:
+                    ring = self.create_loot_set(loot_rating=self.loot_rating, number_of_items=1, item_type='ring')
+                    loot_set.append(ring[0])
                 elif 'potion' in choice:
                     potion_types = ['healing', 'mana_regen', 'buff']
                     effect = random.choice(potion_types)

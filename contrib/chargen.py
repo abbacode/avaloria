@@ -154,6 +154,10 @@ class CmdOOCCharacterCreate(Command):
             self.caller.msg("Usage: create <character name>")
             return 
         charname = self.args.strip()
+        split_charname = charname.split(' ')
+        if len(split_charname) > 2:
+            self.caller.msg("Character name must be in the following format: Firstname Surname.  Or: Firstname.")
+            return
         old_char = ObjectDB.objects.get_objs_with_key_and_typeclass(charname, CHARACTER_TYPECLASS)
         if old_char:
             self.caller.msg("Character {c%s{n already exists." % charname)
@@ -263,9 +267,9 @@ consistent balance reduction.
                     weapons_node = MenuNode("weapons", links=['confirm-bludgeon', 'confirm-blades', 'confirm-heavy'], linktexts=['Bludgeoning Weapons', 'Bladed Weapons', 'Heavy Weapons'], text=text)
                     nodes.append(weapons_node)
                 elif 'armor skills' in option:
-                    confirm_light = MenuNode("confirm-lightarmor", links=['alignment'], linktexts=['Choose the path you walk.'], code="self.caller.set_armor_skill('light')")
-                    confirm_medium = MenuNode("confirm-mediumarmor", links=['alignment'], linktexts=['Choose the path you walk'], code="self.caller.set_armor_skill('medium')")
-                    confirm_heavy = MenuNode("confirm-heavyarmor", links=['alignment'], linktexts=['Choose the path you walk'], code="self.caller.set_armor_skill('heavy')")  
+                    confirm_light = MenuNode("confirm-lightarmor", links=['END'], linktexts=['Begin your journey.'], code="self.caller.set_armor_skill('light')")
+                    confirm_medium = MenuNode("confirm-mediumarmor", links=['END'], linktexts=['Begin your journey'], code="self.caller.set_armor_skill('medium')")
+                    confirm_heavy = MenuNode("confirm-heavyarmor", links=['END'], linktexts=['Begin your journey'], code="self.caller.set_armor_skill('heavy')")  
                     nodes.append(confirm_light)
                     nodes.append(confirm_medium)
                     nodes.append(confirm_heavy)
@@ -284,19 +288,21 @@ in turn will result in stat loss and most likely death.
                     """
                     armor_node = MenuNode("armor", links=['confirm-lightarmor', 'confirm-mediumarmor', 'confirm-heavyarmor'], linktexts=['Light Armor', 'Medium Armor', 'Heavy Armor'], text=text)
                     nodes.append(armor_node)
+                """
                 elif 'alignment' in option:
                     confirm_good = MenuNode("confirm-good", links=['END'], linktexts=['Begin your journey.'], text="{rYou begin your journey down the path of light.{n", code="self.caller.set_alignment('good')")
                     confirm_evil = MenuNode("confirm-evil", links=['END'], linktexts=['Begin your journey.'], text="{rYou begin your journey down the path of darkness.{n", code="self.caller.set_alignment('evil')")
                     nodes.append(confirm_good)
                     nodes.append(confirm_evil)
-                    text = """
+                    text =
 --{rAlignment Selection{n--
 Which path to do you desire to walk?
 
-                    """
+                    
                     alignment_node = MenuNode("alignment", text=text, links=['confirm-evil', 'confirm-good', 'START'],
                                             linktexts=['Path of Darkness', 'Path of Light', 'Back to Customization'])
                     nodes.append(alignment_node)
+                """
             start_node = MenuNode("START", text="{bWelcome to Avaloria.  Please proceed through the menu to customize your character.{n",
                         links=['race' ], linktexts=['Choose your race.'])
             nodes.append(start_node)

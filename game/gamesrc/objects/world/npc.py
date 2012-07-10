@@ -120,16 +120,19 @@ class Npc(Object):
                     for item in self.potions:
                         merchant_copy = item.copy()
                         merchant_copy.name = item.name
+                        merchant_copy.aliases =[]
                         merchant_copy.move_to(destination=self)
                 elif 'weapons' in self.db.merchant_type:
                     for item in self.db.weapons:
                         merchant_copy = item.copy()
                         merchant_copy.name = item.name
+                        merchant_copy.aliases =[]
                         merchant_copy.move_to(destination=self)
                 elif 'skills' in self.db.merchant_type:
                     for item in self.db.skills:
                         merchant_copy = item.copy()
                         merchant_copy.name = item.name
+                        merchant_copy.aliases =[]
                         merchant_copy.move_to(destination=self)
                         
 
@@ -154,12 +157,12 @@ class Npc(Object):
             self.create_merchant_menutree(caller)
         else:
             #try dialogue
-            if len(self.db.dialogue.keys()) < 1:
-                self.tell_character(caller, "I have nothing to say to the likes of you!")
-            elif self.db.quest_giver:
+            if self.db.quest_giver:
                 self.create_quest_menu(caller)
             elif self.db.merchant:
-                self.create_merchant_menutree()
+                self.create_merchant_menutree(caller)
+            elif len(self.db.dialogue.keys()) < 1:
+                self.tell_character(caller, "I have nothing to say to the likes of you!")
             else:
                 self.do_dialog(caller, type='greeting')
         

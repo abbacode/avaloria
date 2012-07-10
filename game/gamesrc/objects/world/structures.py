@@ -20,6 +20,7 @@ class Structure(Object):
         self.db.total_gold_spent = 0
         self.db.attribute_bonuses = {'strength': 0, 'dexterity': 0, 'constitution': 0, 'intelligence': 0}
         self.db.lair_attribute_bonuses = {}
+        self.db.percentage_bonuses = {}
         self.db.skill_bonuses = {}
         self.db.assigned_henchmen = {}
 
@@ -105,6 +106,7 @@ class Structure(Object):
         
         attribute_bonuses = self.db.attribute_bonuses
         lair_attribute_bonuses = self.db.lair_attribute_bonuses
+        percentage_bonuses = self.db.percentage_bonuses
         for bonus in attribute_bonuses:
             if attribute_bonuses[bonus] != 0:
                 attribute_bonuses[bonus] = attribute_bonuses[bonus] + 1
@@ -112,7 +114,12 @@ class Structure(Object):
         for bonus in lair_attribute_bonuses:
             if lair_attribute_bonuses[bonus] != 0:
                 lair_attribute_bonuses[bonus] = lair_attribute_bonuses[bonus] + 1
-                character.msg("{G%s lair bonuse is now +%s." % (bonus.title(), lair_attribute_bonuses[bonus]))
+                character.msg("{G%s lair bonus is now +%s." % (bonus.title(), lair_attribute_bonuses[bonus]))
+        for bonus in percentage_bonuses:
+            if percentages_bonuses[bonus] != 0:
+                percentage_bonuses[bonus] = percentage_bonuses[bonus] + 1
+                character.msg("{G%s percentage bonus is now +%s\%." % (bonus.title(), percentages_bonuses[bonus])) 
+        
                 
         self.db.attribute_bonuses = attribute_bonuses
         character_attributes = character.db.attributes
@@ -152,15 +159,19 @@ class Structure(Object):
             self.db.lair_attribute_bonuses = { 'defense_rating': 1}
         elif 'Training Grounds' in self.name:
             self.db.attribute_bonuses = { 'strength': 1, 'dexterity': 1, 'intelligence': 0, 'constitution': 0 }
+            self.db.lair_attribute_bonuses = {'defense_rating': 1}
         elif 'Cave of Magi' in self.name:
             self.db.attribute_bonuses = { 'strength': 0, 'dexterity': 0, 'intelligence': 1, 'constitution': 0 }
+            self.db.percentage_bonuses = {'spell_damage_bonus': .01 } 
         elif 'Alchemist Lab' in self.name:
             self.db.attribute_bonuses = { 'strength': 0, 'dexterity': 0, 'intelligence': 1, 'constitution': 1 }
+            self.db.precentage_bounses = {'alchemy_bonus': .01 }
         elif 'Treasury' in self.name:
             self.db.gold_per_day = 10
             self.db.attribute_bonuses = { 'strength': 0, 'dexterity': 0, 'intelligence': 0, 'constitution': 0 }
         elif 'Reinforced Doors' in self.name:
             self.db.attribute_bonuses = { 'strength': 0, 'dexterity': 1, 'intelligence': 0, 'constitution': 1 }
+            self.db.lair_attribute_bonuses = {'defense_rating': 1}
         else:
             pass
     
@@ -219,8 +230,8 @@ class StructureManager(Object):
     def at_object_creation(self):
         self.desc = "You see a large, red stone gripped by an talon-like Pedestal.  As you look at the object, you hear it's voice warmly invite you to touch it."
         self.db.valid_structures = ['Gold Mine', 'Defenses', 'Reinforced Doors', 'Barracks', 'Training Grounds', 'Cave of Magi', 'Throne Room',
-                                    'Alchemist Lab', 'Treasury', 'Merchant Stalls', 'Outpost', 'Torture Pit', 'Soul Magnet' ]
-        self.db.base_prices = { 'Gold Mine': 100, 'Defenses': 25, 'Reinforced Doors': 25, 'Barracks': 150, 'Training Grounds': 200, 'Cave of Magi': 500, 'Throne Room': 1000, 'Alchemist Lab': 650, 'Treasury': 2000, 'Merchant Stalls': 450, 'Outpost': 500, 'Torture Pit': 2500, 'Soul Magnet': 4000 }
+                                    'Alchemist Lab', 'Treasury', ]
+        self.db.base_prices = { 'Gold Mine': 100, 'Defenses': 25, 'Reinforced Doors': 25, 'Barracks': 150, 'Training Grounds': 200, 'Cave of Magi': 500, 'Throne Room': 1000, 'Alchemist Lab': 650, 'Treasury': 2000 }
         self.db.already_built = "" 
         self.db.structures = {}
     
