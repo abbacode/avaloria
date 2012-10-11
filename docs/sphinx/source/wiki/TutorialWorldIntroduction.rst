@@ -44,15 +44,18 @@ install, log into the server as the superuser (user #1) and run:
 
     @batchcommand contrib.tutorial_world.build
 
-The world will be built (there will be a lot of text output) and you
+The world will be built (this might take a while, so don't rerun the
+command even if it seems the system has frozen). After finishing you
 will end up back in Limbo with a new exit called ``tutorial``.
+
+An alternative is
 
 ::
 
     @batchcommand/interactive contrib.tutorial_world.build
 
-will allow you to step through the building process at your own pace to
-see what happens in detail.
+with the /interactive switch you are able to step through the building
+process at your own pace to see what happens in detail.
 
 To play the tutorial "correctly", you should *not* do so as superuser.
 The reason for this is that many game systems ignore the presence of a
@@ -71,29 +74,26 @@ together with her powerful magical weapon - a valuable prize, if it's
 true. Of course this is a chance to adventure that you cannot turn
 down!*
 
-*You reach the coast in the midst of a raging thunderstorm. With wind
+*You reach the ocean in the midst of a raging thunderstorm. With wind
 and rain screaming in your face you stand where the moor meets the sea
 along a high, rocky coast ...*
 
-Look at everything.
+-  Look at everything.
+-  Some objects are interactive in more than one way. Use the normal
+   ``help`` command to get a feel for which commands are available at
+   any given time. (use the command ``tutorial`` to get insight behind
+   the scenes of the tutorial).
+-  In order to fight, you need to first find some type of weapon.
 
-Some objects are interactive in more than one way. Use the normal
-``help`` command to get a feel for which commands are available at any
-given time. (use the command ``tutorial`` to get insight behind the
-scenes of the tutorial).
+   -  *slash* is a normal attack
+   -  *stab* launches an attack that makes more damage but has a lower
+      chance to hit.
+   -  *defend* will lower the chance to taking damage on your enemy's
+      next attack.
 
-In order to fight, you need to first find some type of weapon.
-
--  *slash* is a normal attack
--  *stab* launches an attack that makes more damage but has a lower
-   chance to hit.
--  *defend* will lower the chance to taking damage on your enemy's next
-   attack.
-
-You *can* run from a fight that feels too deadly. Expect to be chased
-though.
-
-Being defeated is a part of the experience ...
+-  You *can* run from a fight that feels too deadly. Expect to be chased
+   though.
+-  Being defeated is a part of the experience ...
 
 Uninstall
 ---------
@@ -103,7 +103,8 @@ and objects it consists of. First, move out of the tutorial area.
 
 ::
 
-    @find tut#01  @find tut#17
+     @find tut#01
+     @find tut#17
 
 This should locate the first and last rooms created by ``build.ev`` -
 *Intro* and *Outro*. If you installed normally, everything created
@@ -113,7 +114,7 @@ that range:
 
 ::
 
-    @del 5-80
+     @del 5-80
 
 You will see some errors since some objects are auto-deleted and so
 cannot be found when the delete mechanism gets to them. That's fine. You

@@ -23,12 +23,13 @@ from src.typeclasses.models import Attribute, TypedObject, TypeNick, TypeNickHan
 from src.typeclasses.models import _get_cache, _set_cache, _del_cache
 from src.typeclasses.typeclass import TypeClass
 from src.objects.manager import ObjectManager
-from src.players.models import PlayerDB
 from src.commands.cmdsethandler import CmdSetHandler
 from src.commands import cmdhandler
 from src.scripts.scripthandler import ScriptHandler
 from src.utils import logger
 from src.utils.utils import make_iter, to_unicode, variable_from_module, inherits_from
+
+from django.utils.translation import ugettext as _
 
 #__all__ = ("ObjAttribute", "Alias", "ObjectNick", "ObjectDB")
 
@@ -38,6 +39,14 @@ _AT_SEARCH_RESULT = variable_from_module(*settings.SEARCH_AT_RESULT.rsplit('.', 
 _GA = object.__getattribute__
 _SA = object.__setattr__
 _DA = object.__delattr__
+
+_ME = _("me")
+_SELF = _("self")
+_HERE = _("here")
+
+def clean_content_cache(obj):
+    "Clean obj's content cache"
+    _SA(obj, "_contents_cache", None)
 
 #------------------------------------------------------------
 #
@@ -194,10 +203,10 @@ class ObjectDB(TypedObject):
         "Parent must be initialized first."
         TypedObject.__init__(self, *args, **kwargs)
         # handlers
-        self.cmdset = CmdSetHandler(self)
-        self.cmdset.update(init_mode=True)
-        self.scripts = ScriptHandler(self)
-        self.nicks = ObjectNickHandler(self)
+        _SA(self, "cmdset", CmdSetHandler(self))
+        _GA(self, "cmdset").update(init_mode=True)
+        _SA(self, "scripts", ScriptHandler(self))
+        _SA(self, "nicks", ObjectNickHandler(self))
         # store the attribute class
 
     # Wrapper properties to easily set database fields. These are
@@ -260,36 +269,39 @@ class ObjectDB(TypedObject):
         "Getter. Allows for value = self.location."
         loc = _get_cache(self, "location")
         if loc:
-            return loc.typeclass
+            return _GA(loc, "typeclass")
         return None
     #@location.setter
     def __location_set(self, location):
         "Setter. Allows for self.location = location"
         try:
-            if location == None or type(location) == ObjectDB:
-                # location is None or a valid object
-                loc = location
-            elif ObjectDB.objects.dbref(location):
-                # location is a dbref; search
+            old_loc = _GA(self, "location")
+            if ObjectDB.objects.dbref(location):
+                # dbref search
                 loc = ObjectDB.objects.dbref_search(location)
-                if loc and hasattr(loc,'dbobj'):
-                    loc = loc.dbobj
-                else:
-                    loc = location.dbobj
+                loc = loc and _GA(loc, "dbobj")
+            elif location and type(location) != ObjectDB:
+                loc = _GA(location, "dbobj")
             else:
-                loc = location.dbobj
+                loc = location
             _set_cache(self, "location", loc)
+            # update the contents of each location
+            if old_loc:
+                _GA(_GA(old_loc, "dbobj"), "contents_update")(self, remove=True)
+            if loc:
+                _GA(loc, "contents_update")(_GA(self, "typeclass"))
         except Exception:
             string = "Cannot set location: "
             string += "%s is not a valid location."
-            self.msg(string % location)
+            _GA(self, "msg")(_(string) % location)
             logger.log_trace(string)
             raise
     #@location.deleter
     def __location_del(self):
         "Deleter. Allows for del self.location"
-        self.db_location = None
-        self.save()
+        _GA(self, "location").contents_update(self, remove=True)
+        _SA(self, "db_location", None)
+        _GA(self, "save")()
         _del_cache(self, "location")
     location = property(__location_get, __location_set, __location_del)
 
@@ -299,7 +311,7 @@ class ObjectDB(TypedObject):
         "Getter. Allows for value = self.home"
         home = _get_cache(self, "home")
         if home:
-            return home.typeclass
+            return _GA(home, "typeclass")
         return None
     #@home.setter
     def __home_set(self, home):
@@ -310,23 +322,23 @@ class ObjectDB(TypedObject):
             elif ObjectDB.objects.dbref(home):
                 hom = ObjectDB.objects.dbref_search(home)
                 if hom and hasattr(hom,'dbobj'):
-                    hom = hom.dbobj
+                    hom = _GA(hom, "dbobj")
                 else:
-                    hom = home.dbobj
+                    hom = _GA(home, "dbobj")
             else:
-                hom = home.dbobj
+                hom = _GA(home, "dbobj")
             _set_cache(self, "home", hom)
         except Exception:
             string = "Cannot set home: "
             string += "%s is not a valid home."
-            self.msg(string % home)
+            _GA(self, "msg")(_(string) % home)
             logger.log_trace(string)
             #raise
     #@home.deleter
     def __home_del(self):
         "Deleter. Allows for del self.home."
-        self.db_home = None
-        self.save()
+        _SA(self, "db_home", None)
+        _GA(self, "save")()
         _del_cache(self, "home")
     home = property(__home_get, __home_set, __home_del)
 
@@ -336,7 +348,7 @@ class ObjectDB(TypedObject):
         "Getter. Allows for value = self.destination."
         dest = _get_cache(self, "destination")
         if dest:
-            return dest.typeclass
+            return _GA(dest, "typeclass")
         return None
     #@destination.setter
     def __destination_set(self, destination):
@@ -348,24 +360,24 @@ class ObjectDB(TypedObject):
             elif ObjectDB.objects.dbref(destination):
                 # destination is a dbref; search
                 dest = ObjectDB.objects.dbref_search(destination)
-                if dest and hasattr(dest,'dbobj'):
-                    dest = dest.dbobj
+                if dest and _GA(self, "_hasattr")(dest,'dbobj'):
+                    dest = _GA(dest, "dbobj")
                 else:
-                    dest = destination.dbobj
+                    dest = _GA(destination, "dbobj")
             else:
                 dest = destination.dbobj
             _set_cache(self, "destination", dest)
         except Exception:
             string = "Cannot set destination: "
-            string += "%s is not a valid destination."
-            self.msg(string % destination)
+            string += "%s is not a valid destination." % destination
+            _GA(self, "msg")(string)
             logger.log_trace(string)
             raise
     #@destination.deleter
     def __destination_del(self):
         "Deleter. Allows for del self.destination"
-        self.db_destination = None
-        self.save()
+        _SA(self, "db_destination", None)
+        _GA(self, "save")()
         _del_cache(self, "destination")
     destination = property(__destination_get, __destination_set, __destination_del)
 
@@ -374,20 +386,20 @@ class ObjectDB(TypedObject):
     #@property
     def __cmdset_storage_get(self):
         "Getter. Allows for value = self.name. Returns a list of cmdset_storage."
-        if self.db_cmdset_storage:
-            return [path.strip() for path  in self.db_cmdset_storage.split(',')]
+        if _GA(self, "db_cmdset_storage"):
+            return [path.strip() for path  in _GA(self, "db_cmdset_storage").split(',')]
         return []
     #@cmdset_storage.setter
     def __cmdset_storage_set(self, value):
         "Setter. Allows for self.name = value. Stores as a comma-separated string."
         value = ",".join(str(val).strip() for val in make_iter(value))
-        self.db_cmdset_storage = value
-        self.save()
+        _SA(self, "db_cmdset_storage", value)
+        _GA(self, "save")()
     #@cmdset_storage.deleter
     def __cmdset_storage_del(self):
         "Deleter. Allows for del self.name"
-        self.db_cmdset_storage = ""
-        self.save()
+        _SA(self, "db_cmdset_storage", "")
+        _GA(self, "save")()
     cmdset_storage = property(__cmdset_storage_get, __cmdset_storage_set, __cmdset_storage_del)
 
     class Meta:
@@ -411,8 +423,8 @@ class ObjectDB(TypedObject):
         Retrieve sessions connected to this object.
         """
         # if the player is not connected, this will simply be an empty list.
-        if self.player:
-            return self.player.sessions
+        if _GA(self, "player"):
+            return _GA(_GA(self, "player"), "sessions")
         return []
     sessions = property(__sessions_get)
 
@@ -422,25 +434,52 @@ class ObjectDB(TypedObject):
         Convenience function for checking if an active player is
         currently connected to this object
         """
-        return any(self.sessions)
+        return any(_GA(self, "sessions"))
     has_player = property(__has_player_get)
     is_player = property(__has_player_get)
 
     #@property
     def __is_superuser_get(self):
         "Check if user has a player, and if so, if it is a superuser."
-        return any(self.sessions) and self.player.is_superuser
+        #return any(self.sessions) and self.player.is_superuser
+        return any(_GA(self, "sessions")) and _GA(_GA(self, "player"), "is_superuser")
     is_superuser = property(__is_superuser_get)
 
+    # contents
+
+    _contents_cache = None
     #@property
     def contents_get(self, exclude=None):
         """
         Returns the contents of this object, i.e. all
         objects that has this object set as its location.
         This should be publically available.
+
+        exclude is one or more objects to not return
         """
-        return ObjectDB.objects.get_contents(self, excludeobj=exclude)
+        if _GA(self, "_contents_cache") == None:
+            # create the cache
+            _SA(self, "_contents_cache", dict((obj.id, obj) for obj in ObjectDB.objects.get_contents(self)))
+        if exclude:
+            exclude = make_iter(exclude)
+            return [obj for obj in _GA(self, "_contents_cache").values() if obj not in exclude]
+        return _GA(self, "_contents_cache").values()
+        #return ObjectDB.objects.get_contents(self, excludeobj=exclude)
     contents = property(contents_get)
+
+    def contents_update(self, obj, remove=False):
+        """
+        Updates the contents property of the object. Called by
+        self.location_set.
+        """
+        # this creates/updates the cache
+        _GA(self, "contents")
+        # set/remove objects from contents cache
+        cache = _GA(self, "_contents_cache")
+        if remove and obj.id in cache:
+            del cache[obj.id]
+        else:
+            cache[obj.id] = obj
 
     #@property
     def __exits_get(self):
@@ -448,7 +487,7 @@ class ObjectDB(TypedObject):
         Returns all exits from this object, i.e. all objects
         at this location having the property destination != None.
         """
-        return [exi for exi in self.contents
+        return [exi for exi in _GA(self, "contents")
                 if exi.destination]
     exits = property(__exits_get)
 
@@ -461,7 +500,8 @@ class ObjectDB(TypedObject):
                global_search=False,
                attribute_name=None,
                use_nicks=False, location=None,
-               ignore_errors=False, player=False):
+               player=False,
+               ignore_errors=False, exact=False):
         """
         Perform a standard object search in the database, handling
         multiple results and lack thereof gracefully.
@@ -470,17 +510,19 @@ class ObjectDB(TypedObject):
                        Obs - To find a player, append * to the
                        start of ostring.
         global_search: Search all objects, not just the current
-                       location/inventory
-        attribute_name: (string) Which attribute to match
-                        (if None, uses default 'name')
+                       location/inventory. This is overruled if location keyword is given.
+        attribute_name: (string) Which attribute to match (if None, uses default 'name')
         use_nicks : Use nickname replace (off by default)
-        location : If None, use caller's current location
+        location : If None, use caller's current location, and caller.contents.
+                   This can also be a list of locations
+        player: return the Objects' controlling Player, instead, if available
         ignore_errors : Don't display any error messages even
                         if there are none/multiple matches -
                         just return the result as a list.
-        player :        Don't search for an Object but a Player.
-                        This will also find players that don't
-                        currently have a character.
+        exact:  Determines if the search must exactly match the key/alias of the
+                given object or if partial matches the beginnings of one or more
+                words in the name is enough. Exact matching is faster if using
+                global search. Also, if attribute_name is set, matching is always exact.
 
         Returns - a unique Object/Player match or None. All error
                   messages are handled by system-commands and the parser-handlers
@@ -500,6 +542,12 @@ class ObjectDB(TypedObject):
         address the individual ball as '1-ball', '2-ball', '3-ball'
         etc.
         """
+        # handle some common self-references:
+        if ostring == _HERE:
+            return self.location
+        if ostring in (_ME, _SELF, '*' + _ME, '*' + _SELF):
+            return self
+
         if use_nicks:
             if ostring.startswith('*') or player:
                 # player nick replace
@@ -510,21 +558,37 @@ class ObjectDB(TypedObject):
                 # object nick replace
                 ostring = self.nicks.get(ostring, nick_type="object")
 
-        if player:
-            if ostring in ("me", "self", "*me", "*self"):
-                results = [self.player]
-            else:
-                results = PlayerDB.objects.player_search(ostring.lstrip('*'))
+        candidates=None
+        if global_search:
+            # only allow exact matching if searching the entire database
+            exact = True
+        elif location:
+            # location(s) were given
+            candidates = []
+            for obj in make_iter(location):
+                candidates.extend([o.dbobj for o in obj.contents])
         else:
-            results = ObjectDB.objects.object_search(ostring, caller=self,
-                                                     global_search=global_search,
-                                                     attribute_name=attribute_name,
-                                                     location=location)
+            # local search. Candidates are self.contents, self.location and self.location.contents
+            location = self.location
+            candidates = self.contents
+            if location:
+                candidates = candidates + [location] + location.contents
+            else:
+                candidates.append(self) # normally we are included in location.contents
+            # db manager expects database objects
+            candidates = [obj.dbobj for obj in candidates]
 
+        results = ObjectDB.objects.object_search(ostring, caller=self,
+                                                 attribute_name=attribute_name,
+                                                 candidates=candidates,
+                                                 exact=exact)
         if ignore_errors:
             return results
-        # this import is cache after the first call.
-        return _AT_SEARCH_RESULT(self, ostring, results, global_search)
+        result = _AT_SEARCH_RESULT(self, ostring, results, global_search)
+        if player and result:
+            return result.player
+        return result
+
 
     #
     # Execution/action methods
@@ -559,7 +623,7 @@ class ObjectDB(TypedObject):
             if nick.db_nick in raw_list:
                 raw_string = raw_string.replace(nick.db_nick, nick.db_real, 1)
                 break
-        return cmdhandler.cmdhandler(self.typeclass, raw_string)
+        return cmdhandler.cmdhandler(_GA(self, "typeclass"), raw_string)
 
     def msg(self, message, from_obj=None, data=None):
         """
@@ -570,16 +634,13 @@ class ObjectDB(TypedObject):
         data (object): an optional data object that may or may not
                        be used by the protocol.
         """
-        # This is an important function that must always work.
-        # we use a different __getattribute__ to avoid recursive loops.
-
-        if object.__getattribute__(self, 'player'):
-            object.__getattribute__(self, 'player').msg(message, from_obj=from_obj, data=data)
+        if _GA(self, 'player'):
+            _GA(_GA(self, 'player'), "msg")(message, from_obj=from_obj, data=data)
 
     def emit_to(self, message, from_obj=None, data=None):
         "Deprecated. Alias for msg"
         logger.log_depmsg("emit_to() is deprecated. Use msg() instead.")
-        self.msg(message, from_obj, data)
+        _GA(self, "msg")(message, from_obj, data)
 
     def msg_contents(self, message, exclude=None, from_obj=None, data=None):
         """
@@ -587,7 +648,7 @@ class ObjectDB(TypedObject):
 
         exclude is a list of objects not to send to. See self.msg() for more info.
         """
-        contents = self.contents
+        contents = _GA(self, "contents")
         if exclude:
             exclude = make_iter(exclude)
             contents = [obj for obj in contents
@@ -627,14 +688,14 @@ class ObjectDB(TypedObject):
             trc = traceback.format_exc()
             errstring = "%s%s" % (trc, string)
             logger.log_trace()
-            self.msg(errstring)
+            _GA(self, "msg")(errstring)
 
-        errtxt = "Couldn't perform move ('%s'). Contact an admin."
+        errtxt = _("Couldn't perform move ('%s'). Contact an admin.")
         if not emit_to_obj:
             emit_to_obj = self
 
         if not destination:
-            emit_to_obj.msg("The destination doesn't exist.")
+            emit_to_obj.msg(_("The destination doesn't exist."))
             return
         if destination.destination and use_destination:
             # traverse exits
@@ -651,12 +712,12 @@ class ObjectDB(TypedObject):
             return False
 
         # Save the old location
-        source_location = self.location
+        source_location = _GA(self, "location")
         if not source_location:
             # there was some error in placing this room.
             # we have to set one or we won't be able to continue
-            if self.home:
-                source_location = self.home
+            if _GA(self, "home"):
+                source_location = _GA(self, "home")
             else:
                 default_home = ObjectDB.objects.get_id(settings.CHARACTER_DEFAULT_HOME)
                 source_location = default_home
@@ -682,7 +743,7 @@ class ObjectDB(TypedObject):
 
         # Perform move
         try:
-            self.location = destination
+            _SA(self, "location", destination)
         except Exception:
             emit_to_obj.msg(errtxt % "location change")
             logger.log_trace()
@@ -743,18 +804,18 @@ class ObjectDB(TypedObject):
         default_home_id = int(settings.CHARACTER_DEFAULT_HOME)
         try:
             default_home = ObjectDB.objects.get(id=default_home_id)
-            if default_home.dbid == self.dbid:
+            if default_home.dbid == _GA(self, "dbid"):
                 # we are deleting default home!
                 default_home = None
         except Exception:
-            string = "Could not find default home '(#%d)'."
+            string = _("Could not find default home '(#%d)'.")
             logger.log_errmsg(string % default_home_id)
             default_home = None
 
         for obj in objs:
             home = obj.home
             # Obviously, we can't send it back to here.
-            if not home or (home and home.dbid == self.dbid):
+            if not home or (home and home.dbid == _GA(self, "dbid")):
                 obj.home = default_home
 
             # If for some reason it's still None...
@@ -762,7 +823,7 @@ class ObjectDB(TypedObject):
                 string = "Missing default home, '%s(#%d)' "
                 string += "now has a null location."
                 obj.location = None
-                obj.msg("Something went wrong! You are dumped into nowhere. Contact an admin.")
+                obj.msg(_("Something went wrong! You are dumped into nowhere. Contact an admin."))
                 logger.log_errmsg(string % (obj.name, obj.dbid))
                 return
 
@@ -770,11 +831,11 @@ class ObjectDB(TypedObject):
                 if home:
                     string = "Your current location has ceased to exist,"
                     string += " moving you to %s(#%d)."
-                    obj.msg(string % (home.name, home.dbid))
+                    obj.msg(_(string) % (home.name, home.dbid))
                 else:
                     # Famous last words: The player should never see this.
                     string = "This place should not exist ... contact an admin."
-                    obj.msg(string)
+                    obj.msg(_(string))
             obj.move_to(home)
 
     def copy(self, new_key=None):
@@ -786,8 +847,20 @@ class ObjectDB(TypedObject):
                            <old_key>_copy by default.
         Returns: Object (copy of this one)
         """
-        if not new_key:
-            new_key = "%s_copy" % self.key
+        def find_clone_key():
+            """
+            Append 01, 02 etc to obj.key. Checks next higher number in the
+            same location, then adds the next number available
+
+            returns the new clone name on the form keyXX
+            """
+            key = _GA(self, "key")
+            num = 1
+            #for obj in (obj for obj in _GA(_GA(self, "location"), "contents")
+            #            if obj.key.startswith(key) and obj.key.lstrip(key).isdigit()):
+            #    num += 1
+            return "%s_copy" % key
+        new_key = new_key or find_clone_key()
         return ObjectDB.objects.copy_object(self, new_key=new_key)
 
     delete_iter = 0
@@ -798,7 +871,7 @@ class ObjectDB(TypedObject):
         objects to their respective home locations, as well as clean
         up all exits to/from the object.
         """
-        if self.delete_iter > 0:
+        if _GA(self, "delete_iter") > 0:
             # make sure to only call delete once on this object
             # (avoid recursive loops)
             return False
@@ -807,22 +880,22 @@ class ObjectDB(TypedObject):
             # this is an extra pre-check
             # run before deletion mechanism
             # is kicked into gear.
-            self.delete_iter == 0
+            _SA(self, "delete_iter", 0)
             return False
 
         self.delete_iter += 1
 
         # See if we need to kick the player off.
 
-        for session in self.sessions:
-            session.msg("Your character %s has been destroyed." % self.name)
+        for session in _GA(self, "sessions"):
+            session.msg(_("Your character %s has been destroyed.") % _GA(self, "key"))
             # no need to disconnect, Player just jumps to OOC mode.
         # sever the connection (important!)
-        if object.__getattribute__(self, 'player') and self.player:
-            self.player.character = None
-        self.player = None
+        if _GA(self, 'player'):
+            _SA(_GA(self, "player"), "character", None)
+        _SA(self, "player", None)
 
-        for script in self.scripts.all():
+        for script in _GA(self, "scripts").all():
             script.stop()
 
         # if self.player:
@@ -830,9 +903,12 @@ class ObjectDB(TypedObject):
         #     self.player.user.save(
 
         # Destroy any exits to and from this room, if any
-        self.clear_exits()
+        _GA(self, "clear_exits")()
         # Clear out any non-exit objects located within the object
-        self.clear_contents()
+        _GA(self, "clear_contents")()
+        # clear current location's content cache of this object
+        if _GA(self, "location"):
+            _GA(self, "location").contents_update(self, remove=True)
         # Perform the deletion of the object
         super(ObjectDB, self).delete()
         return True

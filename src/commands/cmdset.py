@@ -14,7 +14,7 @@ See CmdHandler for practical examples on how to apply cmdsets
 together to create interesting in-game effects.
 """
 
-import copy
+from django.utils.translation import ugettext as _
 from src.utils.utils import inherits_from, is_iter
 __all__ = ("CmdSet",)
 
@@ -143,10 +143,12 @@ class CmdSet(object):
         if key:
             self.key = key
         self.commands = []
+        self.system_commands = []
         self.actual_mergetype = self.mergetype
         self.cmdsetobj = cmdsetobj
         # initialize system
         self.at_cmdset_creation()
+        self._contains_cache = {}
 
     # Priority-sensitive merge operations for cmdsets
 
@@ -222,7 +224,11 @@ class CmdSet(object):
         Returns True if this cmdset contains the given command (as defined
         by command name and aliases). This allows for things like 'if cmd in cmdset'
         """
-        return othercmd in self.commands
+        ret = self._contains_cache.get(othercmd)
+        if ret == None:
+            ret = othercmd in self.commands
+            self._contains_cache[othercmd] = ret
+        return ret
 
     def __add__(self, cmdset_b):
         """
@@ -243,11 +249,15 @@ class CmdSet(object):
         if not cmdset_b:
             return self
 
-        # preserve system __commands
-        sys_commands = self.get_system_cmds() + cmdset_b.get_system_cmds()
+        sys_commands_a = self.get_system_cmds()
+        sys_commands_b = cmdset_b.get_system_cmds()
 
         if self.priority >= cmdset_b.priority:
             # A higher or equal priority than B
+
+            # preserve system __commands
+            sys_commands = sys_commands_a + [cmd for cmd in sys_commands_b if cmd not in sys_commands_a]
+
             mergetype = self.key_mergetypes.get(cmdset_b.key, self.mergetype)
             if mergetype == "Intersect":
                 cmdset_c = self._intersect(self, cmdset_b, cmdset_b.duplicates)
@@ -257,8 +267,16 @@ class CmdSet(object):
                 cmdset_c = self._remove(self, cmdset_b, cmdset_b.duplicates)
             else: # Union
                 cmdset_c = self._union(self, cmdset_b, cmdset_b.duplicates)
+            cmdset_c.no_channels = self.no_channels
+            cmdset_c.no_exits = self.no_exits
+            cmdset_c.no_objs = self.no_objs
+
         else:
             # B higher priority than A
+
+            # preserver system __commands
+            sys_commands = sys_commands_b + [cmd for cmd in sys_commands_a if cmd not in sys_commands_b]
+
             mergetype = cmdset_b.key_mergetypes.get(self.key, cmdset_b.mergetype)
             if mergetype == "Intersect":
                 cmdset_c = self._intersect(cmdset_b, self, self.duplicates)
@@ -268,6 +286,9 @@ class CmdSet(object):
                 cmdset_c = self._remove(self, cmdset_b, self.duplicates)
             else: # Union
                 cmdset_c = self._union(cmdset_b, self, self.duplicates)
+            cmdset_c.no_channels = cmdset_b.no_channels
+            cmdset_c.no_exits = cmdset_b.no_exits
+            cmdset_c.no_objs = cmdset_b.no_objs
 
         # we store actual_mergetype since key_mergetypes
         # might be different from the main mergetype.
@@ -302,27 +323,38 @@ class CmdSet(object):
             # an infinite loop (adding cmdset to itself somehow)
             try:
                 cmd = self._instantiate(cmd)
-            except RuntimeError, e:
-                string = "Adding cmdset %s to %s lead to an infinite loop. When adding a cmdset to another, "
+            except RuntimeError:
+                string = "Adding cmdset %(cmd)s to %(class)s lead to an infinite loop. When adding a cmdset to another, "
                 string += "make sure they are not themself cyclically added to the new cmdset somewhere in the chain."
-                raise RuntimeError(string % (cmd, self.__class__))
+                raise RuntimeError(_(string) % {"cmd":cmd, "class":self.__class__})
             cmds = cmd.commands
         elif is_iter(cmd):
             cmds = [self._instantiate(c) for c in cmd]
         else:
             cmds = [self._instantiate(cmd)]
+        commands = self.commands
+        system_commands = self.system_commands
         for cmd in cmds:
             # add all commands
             if not hasattr(cmd, 'obj'):
                 cmd.obj = self.cmdsetobj
             try:
-                ic = self.commands.index(cmd)
-                self.commands[ic] = cmd # replace
+                ic = commands.index(cmd)
+                commands[ic] = cmd # replace
             except ValueError:
-                self.commands.append(cmd)
+                commands.append(cmd)
             # extra run to make sure to avoid doublets
-            self.commands = list(set(self.commands))
+            self.commands = list(set(commands))
             #print "In cmdset.add(cmd):", self.key, cmd
+            # add system_command to separate list as well,
+            # for quick look-up
+            if cmd.key.startswith("__"):
+                try:
+                    ic = system_commands.index(cmd)
+                    system_commands[ic] = cmd # replace
+                except ValueError:
+                    system_commands.append(cmd)
+
 
     def remove(self, cmd):
         """
@@ -353,7 +385,8 @@ class CmdSet(object):
         commands starting with double underscore __.
         These are excempt from merge operations.
         """
-        return [cmd for cmd in self.commands if cmd.key.startswith('__')]
+        return self.system_commands
+        #return [cmd for cmd in self.commands if cmd.key.startswith('__')]
 
     def make_unique(self, caller):
         """
@@ -375,19 +408,11 @@ class CmdSet(object):
                 unique[cmd.key] = cmd
         self.commands = unique.values()
 
-    def at_cmdset_creation(self):
-        """
-        Hook method - this should be overloaded in the inheriting
-        class, and should take care of populating the cmdset
-        by use of self.add().
-        """
-        pass
-
     def get_all_cmd_keys_and_aliases(self, caller=None):
         """
         Returns a list of all command keys and aliases
         available in this cmdset. If caller is given, the
-        comands is checked for access on the "call" type
+        commands is checked for access on the "call" type
         before being returned.
         """
         names = []
@@ -396,3 +421,11 @@ class CmdSet(object):
         else:
             [names.extend(cmd._keyaliases) for cmd in self.commands]
         return names
+
+    def at_cmdset_creation(self):
+        """
+        Hook method - this should be overloaded in the inheriting
+        class, and should take care of populating the cmdset
+        by use of self.add().
+        """
+        pass

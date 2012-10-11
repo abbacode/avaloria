@@ -286,9 +286,9 @@ perhaps you could spare some time?
         """ % (caller.name, self.db.real_name)
         root_node = MenuNode("START", links=[i for i in checked_quests], linktexts=["{y!{n %s" % i for i in checked_quests], text = welcome_text)
         for quest in checked_quests:
-            caller.msg("Looking for: %s" % quest)
+            #caller.msg("Looking for: %s" % quest)
             quest_obj = storage.search('%s' % quest, global_search=False, ignore_errors=True)[0]
-            caller.msg("%s" % quest_obj.name)
+            #caller.msg("%s" % quest_obj.name)
             confirm_quest_node = MenuNode("confirm-%s" % quest, links=['END'], linktexts=['Exit Quest Menu'], code="self.caller.accept_quest('%s')" % quest, text="You have accepted the quest!")
             quest_node = MenuNode("%s" % quest, links=['confirm-%s' % quest, 'START'], linktexts=['Accept %s' % quest, "I want to talk about something else."], text=quest_obj.db.long_description)
             nodes.append(confirm_quest_node)

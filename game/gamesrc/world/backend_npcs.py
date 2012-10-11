@@ -3,8 +3,8 @@ from src.utils import create, search
 
 
 #CODE (Crossroads NPC's)
-crossroads = search.objects("The Crossroads", global_search=True)[0]
-storage = search.objects("storage", global_search=True)[0]
+crossroads = search.objects("The Crossroads")[0]
+storage = search.objects("storage", )[0]
 npc  = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Lilith Arynesa (Traveling Merchant)", location=crossroads)
 desc = "A short, stocky Erelanian women with blonde hair down to the middle of her back.  She is dressed in the typical clothing \n"
 desc += "of a travelling merchant along with the various knap sacks of the trade holding all sorts of goods for passers by and \n"
@@ -14,7 +14,7 @@ npc.db.trainer = False
 npc.db.merchant = True
 npc.db.merchant_type = "potions;roaming"
 
-blacksmith_room = search.objects("Hammer and Anvil", global_search=True)[0]
+blacksmith_room = search.objects("Hammer and Anvil" )[0]
 blacksmith = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Romero Grijanse (Blacksmith)", location=blacksmith_room)
 desc = "Romero is a typical earthen, not much said but a whole lot done.  He is a tall, stocky fellow with reddish blonde hair that\n "
 desc += "rests in a brain on his back.  As you look at him, his facial expression does not change the slightest.\n"
@@ -24,7 +24,7 @@ blacksmith.db.trainer = False
 blacksmith.db.merchant = True
 blacksmith.db.merchant_type = "weapons_and_armor"
 
-herbalist_room = search.objects("Henry's Herbs", global_search=True)[0]
+herbalist_room = search.objects("Henry's Herbs")[0]
 herbalist = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Henry the Hermit (Potions)", location=herbalist_room)
 desc = "This small fellow doesn\'t look like any of the races you have encountered on your journeys.  The folks in camp said that\n "
 desc += " he showed up very early during the creation of the Crossroads outpost and has been here ever since.  His greasy unkempt\n "
@@ -36,7 +36,7 @@ herbalist.db.trainer = False
 herbalist.db.merchant = True
 herbalist.db.merchant_type = 'potions'
 
-skill_merchant = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Grisoze Farseet", location=crossroads)
+skill_merchant = create.create_object("game.gamesrc.objects.world.npc.Npc", key="Grisoze Farseer", location=crossroads)
 desc = "Grisoze is a very old man, who is quite obviously blind as a bat.  His hair is a mop of frizzy white curls.\n"
 desc += "His skin is a dark hue, as if he has spent every day of his life in the sun.  As you approach him, he looks\n"
 desc += "at you warmly and say, \"Well what do we have here? ...hah!\".  Oh he's also a bit mad."

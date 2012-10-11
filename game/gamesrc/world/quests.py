@@ -4,7 +4,7 @@ from game.gamesrc.objects.world.quests import Quest
 
 #CODE (Generating quests)
 
-storage = search.objects('storage', global_search=True)[0]
+storage = search.objects('storage')[0]
 copy_dir = '/var/mud/evennia/game/gamesrc/copy/'
 tutorial_quest = create.create_object(Quest, key="Tutorial Slaughter", location=storage)
 tutorial_quest.set_description('%squests/tutorial1.txt' % copy_dir)
@@ -21,7 +21,7 @@ objective = { 'objective_name': 'Gather an Item.', 'counter': 0, 'threshold': 1,
 tutorial_quest.add_objective(objective)
 
 #CODE (Marshlands Quests)
-storage = search.objects('storage', global_search=True)[0]
+storage = search.objects('storage')[0]
 copy_dir = '/var/mud/evennia/game/gamesrc/copy/'
 
 slythain_nuisance = create.create_object(Quest, key="Have You Met The Slythain?", location=storage)

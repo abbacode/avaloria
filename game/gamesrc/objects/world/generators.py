@@ -32,6 +32,13 @@ class LootGenerator(Object):
         self.db.art_ring_prefixes = ['Spellcrafted Gold', 'Light Touched Gold', 'Blessed Silver', 'Spelltouched Brass', 'Godtouched Silver']
         self.db.ring_choices = ['Ring', 'Band', 'Loop', 'Binding']
 
+        #Shields
+        self.db.avg_shield_prefixes = ['Worn', 'Rusted', 'Blackened', 'Wooden']
+        self.db.unc_shield_prefixes = ['Steel', 'Iron', 'Fine Bronze', 'Fine Iron']
+        self.db.rare_shield_prefixes = ['Mithril', 'Rune Etched Steel', 'Rune Etched Iron', 'Spelltouched']
+        self.db.art_shield_prefixes = ['Blessed Mithril', 'Blessed Steel', 'Blessed Iron', 'Light touched']
+        self.db.shield_choices = ['Buckler', 'Round Shield', 'Wall Shield', 'Tower Shield', 'Bulwark', 'Shield']
+
         self.db.level = 1
    
     def set_armor_type(self, armor, armortype):
@@ -120,7 +127,19 @@ class LootGenerator(Object):
         elif 'mace' in weapon.db.weapon_type:
             weapon.db.damage = "1d8"
         return weapon
- 
+
+    def set_shield_armor(self, shield):
+        if self.loot_rating is 'average':
+            v = random.randrange(1, 3)
+        elif self.loot_rating is 'uncommon':
+            v = random.randrange(3, 6)
+        elif self.db.loot_rating is 'rare':
+            v = random.randrange(6,9)
+        elif self.loot_rating is 'artifact':
+            v = random.randrange(9,15)
+        shield.db.armor_rating = v
+        return shield
+
     def set_ring_bonuses(self, ring):
         stats = ['strength', 'dexterity', 'constitution', 'intelligence']
         choice = random.choice(stats)
@@ -217,6 +236,63 @@ class LootGenerator(Object):
                     weapon = self.set_weapon_type(weapon, weapontype)
                     weapon = self.set_weapon_damage(weapon)
                     loot_set.append(weapon)
+                return loot_set
+        elif 'shield' in self.item_type:
+            if 'average' in self.loot_rating:
+                for i in range(number_of_items):
+                    prefix = random.choice(self.db.avg_shield_prefixes)
+                    suffix = random.choice(self.db.shield_choices)
+                    name = "%s %s" % (prefix, suffix)
+                    shield = create.create_object("game.gamesrc.objects.world.items.Armor", key=name)
+                    shield.db.value = random.randrange(1,10)
+                    shield = self.set_shield_armor(shield)
+                    shield.db.item_level = "common"
+                    shield.db.slot = "shield"
+                    shield.db.type = 'shield'
+                    shield.desc = "A crudely crafted shield that has very clearly seen \"better days\"."
+                    loot_set.append(shield)
+                return loot_set
+            elif 'uncommon' in self.loot_rating:
+                for i in range(number_of_items):
+                    prefix = random.choice(self.db.unc_shield_prefixes)
+                    suffix = random.choice(self.db.shield_choices)
+                    name = "%s %s" % (prefix, suffix)
+                    shield = create.create_object("game.gamesrc.objects.world.items.Armor", key=name)
+                    shield.db.value = random.randrange(10,18)
+                    shield = self.set_shield_armor(shield)
+                    shield.db.item_level = "uncommon"
+                    shield.db.slot = "shield"
+                    shield.db.type = "shield"
+                    shield.desc = "A well made shield that has been used, but kept in very good condition"
+                    loot_set.append(shield)
+                return loot_set
+            elif 'rare' in self.loot_rating:
+                for i in range(number_of_items):
+                    prefix = random.choice(self.db.rare_shield_prefixes)
+                    suffix = random.choice(self.db.shield_choices)
+                    name = "%s %s" % (prefix, suffix)
+                    shield = create.create_object("game.gamesrc.objects.world.items.Armor", key=name)
+                    shield.db.value = random.randrange(18, 26)
+                    shield.db.item_level = "rare"
+                    shield.db.slot = "shield"
+                    shield.db.type = "shield"
+                    shield = self.set_shield_armor(shield)
+                    shield.desc = "A finely crafted shield  that could withstand the deepest amounts of physical punishment."
+                    loot_set.append(shield)
+                return loot_set
+            elif 'artifact' in self.loot_rating:
+                for i in range(number_of_items):
+                    prefix = random.choice(self.db.art_shield_prefixes)
+                    suffix = random.choice(self.db.shield_choices)
+                    name = "%s %s" % (prefix, suffix)
+                    shield = create.create_object("game.gamesrc.objects.world.items.Armor", key=name)
+                    shield.db.slot = "shield"
+                    shield.db.type = "shield"
+                    shield.db.value = random.randrange(27, 50)
+                    shield.db.item_level = "artifact"
+                    shield.desc = "A magnificently crafting shield forged by the greatest of shieldsmiths."
+                    shield = self.set_shield_armor(shield)
+                    loot_set.appect(shield)
                 return loot_set
         elif 'ring' in self.item_type:
             if 'average' in self.loot_rating:
@@ -330,7 +406,7 @@ class LootGenerator(Object):
                     loot_set.append(armor)
                 return loot_set 
         elif 'mixed' in self.item_type:
-            loot_choices = ['weapon', 'potion', 'armor', 'ring']
+            loot_choices = ['weapon', 'potion', 'armor', 'ring', 'shield']
             for i in range(number_of_items):
                 random_number = random.random()
                 if random_number < .05:
@@ -348,6 +424,9 @@ class LootGenerator(Object):
                 elif 'ring' in choice:
                     ring = self.create_loot_set(loot_rating=self.loot_rating, number_of_items=1, item_type='ring')
                     loot_set.append(ring[0])
+                elif 'shield' in choice:
+                    shield = self.create_loot_set(loot_rating=self.loot_rating, number_of_items=1, item_type="shield")
+                    loot_set.append(shield[0])
                 elif 'potion' in choice:
                     potion_types = ['healing', 'mana_regen', 'buff']
                     effect = random.choice(potion_types)
@@ -372,7 +451,7 @@ class LootGenerator(Object):
                     potion.generate_item_stats()
                     loot_set.append(potion)                 
                 elif 'skillbook' in choice:
-                    skillbooks = [ 'kick', 'brawling', 'strike', 'toughness']
+                    skillbooks = [ 'kick', 'brawling', 'strike', 'toughness', 'crippling strike', 'rend', 'shield bash']
                     book = random.choice(skillbooks)
                     if 'kick' in book:
                         book = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", key="Training Manual: Kick")
@@ -394,6 +473,20 @@ class LootGenerator(Object):
                         book.db.skill = 'toughness'
                         book.db.value = random.randrange(10,35)
                         book.db.level_requirement = 5
+                    elif 'rend ' in book:
+                        book= create.create_object("game.gamesrc.objects.world.skills.TrainingBook", key="Training Manual: Rend")
+                        book.db.skill = 'rend'
+                        book.db.value = random.randrange(50,80)
+                        book.db.level_requirement = 8
+                    elif 'crippling strike' in book:
+                        book = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", key="Training Manual: Crippling Strik")
+                        book.db.skill = "cripple"
+                        book.db.value = random.randrange(80,100)
+                        book.db.level_requirement = 8
+                    elif 'shield bash' in book:
+                        book.db.skill = 'shield bash'
+                        book.db.value = random.randrange(100,120)
+                        book.db.level_requirement = 8
                     loot_set.append(book)
                 elif 'spellbook' in  choice:
                     spellbooks = ['fireball', 'mageshield', 'heal', 'strength of the bear']
@@ -664,7 +757,7 @@ class DungeonGenerator(Object):
 
     def refresh_level(self):
         lair = self.location.location
-        owner = self.search(lair.db.owner, global_search=True)
+        owner = self.search(lair.db.owner.name, global_search=True)
         self.db.level = owner.db.attributes['level']
         
     def generate_rooms(self):

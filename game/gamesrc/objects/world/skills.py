@@ -279,6 +279,14 @@ class TrainingBook(Object):
                 caller.msg("{CYou have learned a new skill: Crippling Strike.{n")
             else:
                 caller.msg("You already know this skill")
+        elif 'shield bash' in self.db.skill:
+            if 'shield bash' not in [manager.db.skills.keys()]:
+                sb_obj = create.create_object("game.gamesrc.objects.world.skills.ShieldBash", key="shield bash")
+                sb_obj.db.character = caller
+                manager.add_item(sb_obj.name, sb_obj)
+                caller.msg("{CYou have learned a new skill: Shield Bash.{n")
+            else:
+                caller.msg("You already know this skill.")
         elif 'spellweaving' in self.db.skill:
             if 'spellweaving' not in [ manager.db.skills.keys()]:
                 spellweaving_skill_obj = create.create_object("game.gamesrc.objects.world.skills.SpellWeaving", key='spellweaving')
@@ -362,6 +370,35 @@ class Kick(Skill):
         modifier += .01 
         self.db.rank_modifier = modifier
 
+class ShieldBash(Skill):
+    """
+    a high damage attack that requires a shield to use.
+    """
+    def at_object_creation(self):
+        Skill.at_object_creation(self)
+        self.db.desc = "A strong melee attack using the equipped shield to batter an opponent."
+        self.db.damage = "2d6"
+        self.db.effect = "attack"
+        self.db.character = None
+
+    def on_use(self, caller):
+        target = caller.db.target
+        attack_roll = caller.attack_roll()
+        if caller.has_player and caller.db.equipment['shield'] is not None:
+            if attack_roll >= target.db.attributes['temp_armor_rating']:
+                character_attributes = caller.db.attributes
+                damage = self.get_effect()
+                target.take_damage(damage)
+                character_attributes = self.unbalance(1, character_attributes)
+                caller.db.attributes = characte_attributes
+                caller.msg("{CYou bash %s's face in for %s damage!" % (target.name, damage))
+            else:
+                caller.msg("{CYou failed to Shield Bash %s!{n" % target.name)
+                return
+        else:
+            caller.msg("{REquip a shield to use Shield Bash.{n")
+        
+
 class CripplingStrike(Skill):
     """
     A medium damage melee attack that cut's the enemies tendons, rendering them
@@ -392,6 +429,7 @@ class CripplingStrike(Skill):
             else:
                 caller.msg("{RYour attempted to cripple failed!{n")
                 return
+
 
 class Rend(Skill):
     """

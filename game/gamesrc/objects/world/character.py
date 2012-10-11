@@ -2,7 +2,7 @@ import random
 import time
 from collections import deque
 from prettytable import PrettyTable
-from ev import Object, Character, utils, create_object
+from ev import Object, Character, utils, create_object, create_channel
 from src.objects.models import ObjAttribute
 from game.gamesrc.objects.world.items import Item
 from game.gamesrc.scripts.world_scripts import character_class_scripts as cscripts
@@ -81,7 +81,7 @@ class CharacterClass(Character):
         dungeon_manager = create_object("game.gamesrc.objects.world.structures.DungeonManager", key="Stone Summoning Circle", location=self.location)
         dungeon_manager.db.lair_id = self.db.lair_id
         generator = create_object("game.gamesrc.objects.world.generators.DungeonGenerator", location=dungeon_manager, key="Pulsing Red Stone")
-        generator.locks.add("get:none()")
+        generator.locks.add("get:none();drop:none()")
         generator.manager = dungeon_manager
         dungeon_manager.db.generator = generator
         structure_manager.db.lair_id = self.db.lair_id
@@ -99,9 +99,9 @@ class CharacterClass(Character):
         #friends list is atteched to the player
         player_lair_exit = create_object("game.gamesrc.objects.world.rooms.PlayerLairExit", location=lair)
 
-    """
     def rebuild_model(self):
-      #  Build a new character model to grab in new things that have been coded.
+        """
+        Build a new character model to grab in new things that have been coded.
         nc = create_object("game.gamesrc.objects.world.character.CharacterClass")
         valid_attributes = [(attr.key, attr.value) attr for attr in ObjAttribute.objects.filter(db_obj=nc)]
         self_attributes = [(attr.key, attr.value) attr for attr in ObjAttribute.objects.filter(db_obj=self)]
@@ -112,8 +112,8 @@ class CharacterClass(Character):
             for attribute in valid_attributes:
                 if attribute[0] not in self.attributes:
                 new_attribute = ObjAttribute(db_obj=self, value=attribute
+        """      
 
-    """
     def character_summary(self):
         """
         Detailed output of a character.  The character sheet.
@@ -146,6 +146,7 @@ class CharacterClass(Character):
 
     def at_disconnect(self):
         self.cmdset.clear()
+        self.db.grouped = False
         self.scripts.delete("character_sentinel")
    
     def at_first_login(self): 
@@ -947,9 +948,9 @@ class FriendList(Object):
         msg = "{C----------------------------------------------------------------------------------------------------{n"
         caller.msg(msg)
         for friend in friends:
-            friend = self.search(friend.name, global_search=True, player=True)
-            if friend.character:
-                character = friend.character
+            friend = self.search('*%s'%friend.name, global_search=True, player=True, ignore_errors=True)[0]
+            if friend.has_player:
+                character = friend
                 msg = "{{G{0:<15}{{n{1:<25}{2:<20}{3:<20}".format(friend.name, character.name, character.location, character.db.attributes['level']) 
             else:
                 continue #they aren't online and dont need to be shown.
@@ -961,7 +962,8 @@ class FriendList(Object):
     def add_friend(self, caller, friend):
         character_obj = self.search(friend, global_search=True)
         if not character_obj:
-            friend_player_obj = self.search(friend, global_search=True, player=True, ignore_errors=True)[0]
+            friend_player_obj = self.search('*%s'%friend, global_search=True, player=True, ignore_errors=True)[0]
+            friend_player_obj = friend_player_obj.player
         else:
             friend_player_obj = character_obj.player
 
@@ -971,7 +973,7 @@ class FriendList(Object):
         caller.msg("{C%s has been added to your friends list.{n" % friend_player_obj.name)
 
     def remove_friend(self, caller, friend):
-        friend_player_obj = self.search(friend, global_search=True, player=True)
+        friend_player_obj = self.search('*%s'%friend, global_search=True, player=True)
         friends = self.db.friends
         friends.remove(friend_player_obj)
         self.db.friends = friends
@@ -1022,6 +1024,7 @@ class CharacterGroup(Object):
         
         
     def create_comm_channels(self):
+        members = self.db.members
         try:
             party_chat = create_channel("Party Chat [%s]" % self.id, 'Party Chat', locks="send:attr(group, %s);listen:attr(group, %s)" % (self.name, self.name)) 
             self.db.channel = party_chat
@@ -1066,3 +1069,5 @@ class CharacterGroup(Object):
         self.db.leader = character.name
         
         
+
+

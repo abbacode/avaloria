@@ -6,15 +6,23 @@ be of use when designing your own game.
 
 """
 
-from inspect import ismodule
 import os, sys, imp, types, math
-import textwrap
-import datetime
-import random
+import textwrap, datetime, random
+from inspect import ismodule
+from collections import defaultdict
 from twisted.internet import threads
+from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 ENCODINGS = settings.ENCODINGS
+_GA = object.__getattribute__
+_SA = object.__setattr__
+_DA = object.__delattr__
 
 def is_iter(iterable):
     """
@@ -23,12 +31,17 @@ def is_iter(iterable):
     they are actually iterable), since string iterations
     are usually not what we want to do with a string.
     """
-    return hasattr(iterable, '__iter__')
+    # use a try..except here to avoid a property
+    # lookup when using this from a typeclassed entity
+    try:
+        _GA(iterable, '__iter__')
+        return True
+    except AttributeError:
+        return False
 
 def make_iter(obj):
     "Makes sure that the object is always iterable."
-    if not hasattr(obj, '__iter__'): return [obj]
-    return obj
+    return not hasattr(obj, '__iter__') and [obj] or obj
 
 def fill(text, width=78, indent=0):
     """
@@ -243,7 +256,7 @@ def get_evennia_version():
     Check for the evennia version info.
     """
     try:
-        f = open(settings.BASE_PATH + os.sep + "VERSION", 'r')
+        f = open(settings.BASE_PATH + os.sep + "VERSION.txt", 'r')
         return "%s-r%s" % (f.read().strip(), os.popen("hg id -i").read().strip())
     except IOError:
         return "Unknown version"
@@ -394,7 +407,7 @@ def inherits_from(obj, parent):
     Takes an object and tries to determine if it inherits at any distance
     from parent. What differs this function from e.g. isinstance()
     is that obj may be both an instance and a class, and parent
-<    may be an instance, a class, or the python path to a class (counting
+    may be an instance, a class, or the python path to a class (counting
     from the evennia root directory).
     """
 
@@ -413,7 +426,6 @@ def inherits_from(obj, parent):
     else:
         parent_path = "%s.%s" % (parent.__class__.__module__, parent.__class__.__name__)
     return any(1 for obj_path in obj_paths if obj_path == parent_path)
-
 
 def format_table(table, extra_space=1):
     """
@@ -449,44 +461,232 @@ def format_table(table, extra_space=1):
                        for icol, col in enumerate(table)])
     return ftable
 
-def run_async(async_func, at_return=None, at_err=None):
+def server_services():
     """
-    This wrapper will use Twisted's asynchronous features to run a slow
-    function using a separate reactor thread. In effect this means that
-    the server will not be blocked while the slow process finish.
+    Lists all services active on the Server. Observe that
+    since services are launced in memory, this function will
+    only return any results if called from inside the game.
+    """
+    from src.server.sessionhandler import SESSIONS
+    if hasattr(SESSIONS, "server") and hasattr(SESSIONS.server, "services"):
+        server = SESSIONS.server.services.namedServices
+    else:
+        print "This function must be called from inside the evennia process."
+        server = {}
+    del SESSIONS
+    return server
+
+def uses_database(name="sqlite3"):
+    """
+    Checks if the game is currently using a given database. This is a
+    shortcut to having to use the full backend name
+
+    name - one of 'sqlite3', 'mysql', 'postgresql_psycopg2' or 'oracle'
+    """
+    try:
+        engine = settings.DATABASES["default"]["ENGINE"]
+    except KeyError:
+        engine = settings.DATABASE_ENGINE
+    return engine == "django.db.backends.%s" % name
+
+
+
+_FROM_MODEL_MAP = None
+_TO_DBOBJ = lambda o: (hasattr(o, "dbobj") and o.dbobj) or o
+_TO_PACKED_DBOBJ = lambda natural_key, dbref: ('__packed_dbobj__', natural_key, dbref)
+_DUMPS = None
+def to_pickle(data, do_pickle=True, emptypickle=True):
+    """
+    Prepares object for being pickled. This will remap database models
+    into an intermediary format, making them easily retrievable later.
+
+    obj - a python object to prepare for pickling
+    do_pickle - return a pickled object
+    emptypickle - allow pickling also a None/empty value (False will be pickled)
+                  This has no effect if do_pickle is False
+
+    Database objects are stored as ('__packed_dbobj__', <natural_key_tuple>, <dbref>)
+    """
+    # prepare globals
+    global _DUMPS, _FROM_MODEL_MAP
+    _DUMPS = lambda data: to_str(pickle.dumps(data, pickle.HIGHEST_PROTOCOL))
+    if not _DUMPS:
+        _DUMPS = lambda data: to_str(pickle.dumps(data, pickle.HIGHEST_PROTOCOL))
+    if not _FROM_MODEL_MAP:
+        _FROM_MODEL_MAP = defaultdict(str)
+        _FROM_MODEL_MAP.update(dict((c.model, c.natural_key()) for c in ContentType.objects.all()))
+
+    def iter_db2id(item):
+        "recursively looping over iterable items, finding dbobjs"
+        dtype = type(item)
+        if dtype in (basestring, int, float):
+            return item
+        elif dtype == tuple:
+            return tuple(iter_db2id(val) for val in item)
+        elif dtype == dict:
+            return dict((key, iter_db2id(val)) for key, val in item.items())
+        elif hasattr(item, '__iter__'):
+            return [iter_db2id(val) for val in item]
+        else:
+            item = _TO_DBOBJ(item)
+            natural_key = _FROM_MODEL_MAP[hasattr(item, "id") and hasattr(item, '__class__') and item.__class__.__name__.lower()]
+            if natural_key:
+                return _TO_PACKED_DBOBJ(natural_key, item.id)
+        return item
+    # do recursive conversion
+    data = iter_db2id(data)
+    if do_pickle and not (not emptypickle and not data and data != False):
+        print "_DUMPS2:", _DUMPS
+        return _DUMPS(data)
+    return data
+
+_TO_MODEL_MAP = None
+_IS_PACKED_DBOBJ = lambda o: type(o)== tuple and len(o)==3 and o[0]=='__packed_dbobj__'
+_TO_TYPECLASS = lambda o: (hasattr(o, 'typeclass') and o.typeclass) or o
+_LOADS = None
+from django.db import transaction
+@transaction.autocommit
+def from_pickle(data, do_pickle=True):
+    """
+    Converts back from a data stream prepared with to_pickle. This will
+    re-acquire database objects stored in the special format.
+
+    obj - an object or a pickle, as indicated by the do_pickle flag
+    do_pickle - actually unpickle the input before continuing
+    """
+    # prepare globals
+    global _LOADS, _TO_MODEL_MAP
+    if not _LOADS:
+        _LOADS = lambda data: pickle.loads(to_str(data))
+    if not _TO_MODEL_MAP:
+        _TO_MODEL_MAP = defaultdict(str)
+        _TO_MODEL_MAP.update(dict((c.natural_key(), c.model_class()) for c in ContentType.objects.all()))
+
+    def iter_id2db(item):
+        "Recreate all objects recursively"
+        dtype = type(item)
+        if dtype in (basestring, int, float):
+            return item
+        elif _IS_PACKED_DBOBJ(item): # this is a tuple and must be done before tuple-check
+            #print item[1], item[2]
+            if item[2]: #Not sure why this could ever be None, but it can
+                return  _TO_TYPECLASS(_TO_MODEL_MAP[item[1]].objects.get(id=item[2]))
+            return None
+        elif dtype == tuple:
+            return tuple(iter_id2db(val) for val in item)
+        elif dtype == dict:
+            return dict((key, iter_id2db(val)) for key, val in item.items())
+        elif hasattr(item, '__iter__'):
+            return [iter_id2db(val) for val in item]
+        return item
+    if do_pickle:
+        data = _LOADS(data)
+    # we have to make sure the database is in a safe state
+    # (this is relevant for multiprocess operation)
+    transaction.commit()
+    # do recursive conversion
+    return iter_id2db(data)
+
+
+_TYPECLASSMODELS = None
+_OBJECTMODELS = None
+def clean_object_caches(obj):
+    """
+    Clean all object caches on the given object
+    """
+    global _TYPECLASSMODELS, _OBJECTMODELS
+    if not _TYPECLASSMODELS:
+        from src.typeclasses import models as _TYPECLASSMODELS
+    #if not _OBJECTMODELS:
+    #    from src.objects import models as _OBJECTMODELS
+
+    #print "recaching:", obj
+    if not obj:
+        return
+    obj = hasattr(obj, "dbobj") and obj.dbobj or obj
+    # contents cache
+    try:
+        _SA(obj, "_contents_cache", None)
+    except AttributeError:
+        pass
+
+    # on-object property cache
+    [_DA(obj, cname) for cname in obj.__dict__.keys() if cname.startswith("_cached_db_")]
+    try:
+        hashid = _GA(obj, "hashid")
+        hasid = obj.hashid
+        _TYPECLASSMODELS._ATTRIBUTE_CACHE[hashid] = {}
+    except AttributeError:
+        pass
+
+_PPOOL = None
+_PCMD = None
+_PROC_ERR = "A process has ended with a probable error condition: process ended by signal 9."
+def run_async(to_execute, *args, **kwargs):
+    """
+    Runs a function or executes a code snippet asynchronously.
+
+    Inputs:
+    to_execute (callable) - if this is a callable, it will
+            be executed with *args and non-reserver *kwargs as
+            arguments.
+            The callable will be executed using ProcPool, or in
+            a thread if ProcPool is not available.
+
+    reserved kwargs:
+        'at_return' -should point to a callable with one argument.
+                    It will be called with the return value from
+                    to_execute.
+        'at_return_kwargs' - this dictionary which be used as keyword
+                             arguments to the at_return callback.
+        'at_err' - this will be called with a Failure instance if
+                       there is an error in to_execute.
+        'at_err_kwargs' - this dictionary will be used as keyword
+                          arguments to the at_err errback.
+
+    *args   - these args will be used
+              as arguments for that function. If to_execute is a string
+              *args are not used.
+    *kwargs - these kwargs will be used
+              as keyword arguments in that function. If a string, they
+              instead are used to define the executable environment
+              that should be available to execute the code in to_execute.
+
+    run_async will relay executed code to a thread.
 
     Use this function with restrain and only for features/commands
     that you know has no influence on the cause-and-effect order of your
     game (commands given after the async function might be executed before
-    it has finished). Accessing the same property from different threads can
-    lead to unpredicted behaviour if you are not careful (this is called a
+    it has finished). Accessing the same property from different threads
+    can lead to unpredicted behaviour if you are not careful (this is called a
     "race condition").
 
     Also note that some databases, notably sqlite3, don't support access from
     multiple threads simultaneously, so if you do heavy database access from
-    your async_func under sqlite3 you will probably run very slow or even get
+    your to_execute under sqlite3 you will probably run very slow or even get
     tracebacks.
 
-    async_func() - function that should be run asynchroneously
-    at_return(r) - if given, this function will be called when async_func returns
-                   value r at the end of a successful execution
-    at_err(e) - if given, this function is called if async_func fails with an exception e.
-                use e.trap(ExceptionType1, ExceptionType2)
-
     """
-    # create deferred object
 
-    deferred = threads.deferToThread(async_func)
-    if at_return:
-        deferred.addCallback(at_return)
-    if at_err:
-        deferred.addErrback(at_err)
-    # always add a logging errback as a last catch
-    def default_errback(e):
-        from src.utils import logger
-        logger.log_trace(e)
-    deferred.addErrback(default_errback)
+    # handle special reserved input kwargs
+    callback = kwargs.pop("at_return", None)
+    errback = kwargs.pop("at_err", None)
+    print callback
+    print errback
+    callback_kwargs = kwargs.pop("at_return_kwargs", {})
+    errback_kwargs = kwargs.pop("at_err_kwargs", {})
 
+    if callable(to_execute):
+        # no process pool available, fall back to old deferToThread mechanism.
+        deferred = threads.deferToThread(to_execute, *args, **kwargs)
+    else:
+        # no appropriate input for this server setup
+        raise RuntimeError("'%s' could not be handled by run_async" % to_execute)
+
+    # attach callbacks
+    if callback:
+        deferred.addCallback(callback, **callback_kwargs)
+    deferred.addErrback(errback, **errback_kwargs)
 
 def check_evennia_dependencies():
     """
@@ -494,7 +694,6 @@ def check_evennia_dependencies():
 
     Returns False if a show-stopping version mismatch is found.
     """
-
     # defining the requirements
     python_min = '2.6'
     twisted_min = '10.0'
@@ -543,6 +742,7 @@ def check_evennia_dependencies():
     if settings.IRC_ENABLED:
         try:
             import twisted.words
+            twisted.words # set to avoid debug info about not-used import
         except ImportError:
             errstring += "\n ERROR: IRC is enabled, but twisted.words is not installed. Please install it."
             errstring += "\n   Linux Debian/Ubuntu users should install package 'python-twisted-words', others"
@@ -719,7 +919,51 @@ def string_suggestions(string, vocabulary, cutoff=0.6, maxnum=3):
     Returns:
         list of suggestions from vocabulary (could be empty if there are no matches)
     """
-    #if string in vocabulary:
-    #    return [string]
     return [tup[1] for tup in sorted([(string_similarity(string, sugg), sugg) for sugg in vocabulary],
                                       key=lambda tup: tup[0], reverse=True) if tup[0] >= cutoff][:maxnum]
+
+def string_partial_matching(alternatives, inp, ret_index=True):
+    """
+    Partially matches a string based on a list of alternatives. Matching
+    is made from the start of each subword in each alternative. Case is not
+    important. So e.g. "bi sh sw" or just "big" or "shiny" or "sw" will match
+    "Big shiny sword". Scoring is done to allow to separate by most common
+    demoninator. You will get multiple matches returned if appropriate.
+
+    Input:
+        alternatives (list of str) - list of possible strings to match
+        inp (str) - search criterion
+        ret_index (bool) - return list of indices (from alternatives array) or strings
+    Returns:
+        list of matching indices or strings, or an empty list
+
+    """
+    if not alternatives or not inp:
+        return []
+
+    matches = defaultdict(list)
+    inp_words = inp.lower().split()
+    for altindex, alt in enumerate(alternatives):
+        alt_words = alt.lower().split()
+        last_index = 0
+        score = 0
+        for inp_word in inp_words:
+            # loop over parts, making sure only to visit each part once
+            # (this will invalidate input in the wrong word order)
+            submatch = [last_index + alt_num for alt_num, alt_word
+                        in enumerate(alt_words[last_index:]) if alt_word.startswith(inp_word)]
+            if submatch:
+                last_index = min(submatch) + 1
+                score += 1
+            else:
+                score = 0
+                break
+        if score:
+            if ret_index:
+                matches[score].append(altindex)
+            else:
+                matches[score].append(alt)
+    if matches:
+        return matches[max(matches)]
+    return []
+

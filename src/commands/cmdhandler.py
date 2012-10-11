@@ -45,6 +45,8 @@ from src.commands.cmdset import CmdSet
 from src.commands.cmdparser import at_multimatch_cmd
 from src.utils.utils import string_suggestions
 
+from django.utils.translation import ugettext as _
+
 __all__ = ("cmdhandler",)
 
 # This decides which command parser is to be used.
@@ -140,7 +142,8 @@ def get_and_merge_cmdsets(caller):
     # report cmdset errors to user (these should already have been logged)
     yield [caller.msg(cmdset.message) for cmdset in cmdsets if cmdset.key == "_CMDSET_ERROR"]
     # sort cmdsets after reverse priority (highest prio are merged in last)
-    cmdsets = yield sorted(cmdsets, key=lambda x: x.priority)
+    yield cmdsets.sort(key=lambda x: x.priority)
+    #cmdsets = yield sorted(cmdsets, key=lambda x: x.priority)
 
     if cmdsets:
         # Merge all command sets into one, beginning with the lowest-prio one
@@ -178,7 +181,7 @@ def cmdhandler(caller, raw_string, testing=False):
             if not cmdset:
                 # this is bad and shouldn't happen.
                 raise NoCmdSets
-
+            unformatted_raw_string = raw_string
             raw_string = raw_string.strip()
             if not raw_string:
                 # Empty input. Test for system command instead.
@@ -189,34 +192,44 @@ def cmdhandler(caller, raw_string, testing=False):
             # This also checks for permissions, so all commands in match
             # are commands the caller is allowed to call.
             matches = yield _COMMAND_PARSER(raw_string, cmdset, caller)
+
             # Deal with matches
-            if not matches:
-                # No commands match our entered command
-                syscmd = yield cmdset.get(CMD_NOMATCH)
-                if syscmd:
-                    sysarg = raw_string
-                else:
-                    sysarg = "Command '%s' is not available." % raw_string
-                    suggestions = string_suggestions(raw_string, cmdset.get_all_cmd_keys_and_aliases(caller), cutoff=0.7, maxnum=3)
-                    if suggestions:
-                        sysarg += " Maybe you meant %s?" % utils.list_to_string(suggestions, 'or', addquote=True)
-                    else:
-                        sysarg += " Type \"help\" for help."
-                raise ExecSystemCommand(syscmd, sysarg)
 
             if len(matches) > 1:
                 # We have a multiple-match
                 syscmd = yield cmdset.get(CMD_MULTIMATCH)
-                sysarg = "There where multiple matches."
+                sysarg = _("There were multiple matches.")
                 if syscmd:
                     syscmd.matches = matches
                 else:
                     sysarg = yield at_multimatch_cmd(caller, matches)
                 raise ExecSystemCommand(syscmd, sysarg)
 
-            # At this point, we have a unique command match.
-            match = matches[0]
-            cmdname, args, cmd = match[0], match[1], match[2]
+            if len(matches) == 1:
+                # We have a unique command match.
+                match = matches[0]
+                cmdname, args, cmd = match[0], match[1], match[2]
+
+                # check if we allow this type of command
+                if cmdset.no_channels and hasattr(cmd, "is_channel") and cmd.is_channel:
+                    matches = []
+                if cmdset.no_exits and hasattr(cmd, "is_exit") and cmd.is_exit:
+                    matches = []
+
+            if not matches:
+                # No commands match our entered command
+                syscmd = yield cmdset.get(CMD_NOMATCH)
+                if syscmd:
+                    sysarg = raw_string
+                else:
+                    sysarg = _("Command '%s' is not available.") % raw_string
+                    suggestions = string_suggestions(raw_string, cmdset.get_all_cmd_keys_and_aliases(caller), cutoff=0.7, maxnum=3)
+                    if suggestions:
+                        sysarg += _(" Maybe you meant %s?") % utils.list_to_string(suggestions, _('or'), addquote=True)
+                    else:
+                        sysarg += _(" Type \"help\" for help.")
+                raise ExecSystemCommand(syscmd, sysarg)
+
 
             # Check if this is a Channel match.
             if hasattr(cmd, 'is_channel') and cmd.is_channel:
@@ -236,6 +249,7 @@ def cmdhandler(caller, raw_string, testing=False):
             cmd.cmdstring = cmdname
             cmd.args = args
             cmd.cmdset = cmdset
+            cmd.raw_string = unformatted_raw_string
 
             if hasattr(cmd, 'obj') and hasattr(cmd.obj, 'scripts'):
                 # cmd.obj are automatically made available.
@@ -277,6 +291,7 @@ def cmdhandler(caller, raw_string, testing=False):
                 syscmd.cmdstring = syscmd.key
                 syscmd.args = sysarg
                 syscmd.cmdset = cmdset
+                syscmd.raw_string = unformatted_raw_string
 
                 if hasattr(syscmd, 'obj') and hasattr(syscmd.obj, 'scripts'):
                     # cmd.obj is automatically made available.
@@ -301,19 +316,19 @@ def cmdhandler(caller, raw_string, testing=False):
             string += "If logging out/in doesn't solve the problem, try to "
             string += "contact the server admin through some other means "
             string += "for assistance."
-            caller.msg(string)
+            caller.msg(_(string))
             logger.log_errmsg("No cmdsets found: %s" % caller)
 
         except Exception:
             # We should not end up here. If we do, it's a programming bug.
             string = "%s\nAbove traceback is from an untrapped error."
             string += " Please file a bug report."
-            logger.log_trace(string)
+            logger.log_trace(_(string))
             caller.msg(string % format_exc())
 
     except Exception:
         # This catches exceptions in cmdhandler exceptions themselves
         string = "%s\nAbove traceback is from a Command handler bug."
         string += " Please contact an admin and/or file a bug report."
-        logger.log_trace(string)
+        logger.log_trace(_(string))
         caller.msg(string % format_exc())

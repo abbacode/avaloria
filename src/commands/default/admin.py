@@ -302,7 +302,7 @@ class CmdDelPlayer(MuxCommand):
 
         # We use player_search since we want to be sure to find also players
         # that lack characters.
-        players = caller.search("*%s" % args, player=True)
+        players = caller.search("*%s" % args)
         if not players:
             try:
                 players = PlayerDB.objects.filter(id=args)
@@ -367,10 +367,13 @@ class CmdDelPlayer(MuxCommand):
                 if reason:
                     string += " Reason given:\n  '%s'" % reason
                 character.msg(string)
-                caller.execute_cmd("@boot %s" % uname)
-
-            player.delete()
+                # we have a bootable object with a connected player
+                sessions = SESSIONS.sessions_from_player(character.player)
+                for session in sessions:
+                   session.msg(string)
+                   session.disconnect()
             user.delete()
+            player.delete()
             caller.msg("Player %s was successfully deleted." % uname)
 
 

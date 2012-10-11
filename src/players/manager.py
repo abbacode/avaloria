@@ -38,7 +38,7 @@ def returns_player_list(method):
                 # there is a 1-1 relation between Users-Players, so we
                 # try to go the other way instead.
                 from src.players.models import PlayerDB
-                match = PlayerDB.objects.filter(user=user)
+                match = PlayerDB.objects.filter(user__id=user.id)
                 if match:
                     players.append(match[0])
                 else:
@@ -96,7 +96,7 @@ class PlayerManager(TypedObjectManager):
         """
         Returns a list of player objects with currently connected users/players.
         """
-        return [player for player in self.all() if player.sessions]
+        return self.filter(db_is_connected=True)
 
     @returns_typeclass_list
     @returns_player_list
@@ -116,6 +116,8 @@ class PlayerManager(TypedObjectManager):
         """
         Returns a QuerySet containing the player User accounts that have been
         connected within the last <days> days.
+
+        days - number of days backwards to check
         """
         end_date = datetime.datetime.now()
         tdelta = datetime.timedelta(days)
@@ -137,32 +139,18 @@ class PlayerManager(TypedObjectManager):
         """
         Returns a player object based on User id.
         """
-        return User.objects.get(id=uid)
+        try:
+            return User.objects.get(id=uid)
+        except User.model.DoesNotExist:
+            return None
 
     @returns_typeclass
     def get_player_from_name(self, uname):
         "Get player object based on name"
-        players = self.filter(user__username=uname)
-        if players:
-            return players[0]
-        return None
-
-    # @returns_typeclass_list
-    # def get_players_with_perm(self, permstring):
-    #     """
-    #     Returns all players having access according to the given
-    #     permission string.
-    #     """
-    #     return [player for player in self.all()
-    #             if player.has_perm(permstring)]
-
-    # @returns_typeclass_list
-    # def get_players_with_group(self, groupstring):
-    #     """
-    #     Returns all players belonging to the given group.
-    #     """
-    #     return [player.user for player in self.all()
-    #             if player.has_group(groupstring)]
+        try:
+            return self.get(user__username=uname)
+        except self.model.DoesNotExist:
+            return None
 
     @returns_typeclass_list
     def player_search(self, ostring):
@@ -174,12 +162,11 @@ class PlayerManager(TypedObjectManager):
         """
         ostring = ostring.lstrip("*")
         dbref = self.dbref(ostring)
-        if dbref:
+        if dbref or dbref == 0:
             matches = self.filter(id=dbref)
             if matches:
                 return matches
         return self.filter(user__username__iexact=ostring)
-
 
     def swap_character(self, player, new_character, delete_old_character=False):
         """

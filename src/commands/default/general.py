@@ -301,7 +301,7 @@ class CmdGet(MuxCommand):
         if not self.args:
             caller.msg("Get what?")
             return
-        obj = caller.search(self.args)
+        obj = caller.search(self.args, location=caller.location)
         if not obj:
             return
         if caller == obj:
@@ -349,11 +349,12 @@ class CmdDrop(MuxCommand):
             caller.msg("Drop what?")
             return
 
-        results = caller.search(self.args, ignore_errors=True)
-        # we process the results ourselves since we want to sift out only
-        # those in our inventory.
-        results = [obj for obj in results if obj in caller.contents]
-        # now we send it into the handler.
+        # Because the DROP command by definition looks for items
+        # in inventory, call the search function using location = caller
+        results = caller.search(self.args, location=caller, ignore_errors=True)
+
+        # now we send it into the error handler (this will output consistent
+        # error messages if there are problems).
         obj = AT_SEARCH_RESULT(caller, self.args, results, False)
         if not obj:
             return
@@ -434,7 +435,7 @@ class CmdWho(MuxCommand):
                 table[0].append(plr_pobject.name[:25])
                 table[1].append(utils.time_format(delta_conn, 0))
                 table[2].append(utils.time_format(delta_cmd, 1))
-                table[3].append(plr_pobject.location.id)
+                table[3].append(plr_pobject.location and plr_pobject.location.id or "None")
                 table[4].append(session.cmd_total)
                 table[5].append(session.address[0])
             else:
@@ -711,7 +712,7 @@ class CmdIC(MuxCommand):
                 return
         if not new_character:
             # search for a matching character
-            new_character = search.search_objects(self.args, global_search=True)[0]
+            new_character = search.search_objects(self.args)[0]
         if not new_character:
             # the search method handles error messages etc.
             return

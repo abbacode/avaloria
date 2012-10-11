@@ -56,24 +56,36 @@ General mud/game development ideas and discussions
    Realities <http://disinterest.org/resource/imaginary-realities/>`_ is
    an e-magazine on game/MUD design which were active 1998-2001.
    Interesting articles.
+-  `Mud-dev wiki <http://mud-dev.wikidot.com/>`_ is a slowly growing
+   resource on MUD creation
+-  `Nick Gammon's hints
+   thread <http://www.gammon.com.au/forum/bbshowpost.php?bbsubject_id=5959>`_
+   holds a very useful list of things to think about when starting your
+   new MUD.
 
 -  `Lost Garden <http://www.lostgarden.com/>`_ is a game development
    blog with long and interesting articles (not MUD-specific)
 -  `What Games Are <http://whatgamesare.com/>`_ is a blog about general
    game design (not MUD-specific)
+-  `The Alexandrian <http://thealexandrian.net/>`_ is a blog about
+   tabletop roleplaying and board games, but with lots of general
+   discussion about rule systems and game balance that could be
+   applicable also for MUDs.
+
+x
 
 Frameworks
 ----------
 
-`Django's homepage <http://www.djangoproject.com/>`_
+-  `Django's homepage <http://www.djangoproject.com/>`_
 
--  `Documentation <http://docs.djangoproject.com/en>`_
--  `Code <http://code.djangoproject.com/>`_
+   -  `Documentation <http://docs.djangoproject.com/en>`_
+   -  `Code <http://code.djangoproject.com/>`_
 
-`Twisted homepage <http://twistedmatrix.com/>`_
+-  `Twisted homepage <http://twistedmatrix.com/>`_
 
--  `Documentation <http://twistedmatrix.com/documents/current/core/howto/index.html>`_
--  `Code <http://twistedmatrix.com/trac/browser>`_
+   -  `Documentation <http://twistedmatrix.com/documents/current/core/howto/index.html>`_
+   -  `Code <http://twistedmatrix.com/trac/browser>`_
 
 Tools
 -----
@@ -87,10 +99,11 @@ Tools
 Python Info
 -----------
 
-`Python Website <http://www.python.org/>`_
+-  `Python Website <http://www.python.org/>`_
 
--  `Documentation <http://www.python.org/doc/>`_
--  `Tutorial <http://docs.python.org/tut/tut.html>`_
--  `Library Reference <http://docs.python.org/lib/lib.html>`_
--  `Language Reference <http://docs.python.org/ref/ref.html>`_
+   -  `Documentation <http://www.python.org/doc/>`_
+   -  `Tutorial <http://docs.python.org/tut/tut.html>`_
+   -  `Library Reference <http://docs.python.org/lib/lib.html>`_
+   -  `Language Reference <http://docs.python.org/ref/ref.html>`_
+
 

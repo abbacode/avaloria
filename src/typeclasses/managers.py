@@ -34,7 +34,7 @@ class AttributeManager(models.Manager):
 
 def returns_typeclass_list(method):
     """
-    Decorator: Chantes return of the decorated method (which are
+    Decorator: Changes return of the decorated method (which are
     TypeClassed objects) into object_classes(s) instead.  Will always
     return a list (may be empty).
     """
@@ -52,11 +52,11 @@ def returns_typeclass(method):
     def func(self, *args, **kwargs):
         "decorator. Returns result or None."
         self.__doc__ = method.__doc__
-        rfunc = returns_typeclass_list(method)
-        try:
-            return rfunc(self, *args, **kwargs)[0]
-        except IndexError:
-            return None
+        matches = method(self, *args, **kwargs)
+        dbobj = matches and make_iter(matches)[0] or None
+        if dbobj:
+           return (hasattr(dbobj, "typeclass") and dbobj.typeclass) or dbobj
+        return None
     return update_wrapper(func, method)
 
 
@@ -76,35 +76,40 @@ class TypedObjectManager(idmapper.manager.SharedMemoryManager):
         if isinstance(dbref, basestring):
             dbref = dbref.lstrip('#')
         try:
-            if int(dbref) < 1:
+            if int(dbref) < 0:
                 return None
         except Exception:
             return None
         return dbref
 
-    @returns_typeclass_list
-    def get_with_attr(self, attribute_name, attribute_value=None):
-        """
-        Returns the typeclassed entity depending on having a given attribute.
+    #@returns_typeclass_list
+    #def get_with_attr(self, attribute_name, attribute_value=None):
+    #    """
+    #    Returns the typeclassed entity depending on having a given attribute.
 
-        attribute_name - only entities with an attribute of this name will be included in match
-        attribute_value - if != None, only entities with db.attribute_name=attribute_value will match.
-        """
-        self.filter()
+    #    attribute_name - only entities with an attribute of this name will be included in match
+    #    attribute_value - if != None, only entities with db.attribute_name=attribute_value will match.
+    #    """
+    #    self.filter() #TODO not implemented
 
 
     @returns_typeclass
-    def dbref_search(self, dbref):
+    def get_id(self, dbref):
         """
-        Returns an object when given a dbref.
+        Find object with given dbref
         """
         dbref = self.dbref(dbref)
-        if dbref :
-            try:
-                return self.get(id=dbref)
-            except self.model.DoesNotExist:
-                return None
+        try:
+            return self.get(id=dbref)
+        except self.model.DoesNotExist:
+            pass
         return None
+
+    def dbref_search(self, dbref):
+        """
+        Alias to get_id
+        """
+        return self.get_id(dbref)
 
     @returns_typeclass_list
     def get_dbref_range(self, min_dbref=None, max_dbref=None):
@@ -120,12 +125,6 @@ class TypedObjectManager(idmapper.manager.SharedMemoryManager):
         elif not max_dbref:
             return self.filter(id__gte=min_dbref)
         return self.filter(id__gte=min_dbref).filter(id__lte=min_dbref)
-
-    def get_id(self, idnum):
-        """
-        Alias to dbref_search
-        """
-        return self.dbref_search(idnum)
 
     def object_totals(self):
         """
@@ -150,5 +149,4 @@ class TypedObjectManager(idmapper.manager.SharedMemoryManager):
         if callable(typeclass):
             cls = typeclass.__class__
             typeclass = "%s.%s" % (cls.__module__, cls.__name__)
-        o_query = self.filter(db_typeclass_path__exact=typeclass)
-        return o_query
+        return self.filter(db_typeclass_path__exact=typeclass)

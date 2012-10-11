@@ -56,6 +56,7 @@ _DA = object.__delattr__
 _PLOADS = pickle.loads
 _PDUMPS = pickle.dumps
 
+
 # Property Cache mechanism.
 
 def _get_cache(obj, name):
@@ -64,20 +65,23 @@ def _get_cache(obj, name):
         return _GA(obj, "_cached_db_%s" % name)
     except AttributeError:
         val = _GA(obj, "db_%s" % name)
-        if val: _SA(obj, "_cached_db_%s" % name, val)
+        _SA(obj, "_cached_db_%s" % name, val)
         return val
 def _set_cache(obj, name, val):
     "On-model Cache setter. Also updates database."
     _SA(obj, "db_%s" % name, val)
     _GA(obj, "save")()
     _SA(obj, "_cached_db_%s" % name, val)
-
 def _del_cache(obj, name):
     "On-model cache deleter"
     try:
         _DA(obj, "_cached_db_%s" % name)
     except AttributeError:
         pass
+def _clean_cache(obj):
+    "On-model cache resetter"
+    [_DA(obj, cname) for cname in obj.__dict__.keys() if cname.startswith("_cached_db_")]
+
 
 # this cache holds the attributes loaded on objects, one dictionary
 # of attributes per object.
@@ -884,11 +888,19 @@ class TypedObject(SharedMemoryModel):
             # (we make sure to not incur a loop by not triggering the
             # typeclass' __getattribute__, since that one would
             # try to look back to this very database object.)
-            typeclass = _GA(self, 'typeclass')
-            if typeclass:
-                return _GA(typeclass, propname)
-            else:
-                raise AttributeError
+            return _GA(_GA(self, 'typeclass'), propname)
+
+    def _hasattr(self, obj, attrname):
+        """
+        Loop-safe version of hasattr, to avoid running a lookup that
+        will be rerouted up the typeclass. Returns True/False.
+        """
+        try:
+            _GA(obj, attrname)
+            return True
+        except AttributeError:
+            return False
+
     #@property
     _dbid_cache = None
     def __dbid_get(self):
@@ -1282,6 +1294,20 @@ class TypedObject(SharedMemoryModel):
         attrib_obj.value = new_value
         _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name] = attrib_obj
 
+    def get_attribute_obj(self, attribute_name, default=None):
+        """
+        Get the actual attribute object named attribute_name
+        """
+        attrib_obj = _ATTRIBUTE_CACHE[_GA(self, "hashid")].get(attribute_name)
+        if not attrib_obj:
+            attrib_obj = _GA(self, "_attribute_class").objects.filter(
+                             db_obj=self).filter(db_key__iexact=attribute_name)
+            if not attrib_obj:
+                return default
+            _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name] = attrib_obj[0] #query is first evaluated here
+            return _ATTRIBUTE_CACHE[_GA(self, "hashid")][attribute_name]
+        return attrib_obj
+
     def get_attribute(self, attribute_name, default=None):
         """
         Returns the value of an attribute on an object. You may need to
@@ -1384,6 +1410,55 @@ class TypedObject(SharedMemoryModel):
             # act as a setter
             self.set_attribute(attribute_name, value)
 
+    def secure_attr(self, accessing_object, attribute_name=None, value=None, delete=False,
+                    default_access_read=True, default_access_edit=True, default_access_create=True):
+        """
+        This is a version of attr that requires the accessing object
+        as input and will use that to check eventual access locks on
+        the Attribute before allowing any changes or reads.
+
+        In the cases when this method wouldn't return, it will return
+        True for a successful operation, None otherwise.
+
+        locktypes checked on the Attribute itself:
+            attrread - control access to reading the attribute value
+            attredit - control edit/delete access
+        locktype checked on the object on which the Attribute is/will be stored:
+            attrcreate - control attribute create access (this is checked *on the object*  not on the Attribute!)
+
+        default_access_* defines which access is assumed if no
+        suitable lock is defined on the Atttribute.
+
+        """
+        if attribute_name == None:
+            # act as list method, but check access
+            return [attr for attr in self.get_all_attributes()
+                    if attr.access(accessing_object, "attread", default=default_access_read)]
+        elif delete == True:
+            # act as deleter
+            attr = self.get_attribute_obj(attribute_name)
+            if attr and attr.access(accessing_object, "attredit", default=default_access_edit):
+               self.del_attribute(attribute_name)
+               return True
+        elif value == None:
+            # act as getter
+            attr = self.get_attribute_obj(attribute_name)
+            if attr and attr.access(accessing_object, "attrread", default=default_access_read):
+               return attr.value
+        else:
+            # act as setter
+            attr = self.get_attribute_obj(attribute_name)
+            if attr:
+               # attribute already exists
+                if attr.access(accessing_object, "attredit", default=default_access_edit):
+                    self.set_attribute(attribute_name, value)
+                    return True
+            else:
+                # creating a new attribute - check access on storing object!
+                if self.access(accessing_object, "attrcreate", default=default_access_create):
+                    self.set_attribute(attribute_name, value)
+                    return True
+
     #@property
     def __db_get(self):
         """
@@ -1395,7 +1470,7 @@ class TypedObject(SharedMemoryModel):
              and
            del obj.db.attrname
              and
-           all_attr = obj.db.all() (if there is no attribute named 'all', in which
+           all_attr = obj.db.all (unless there is no attribute named 'all', in which
                                     case that will be returned instead).
         """
         try:
@@ -1407,8 +1482,7 @@ class TypedObject(SharedMemoryModel):
                     _SA(self, 'obj', obj)
                 def __getattribute__(self, attrname):
                     if attrname == 'all':
-                        # we allow for overwriting the all() method
-                        # with an attribute named 'all'.
+                        # we allow to overload our default .all
                         attr = _GA(self, 'obj').get_attribute("all")
                         if attr:
                             return attr
@@ -1442,7 +1516,7 @@ class TypedObject(SharedMemoryModel):
     def nattr(self, attribute_name=None, value=None, delete=False):
         """
         This is the equivalence of self.attr but for non-persistent
-        stores.
+        stores. Will not raise error but return None.
         """
         if attribute_name == None:
             # act as a list method
@@ -1453,11 +1527,11 @@ class TypedObject(SharedMemoryModel):
                         if not val.startswith['_']]
         elif delete == True:
             if hasattr(self.ndb, attribute_name):
-                _DA(self.db, attribute_name)
+                _DA(_GA(self, "db"), attribute_name)
         elif value == None:
             # act as a getter.
             if hasattr(self.ndb, attribute_name):
-                _GA(self.ndb, attribute_name)
+                _GA(_GA(self, "ndb"), attribute_name)
             else:
                 return None
         else:
@@ -1539,6 +1613,12 @@ class TypedObject(SharedMemoryModel):
             return any(True for hpos, hperm in enumerate(_PERMISSION_HIERARCHY)
                        if hperm in [p.lower() for p in self.permissions] and hpos > ppos)
         return False
+
+    def flush_attr_cache(self):
+        """
+        Flush only the attribute cache for this object.
+        """
+        _ATTRIBUTE_CACHE[_GA(self, "hashid")] = {}
 
     def flush_from_cache(self):
         """

@@ -239,7 +239,7 @@ class StructureManager(Object):
     def gen_ids(self):
         lair = self.location.search(self.db.lair_id, global_search=True)
         lair.structure_manager_id=self.dbref
-        self.db.character_id = lair.db.owner
+        self.db.character_id = lair.db.owner.dbref
         self.character = self.location.search(self.db.character_id, global_search=True)
         self.locks.add("edit:id(%s);get:none()" % self.character.dbref)
 

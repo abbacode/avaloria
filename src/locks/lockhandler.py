@@ -107,7 +107,10 @@ to any other identifier you can use.
 import re, inspect
 from django.conf import settings
 from src.utils import logger, utils
-__all__ = ("LockHandler", )
+from django.utils.translation import ugettext as _
+
+__all__ = ("LockHandler", "LockException")
+
 #
 # Exception class
 #
@@ -165,7 +168,6 @@ class LockHandler(object):
         self.obj = obj
         self.locks = {}
         self.log_obj = None
-        self.no_errors = True
         self.reset_flag = False
         self._cache_locks(self.obj.lock_storage)
         # we handle bypass checks already here for efficiency. We need to grant access to superusers and
@@ -215,7 +217,7 @@ class LockHandler(object):
                 funcname, rest = (part.strip().strip(')') for part in funcstring.split('(', 1))
                 func = _LOCKFUNCS.get(funcname, None)
                 if not callable(func):
-                    elist.append("Lock: function '%s' is not available." % funcstring)
+                    elist.append(_("Lock: function '%s' is not available.") % funcstring)
                     continue
                 args = list(arg.strip() for arg in rest.split(',') if not '=' in arg)
                 kwargs = dict([arg.split('=', 1) for arg in rest.split(',') if '=' in arg])
@@ -226,14 +228,14 @@ class LockHandler(object):
             try:
                 # purge the eval string of any superfluos items, then test it
                 evalstring = " ".join(_RE_OK.findall(evalstring))
-                eval(evalstring % tuple(True for func in funclist))
+                eval(evalstring % tuple(True for func in funclist), {}, {})
             except Exception:
-                elist.append("Lock: definition '%s' has syntax errors." % raw_lockstring)
+                elist.append(_("Lock: definition '%s' has syntax errors.") % raw_lockstring)
                 continue
             if access_type in locks:
                 duplicates += 1
-                wlist.append("Lock: access type '%s' changed from '%s' to '%s' " % \
-                                 (access_type, locks[access_type][2], raw_lockstring))
+                wlist.append(_("Lock: access type '%(access_type)s' changed from '%(source)s' to '%(goal)s' " % \
+                                 {"access_type":access_type, "source":locks[access_type][2], "goal":raw_lockstring}))
             locks[access_type] = (evalstring, tuple(lock_funcs), raw_lockstring)
         if wlist and self.log_obj:
             # a warning text was set, it's not an error, so only report if log_obj is available.
@@ -241,7 +243,6 @@ class LockHandler(object):
         if elist:
             # an error text was set, raise exception.
             raise LockException("\n".join(elist))
-            self.no_errors = False
         # return the gathered locks in an easily executable form
         return locks
 
@@ -262,21 +263,20 @@ class LockHandler(object):
         """
         if log_obj:
             self.log_obj = log_obj
-        self.no_errors = True
         # sanity checks
         for lockdef in lockstring.split(';'):
             if not ':' in lockstring:
-                self._log_error("Lock: '%s' contains no colon (:)." % lockdef)
+                self._log_error(_("Lock: '%s' contains no colon (:).") % lockdef)
                 return False
             access_type, rhs = [part.strip() for part in lockdef.split(':', 1)]
             if not access_type:
-                self._log_error("Lock: '%s' has no access_type (left-side of colon is empty)." % lockdef)
+                self._log_error(_("Lock: '%s' has no access_type (left-side of colon is empty).") % lockdef)
                 return False
             if rhs.count('(') != rhs.count(')'):
-                self._log_error("Lock: '%s' has mismatched parentheses." % lockdef)
+                self._log_error(_("Lock: '%s' has mismatched parentheses.") % lockdef)
                 return False
             if not _RE_FUNCS.findall(rhs):
-                self._log_error("Lock: '%s' has no valid lock functions." % lockdef)
+                self._log_error(_("Lock: '%s' has no valid lock functions.") % lockdef)
                 return False
         # get the lock string
         storage_lockstring = self.obj.lock_storage
@@ -288,7 +288,17 @@ class LockHandler(object):
         self._cache_locks(storage_lockstring)
         self._save_locks()
         self.log_obj = None
-        return self.no_errors
+        return True
+
+    def replace(self, lockstring, log_obj=None):
+        "Replaces the lockstring entirely."
+        old_lockstring = str(self)
+        self.clear()
+        try:
+            return self.add(lockstring, log_obj)
+        except LockException:
+            self.add(old_lockstring, log_obj)
+            raise
 
     def get(self, access_type):
         "get the lockstring of a particular type"
@@ -386,7 +396,7 @@ class LockHandler(object):
              or (hasattr(accessing_obj, 'get_player') and (not accessing_obj.get_player() or accessing_obj.get_player().is_superuser))):
                 return True
 
-        locks = self. _parse_lockstring(lockstring)
+        locks = self._parse_lockstring(lockstring)
         for access_type in locks:
             evalstring, func_tup, raw_string = locks[access_type]
             true_false = tuple(tup[0](accessing_obj, self.obj, *tup[1], **tup[2]) for tup in func_tup)

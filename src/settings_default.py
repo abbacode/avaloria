@@ -64,7 +64,7 @@ SSL_INTERFACES = ['0.0.0.0']
 # All feedback from the game will be echoed to all sessions.
 # If false, only one session is allowed, all other are logged off
 # when a new connects.
-ALLOW_MULTISESSION = True
+ALLOW_MULTISESSION = False
 # The path that contains this settings.py file (no trailing slash).
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Path to the src directory containing the bulk of the codebase's code.
@@ -110,6 +110,7 @@ ENCODINGS = ["utf-8", "latin-1", "ISO-8859-1"]
 # change this unless you cannot use the default AMP port/host for whatever reason.
 AMP_HOST = 'localhost'
 AMP_PORT = 5000
+AMP_INTERFACE = '127.0.0.1'
 # Attributes on objects are cached aggressively for speed. If the number of
 # objects is large (and their attributes are often accessed) this can use up a lot of
 # memory. So every now and then Evennia checks the size of this cache and resets
@@ -121,14 +122,13 @@ ATTRIBUTE_CACHE_MAXSIZE = 100
 # Evennia Database config
 ######################################################################
 
-# Database config syntax for Django 1.2+. You can add several
-# database engines in the dictionary (untested).
-# ENGINE - path to the the database backend (replace
-#          sqlite3 in the example with the one you want.
-#          Supported database engines are
-#            'postgresql_psycopg2', 'postgresql', 'mysql',
-#             'sqlite3' and 'oracle').
-# NAME - database name, or path the db file for sqlite3
+# Database config syntax for Django 1.2+.
+# ENGINE - path to the the database backend. Possible choices are:
+#            'django.db.backends.sqlite3', (default)
+#            'django.db.backends.mysql',
+#            'django.db.backends.'postgresql_psycopg2' (see Issue 241),
+#            'django.db.backends.oracle' (untested).
+# NAME - database name, or path to the db file for sqlite3
 # USER - db admin (unused in sqlite3)
 # PASSWORD - db admin password (unused in sqlite3)
 # HOST - empty string is localhost (unused in sqlite3)
@@ -142,7 +142,7 @@ DATABASES = {
         'HOST':'',
         'PORT':''
         }}
-# Engine Config style for Django versions < 1.2. See above.
+# Engine Config style for Django versions < 1.2 only. See above.
 DATABASE_ENGINE = 'sqlite3'
 DATABASE_NAME = os.path.join(GAME_DIR, 'evennia.db3')
 DATABASE_USER = ''
@@ -153,9 +153,12 @@ DATABASE_PORT = ''
 ######################################################################
 # Evennia pluggable modules
 ######################################################################
+# Plugin modules extend Evennia in various ways. In the cases with no
+# existing default, there are examples of many of these modules
+# in game/gamesrc/conf/examples.
 
 # The command parser module to use. See the default module for which
-# functions it must implement.
+# functions it must implement
 COMMAND_PARSER = "src.commands.cmdparser.cmdparser"
 # The handler that outputs errors when searching
 # objects using object.search().
@@ -177,6 +180,14 @@ AT_INITIAL_SETUP_HOOK_MODULE = ""
 # at_server_stop() methods. These methods will be called every time
 # the server starts, reloads and resets/stops respectively.
 AT_SERVER_STARTSTOP_MODULE = ""
+# List of one or more module paths to modules containing a function start_plugin_services(application). This module
+# will be called with the main Evennia Server application when the Server is initiated.
+# It will be called last in the startup sequence.
+SERVER_SERVICES_PLUGIN_MODULES = []
+# List of one or more module paths to modules containing a function start_plugin_services(application). This module
+# will be called with the main Evennia Portal application when the Portal is initiated.
+# It will be called last in the startup sequence.
+PORTAL_SERVICES_PLUGIN_MODULES = []
 # Module holding MSSP meta data. This is used by MUD-crawlers to determine
 # what type of game you are running, how many players you have etc.
 MSSP_META_MODULE = ""
@@ -223,9 +234,10 @@ BASE_OBJECT_TYPECLASS = "src.objects.objects.Object"
 BASE_CHARACTER_TYPECLASS = "src.objects.objects.Character"
 # Typeclass for rooms (fallback)
 BASE_ROOM_TYPECLASS = "src.objects.objects.Room"
-# Typeclass for Exit objects (fallback)
+# Typeclass for Exit objects (fallback).
 BASE_EXIT_TYPECLASS = "src.objects.objects.Exit"
-# Typeclass for Scripts (fallback)
+# Typeclass for Scripts (fallback). You usually don't need to change this
+# but create custom variations of scripts on a per-case basis instead.
 BASE_SCRIPT_TYPECLASS = "src.scripts.scripts.DoNothing"
 # The home location for new characters. This must be a unique
 # dbref (default is Limbo #2). If you want more advanced control over
@@ -325,7 +337,7 @@ IRC_ENABLED = False
 # discussion channel 'ievennia' is on server01.mudbytes.net:5000.
 IMC2_ENABLED = False
 IMC2_NETWORK = "server01.mudbytes.net"
-IMC2_PORT = 5000
+IMC2_PORT = 5000 # this is the imc2 port, not on localhost
 IMC2_CLIENT_PWD = ""
 IMC2_SERVER_PWD = ""
 # RSS allows to connect RSS feeds (from forum updates, blogs etc) to
@@ -338,7 +350,7 @@ RSS_ENABLED=False
 RSS_UPDATE_INTERVAL = 60*10 # 10 minutes
 
 ######################################################################
-# Config for Django web features
+# Django web features
 ######################################################################
 
 # While DEBUG is False, show a regular server error page on the web

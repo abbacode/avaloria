@@ -6,6 +6,7 @@ other things.
 Everything starts at handle_setup()
 """
 
+import django
 from django.contrib.auth.models import User
 from django.core import management
 from django.conf import settings
@@ -13,7 +14,6 @@ from src.server.models import ServerConfig
 from src.help.models import HelpEntry
 from src.utils import create
 
-# i18n
 from django.utils.translation import ugettext as _
 
 def create_config_values():
@@ -34,7 +34,7 @@ def create_objects():
     Creates the #1 player and Limbo room.
     """
 
-    print _(" Creating objects (Player #1 and Limbo room) ...")
+    print " Creating objects (Player #1 and Limbo room) ..."
 
     # Set the initial User's account object's username on the #1 object.
     # This object is pure django and only holds name, email and password.
@@ -85,21 +85,40 @@ def create_objects():
     if not god_character.home:
         god_character.home = limbo_obj
 
+
 def create_channels():
     """
     Creates some sensible default channels.
     """
-    print _(" Creating default channels ...")
+    print " Creating default channels ..."
 
     # public channel
-    key, aliases, desc, locks = settings.CHANNEL_PUBLIC
-    pchan = create.create_channel(key, aliases, desc, locks=locks)
+    key1, aliases, desc, locks = settings.CHANNEL_PUBLIC
+    pchan = create.create_channel(key1, aliases, desc, locks=locks)
     # mudinfo channel
-    key, aliases, desc, locks = settings.CHANNEL_MUDINFO
-    ichan = create.create_channel(key, aliases, desc, locks=locks)
+    key2, aliases, desc, locks = settings.CHANNEL_MUDINFO
+    ichan = create.create_channel(key2, aliases, desc, locks=locks)
     # connectinfo channel
-    key, aliases, desc, locks = settings.CHANNEL_CONNECTINFO
-    cchan = create.create_channel(key, aliases, desc, locks=locks)
+    key3, aliases, desc, locks = settings.CHANNEL_CONNECTINFO
+    cchan = create.create_channel(key3, aliases, desc, locks=locks)
+
+
+    # TODO: postgresql-psycopg2 has a strange error when trying to connect the user
+    # to the default channels. It works fine from inside the game, but not from
+    # the initial startup. We are temporarily bypassing the problem with the following
+    # fix. See Evennia Issue 151.
+    if ((".".join(str(i) for i in django.VERSION) < "1.2" and settings.DATABASE_ENGINE == "postgresql_psycopg2")
+        or (hasattr(settings, 'DATABASES')
+            and settings.DATABASES.get("default", {}).get('ENGINE', None)
+            == 'django.db.backends.postgresql_psycopg2')):
+        warning = """
+        PostgreSQL-psycopg2 compatability fix:
+        The in-game channels %s, %s and %s were created,
+        but the superuser was not yet connected to them. Please use in-game commands to
+        connect Player #1 to those channels when first logging in.
+        """ % (key1, key2, key3)
+        print warning
+        return
 
     # connect the god user to all these channels by default.
     goduser = get_god_user()
@@ -112,12 +131,11 @@ def import_MUX_help_files():
     """
     Imports the MUX help files.
     """
-    print _(" Importing MUX help database (devel reference only) ...")
+    print " Importing MUX help database (devel reference only) ..."
     management.call_command('loaddata', '../src/help/mux_help_db.json', verbosity=0)
     # categorize the MUX help files into its own category.
     default_category = "MUX"
-    print _(" Moving imported help db to help category '%(default)s'." \
-                                                   % {'default': default_category})
+    print " Moving imported help db to help category '%(default)s'." % {'default': default_category}
     HelpEntry.objects.all_to_category(default_category)
 
 def create_system_scripts():
@@ -127,7 +145,7 @@ def create_system_scripts():
     """
     from src.scripts import scripts
 
-    print _(" Creating and starting global scripts ...")
+    print " Creating and starting global scripts ..."
 
     # check so that all sessions are alive.
     script1 = create.create_script(scripts.CheckSessions)
@@ -138,7 +156,7 @@ def create_system_scripts():
     # clear the attribute cache regularly
     script4 = create.create_script(scripts.ClearAttributeCache)
     if not script1 or not script2 or not script3 or not script4:
-        print _(" Error creating system scripts.")
+        print " Error creating system scripts."
 
 def start_game_time():
     """
@@ -147,7 +165,7 @@ def start_game_time():
     the total run time of the server as well as its current uptime
     (the uptime can also be found directly from the server though).
     """
-    print _(" Starting in-game time ...")
+    print " Starting in-game time ..."
     from src.utils import gametime
     gametime.init_gametime()
 
@@ -170,20 +188,20 @@ def create_admin_media_links():
         dpath = os.path.join(django.__path__[0], 'contrib', 'admin', 'static', 'admin')
     apath = os.path.join(settings.ADMIN_MEDIA_ROOT)
     if os.path.isdir(apath):
-        print _(" ADMIN_MEDIA_ROOT already exists. Ignored.")
+        print " ADMIN_MEDIA_ROOT already exists. Ignored."
         return
     if os.name == 'nt':
-        print _(" Admin-media files copied to ADMIN_MEDIA_ROOT (Windows mode).")
+        print " Admin-media files copied to ADMIN_MEDIA_ROOT (Windows mode)."
         os.mkdir(apath)
         os.system('xcopy "%s" "%s" /e /q /c' % (dpath, apath))
     if os.name == 'posix':
         try:
             os.symlink(dpath, apath)
-            print _(" Admin-media symlinked to ADMIN_MEDIA_ROOT.")
+            print " Admin-media symlinked to ADMIN_MEDIA_ROOT."
         except OSError, e:
-            print _(" There was an error symlinking Admin-media to ADMIN_MEDIA_ROOT:\n  %s\n   -> \n  %s\n  (%s)\n  If you see issues, link manually." % (dpath, apath, e))
+            print " There was an error symlinking Admin-media to ADMIN_MEDIA_ROOT:\n  %s\n   -> \n  %s\n  (%s)\n  If you see issues, link manually." % (dpath, apath, e)
     else:
-        print _(" Admin-media files should be copied manually to ADMIN_MEDIA_ROOT.")
+        print " Admin-media files should be copied manually to ADMIN_MEDIA_ROOT."
 
 def at_initial_setup():
     """
@@ -199,7 +217,7 @@ def at_initial_setup():
         mod = __import__(modname, fromlist=[None])
     except (ImportError, ValueError):
         return
-    print _(" Running at_initial_setup() hook.")
+    print " Running at_initial_setup() hook."
     if mod.__dict__.get("at_initial_setup", None):
         mod.at_initial_setup()
 
@@ -211,7 +229,7 @@ def reset_server():
     It also checks so the warm-reset mechanism works as it should.
     """
     from src.server.sessionhandler import SESSIONS
-    print _(" Initial setup complete. Resetting/reloading Server.")
+    print " Initial setup complete. Restarting Server once."
     SESSIONS.server.shutdown(mode='reset')
 
 def handle_setup(last_step):
@@ -239,7 +257,8 @@ def handle_setup(last_step):
         create_admin_media_links,
         import_MUX_help_files,
         at_initial_setup,
-        reset_server]
+        reset_server
+        ]
 
     if not settings.IMPORT_MUX_HELP:
         # skip importing of the MUX helpfiles, they are

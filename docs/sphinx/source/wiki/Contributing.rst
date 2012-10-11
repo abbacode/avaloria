@@ -8,13 +8,16 @@ Contributing with Documentation
 
 Evennia depends heavily on good documentation and we are always looking
 for extra eyes and hands to improve it. Even small things such as fixing
-typos is a great help. To edit the wiki yourself you need contributor
-access. Otherwise, it goes a long way just pointing out wiki errors so
-devs can fix them (in an Issue or just over chat/forum). You can also
-commit wiki changes over Mercurial - just go to the wiki repository
-"http://code.google.com/p/evennia/source/checkout?repo
+typos are a great help!
 
-wiki">here and then continue from point ``2`` below.
+The documentation is a wiki and to edit it you need wiki-contributor
+access. We are happy to give this - just ask (on the forum/mailing list
+or in the chat channel) if you want to help out. Otherwise, it goes a
+long way just pointing out wiki errors so devs can fix them (in an Issue
+or just over chat/forum). You can also commit wiki changes over
+Mercurial - just go to the wiki repository
+`here <http://code.google.com/p/evennia/source/checkout?repo=wiki>`_ and
+then continue from point ``2`` below.
 
 Contributing with Code through a clone repository
 -------------------------------------------------
@@ -37,8 +40,8 @@ do this once):
    something useful, like "Johns-evennia-fixes". Give a brief summary,
    like "my repo for contributing to Evennia". Accept.
 #. Your new repo is created. You should see it appear in the `clone-repo
-   list <https://code.google.com/p/evennia/source/clones.html>`_. This
-   is actually your own mini-version of the Evennia page!
+   list <https://code.google.com/p/evennia/source/clones>`_. This is
+   actually your own mini-version of the Evennia page!
 #. Choose your repo and you will find it has its own Checkout page. Use
    the command shown there to get a local copy of your clone to your
    computer.
@@ -61,7 +64,9 @@ Once you have an online clone and a local copy of it:
    commits, so it's possible to pick individual features.
 
 From your online repo, Evennia devs can then, assuming the change is
-deemed good, pick and merge your work into Evennia proper.
+deemed good, pick and merge your work into Evennia proper. Mercurial
+will automatically make sure you get proper credit for your contribution
+in the source code history.
 
 Contributing with Patches
 -------------------------
@@ -69,21 +74,20 @@ Contributing with Patches
 To help with Evennia development it's recommended to do so using a clone
 repository as described above. But for small, well isolated fixes you
 are also welcome to submit your suggested Evennia fixes/addendums as
-*patches*. You can use normal
-`patches <https://secure.wikimedia.org/wikipedia/en/wiki/Patch_%28computing%29.html>`_,
+*patches*. You can use `normal
+patches <https://secure.wikimedia.org/wikipedia/en/wiki/Patch_%28computing%29>`_,
 but it might be easier to use mercurial's own patch mechanism. Make sure
 you have committed your latest fixes first, then
 
 ::
 
-    hg export tip > mypatch.patch
+     hg export tip > mypatch.patch
 
 This will create a patch file ``mypatch.patch`` that can be imported by
 others with ``hg import mypatch.patch``. Depending on what fits best,
 post your patch to the `issue
-tracker <https://code.google.com/p/evennia/issues/list.html>`_ or to the
-`discussion
-forum <https://groups.google.com/forum/#!forum/evennia.html>`_. Please
-avoid pasting the full patch text directly in your post though, best is
-to use a site like `Pastebin <http://pastebin.com/>`_ and just supply
-the link.
+tracker <https://code.google.com/p/evennia/issues/list>`_ or to the
+`discussion forum <https://groups.google.com/forum/#!forum/evennia>`_.
+Please avoid pasting the full patch text directly in your post though,
+best is to use a site like `Pastebin <http://pastebin.com/>`_ and just
+supply the link.

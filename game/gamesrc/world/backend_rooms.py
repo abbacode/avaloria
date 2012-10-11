@@ -34,4 +34,3 @@ herbalist.desc = desc
 
 exit_from_xroad = create.create_object("game.gamesrc.objects.baseobjects.Exit", key="Henry's Herbs", location=xroads, destination=herbalist)
 exit_to_x_roads = create.create_object("game.gamesrc.objects.baseobjects.Exit", key="Crossroads", location=herbalist, destination=xroads)
-

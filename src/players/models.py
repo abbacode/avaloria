@@ -44,7 +44,6 @@ from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.encoding import smart_str
-from django.contrib.contenttypes.models import ContentType
 
 from src.typeclasses.models import _get_cache, _set_cache, _del_cache
 from src.server.sessionhandler import SESSIONS
@@ -63,6 +62,8 @@ _AT_SEARCH_RESULT = utils.variable_from_module(*settings.SEARCH_AT_RESULT.rsplit
 _GA = object.__getattribute__
 _SA = object.__setattr__
 _DA = object.__delattr__
+
+_TYPECLASS = None
 
 #------------------------------------------------------------
 #
@@ -161,7 +162,9 @@ class PlayerDB(TypedObject):
     # Use the property 'obj' to access.
     db_obj = models.ForeignKey("objects.ObjectDB", null=True, blank=True,
                                verbose_name="character", help_text='In-game object.')
-
+    # store a connected flag here too, not just in sessionhandler.
+    # This makes it easier to track from various out-of-process locations
+    db_is_connected = models.BooleanField(default=False, verbose_name="is_connected", help_text="If player is connected to game or not")
     # database storage of persistant cmdsets.
     db_cmdset_storage = models.CharField('cmdset', max_length=255, null=True,
                                          help_text="optional python path to a cmdset class. If creating a Character, this will default to settings.CMDSET_DEFAULT.")
@@ -177,9 +180,9 @@ class PlayerDB(TypedObject):
         "Parent must be initiated first"
         TypedObject.__init__(self, *args, **kwargs)
         # handlers
-        self.cmdset = CmdSetHandler(self)
-        self.cmdset.update(init_mode=True)
-        self.nicks = PlayerNickHandler(self)
+        _SA(self, "cmdset", CmdSetHandler(self))
+        _GA(self, "cmdset").update(init_mode=True)
+        _SA(self, "nicks", PlayerNickHandler(self))
 
     # Wrapper properties to easily set database fields. These are
     # @property decorators that allows to access these fields using
@@ -197,8 +200,11 @@ class PlayerDB(TypedObject):
     #@obj.setter
     def obj_set(self, value):
         "Setter. Allows for self.obj = value"
-        from src.typeclasses.typeclass import TypeClass
-        if isinstance(value, TypeClass):
+        global _TYPECLASS
+        if not _TYPECLASS:
+            from src.typeclasses.typeclass import TypeClass as _TYPECLASS
+
+        if isinstance(value, _TYPECLASS):
             value = value.dbobj
         try:
             _set_cache(self, "obj", value)
@@ -234,22 +240,36 @@ class PlayerDB(TypedObject):
     #@property
     def cmdset_storage_get(self):
         "Getter. Allows for value = self.name. Returns a list of cmdset_storage."
-        if self.db_cmdset_storage:
-            return [path.strip() for path  in self.db_cmdset_storage.split(',')]
+        if _GA(self, "db_cmdset_storage"):
+            return [path.strip() for path  in _GA(self, "db_cmdset_storage").split(',')]
         return []
     #@cmdset_storage.setter
     def cmdset_storage_set(self, value):
         "Setter. Allows for self.name = value. Stores as a comma-separated string."
         if utils.is_iter(value):
             value = ",".join([str(val).strip() for val in value])
-        self.db_cmdset_storage = value
-        self.save()
+        _SA(self, "db_cmdset_storage", value)
+        _GA(self, "save")()
     #@cmdset_storage.deleter
     def cmdset_storage_del(self):
         "Deleter. Allows for del self.name"
-        self.db_cmdset_storage = ""
-        self.save()
+        _SA(self, "db_cmdset_storage", "")
+        _GA(self, "save")()
     cmdset_storage = property(cmdset_storage_get, cmdset_storage_set, cmdset_storage_del)
+
+    #@property
+    def is_connected_get(self):
+        "Getter. Allows for value = self.is_connected"
+        return _get_cache(self, "is_connected")
+    #@is_connected.setter
+    def is_connected_set(self, value):
+        "Setter. Allows for self.is_connected = value"
+        _set_cache(self, "is_connected", value)
+    #@is_connected.deleter
+    def is_connected_del(self):
+        "Deleter. Allows for del is_connected"
+        _set_cache(self, "is_connected", False)
+    is_connected = property(is_connected_get, is_connected_set, is_connected_del)
 
     class Meta:
         "Define Django meta options"
@@ -261,10 +281,10 @@ class PlayerDB(TypedObject):
     #
 
     def __str__(self):
-        return smart_str("%s(player %s)" % (self.name, self.dbid))
+        return smart_str("%s(player %s)" % (_GA(self, "name"), _GA(self, "dbid")))
 
     def __unicode__(self):
-        return u"%s(player#%s)" % (self.name, self.dbid)
+        return u"%s(player#%s)" % (_GA(self, "name"), _GA(self, "dbid"))
 
     # this is required to properly handle attributes and typeclass loading
     _typeclass_paths = settings.PLAYER_TYPECLASS_PATHS
@@ -277,15 +297,15 @@ class PlayerDB(TypedObject):
     #@property
     def name_get(self):
         "Getter. Allows for value = self.name"
-        if not self._name_cache:
-            self._name_cache = self.user.username
-        return self._name_cache
+        if not _GA(self, "_name_cache"):
+            _SA(self, "_name_cache", _GA(self,"user").username)
+        return _GA(self, "_name_cache")
     #@name.setter
     def name_set(self, value):
         "Setter. Allows for player.name = newname"
-        self.user.username = value
-        self.user.save() # this might be stopped by Django?
-        self._name_cache = value
+        _GA(self, "user").username = value
+        _GA(self, "user").save()
+        _SA(self, "_name_cache", value)
     #@name.deleter
     def name_del(self):
         "Deleter. Allows for del self.name"
@@ -297,9 +317,9 @@ class PlayerDB(TypedObject):
     #@property
     def uid_get(self):
         "Getter. Retrieves the user id"
-        if not self._uid_cache:
-            self._uid_cache = self.user.id
-        return self._uid_cache
+        if not _GA(self, "_uid_cache"):
+            _SA(self, "_uid_cache", _GA(self, "user").id)
+        return _GA(self, "_uid_cache")
     def uid_set(self, value):
         raise Exception("User id cannot be set!")
     def uid_del(self):
@@ -325,9 +345,9 @@ class PlayerDB(TypedObject):
     _is_superuser_cache = None
     def is_superuser_get(self):
         "Superusers have all permissions."
-        if self._is_superuser_cache == None:
-            self._is_superuser_cache = self.user.is_superuser
-        return self._is_superuser_cache
+        if _GA(self, "_is_superuser_cache") == None:
+            _SA(self, "_is_superuser_cache", _GA(self, "user").is_superuser)
+        return _GA(self, "_is_superuser_cache")
     is_superuser = property(is_superuser_get)
 
     #
@@ -339,21 +359,19 @@ class PlayerDB(TypedObject):
         Evennia -> User
         This is the main route for sending data back to the user from the server.
         """
-
         if from_obj:
             try:
-                from_obj.at_msg_send(outgoing_string, to_obj=self, data=data)
+                _GA(from_obj, "at_msg_send")(outgoing_string, to_obj=self, data=data)
             except Exception:
                 pass
-
-        if (object.__getattribute__(self, "character")
-            and not self.character.at_msg_receive(outgoing_string, from_obj=from_obj, data=data)):
+        if (_GA(self, "character") and not
+            _GA(self, "character").at_msg_receive(outgoing_string, from_obj=from_obj, data=data)):
             # the at_msg_receive() hook may block receiving of certain messages
             return
 
         outgoing_string = utils.to_str(outgoing_string, force_string=True)
 
-        for session in object.__getattribute__(self, 'sessions'):
+        for session in _GA(self, 'sessions'):
             session.msg(outgoing_string, data)
 
 
@@ -361,16 +379,27 @@ class PlayerDB(TypedObject):
         """
         Swaps character, if possible
         """
-        return self.__class__.objects.swap_character(self, new_character, delete_old_character=delete_old_character)
+        return _GA(self, "__class__").objects.swap_character(self, new_character, delete_old_character=delete_old_character)
 
-
+    def delete(self, *args, **kwargs):
+        "Make sure to delete user also when deleting player - the two may never exist separately."
+        try:
+            if _GA(self, "user"):
+                _GA(_GA(self, "user"), "delete")()
+        except AssertionError:
+            pass
+        try:
+            super(PlayerDB, self).delete(*args, **kwargs)
+        except AssertionError:
+            # this means deleting the user already cleared out the Player object.
+            pass
     #
     # Execution/action methods
     #
 
     def execute_cmd(self, raw_string):
         """
-        Do something as this playe. This command transparently
+        Do something as this player. This command transparently
         lets its typeclass execute the command.
         raw_string - raw command input coming from the command line.
         """
@@ -395,8 +424,11 @@ class PlayerDB(TypedObject):
                            the Player object itself. If no Character exists (since Player is
                            OOC), None will be returned.
         """
-        matches = self.__class__.objects.player_search(ostring)
+        matches = _GA(self, "__class__").objects.player_search(ostring)
         matches = _AT_SEARCH_RESULT(self, ostring, matches, global_search=True)
-        if matches and return_character and hasattr(matches, "character"):
-           return matches.character
+        if matches and return_character:
+            try:
+                return _GA(matches, "character")
+            except:
+                pass
         return matches

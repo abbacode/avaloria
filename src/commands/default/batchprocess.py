@@ -31,8 +31,8 @@ from src.utils import utils
 # limit symbols for API inclusion
 __all__ = ("CmdBatchCommands", "CmdBatchCode")
 
-HEADER_WIDTH = 70
-UTF8_ERROR = \
+_HEADER_WIDTH = 70
+_UTF8_ERROR = \
 """
  {rDecode error in '%s'.{n
 
@@ -50,6 +50,34 @@ UTF8_ERROR = \
  The (first) error was found with a character on line %s in the file.
 """
 
+_PROCPOOL_BATCHCMD_SOURCE = """
+from src.commands.default.batchprocess import batch_cmd_exec, step_pointer, BatchSafeCmdSet
+caller.ndb.batch_stack = commands
+caller.ndb.batch_stackptr = 0
+caller.ndb.batch_batchmode = "batch_commands"
+caller.cmdset.add(BatchSafeCmdSet)
+for inum in range(len(commands)):
+    print "command:", inum
+    caller.cmdset.add(BatchSafeCmdSet)
+    if not batch_cmd_exec(caller):
+        break
+    step_pointer(caller, 1)
+print "leaving run ..."
+"""
+_PROCPOOL_BATCHCODE_SOURCE = """
+from src.commands.default.batchprocess import batch_code_exec, step_pointer, BatchSafeCmdSet
+caller.ndb.batch_stack = codes
+caller.ndb.batch_stackptr = 0
+caller.ndb.batch_batchmode = "batch_code"
+caller.cmdset.add(BatchSafeCmdSet)
+for inum in range(len(codes)):
+    print "code:", inum
+    caller.cmdset.add(BatchSafeCmdSet)
+    if not batch_code_exec(caller):
+        break
+    step_pointer(caller, 1)
+print "leaving run ..."
+"""
 
 #------------------------------------------------------------
 # Helper functions
@@ -59,7 +87,7 @@ def format_header(caller, entry):
     """
     Formats a header
     """
-    width = HEADER_WIDTH - 10
+    width = _HEADER_WIDTH - 10
     entry = entry.strip()
     header = utils.crop(entry, width=width)
     ptr = caller.ndb.batch_stackptr + 1
@@ -215,7 +243,7 @@ class CmdBatchCommands(MuxCommand):
             commands = BATCHCMD.parse_file(python_path)
         except UnicodeDecodeError, err:
             lnum = err.linenum
-            caller.msg(UTF8_ERROR % (python_path, lnum))
+            caller.msg(_UTF8_ERROR % (python_path, lnum))
             return
 
         if not commands:
@@ -241,18 +269,35 @@ class CmdBatchCommands(MuxCommand):
             caller.msg("\nBatch-command processor - Interactive mode for %s ..." % python_path)
             show_curr(caller)
         else:
-            caller.msg("Running Batch-command processor - Automatic mode for %s ..." % python_path)
+            caller.msg("Running Batch-command processor - Automatic mode for %s (this might take some time) ..." % python_path)
 
-            # add the 'safety' cmdset in case the batch processing adds cmdsets to us
-            for inum in range(len(commands)):
-                # loop through the batch file
-                if not batch_cmd_exec(caller):
-                    return
-                step_pointer(caller, 1)
-            # clean out the safety cmdset and clean out all other temporary attrs.
-            string = "  Batchfile '%s' applied." % python_path
-            caller.msg("{G%s" % string)
-            purge_processor(caller)
+            procpool = False
+            if "PythonProcPool" in utils.server_services():
+                if utils.uses_database("sqlite3"):
+                   caller.msg("Batchprocessor disabled ProcPool under SQLite3.")
+                else:
+                    procpool=True
+
+            if procpool:
+                # run in parallel process
+                def callback(r):
+                    caller.msg("  {GBatchfile '%s' applied." % python_path)
+                    purge_processor(caller)
+                def errback(e):
+                    caller.msg("  {RError from processor: '%s'" % e)
+                    purge_processor(caller)
+                utils.run_async(_PROCPOOL_BATCHCMD_SOURCE, commands=commands, caller=caller, at_return=callback, at_err=errback)
+            else:
+                # run in-process (might block)
+                for inum in range(len(commands)):
+                    # loop through the batch file
+                    if not batch_cmd_exec(caller):
+                        return
+                    step_pointer(caller, 1)
+                # clean out the safety cmdset and clean out all other temporary attrs.
+                string = "  Batchfile '%s' applied." % python_path
+                caller.msg("{G%s" % string)
+                purge_processor(caller)
 
 class CmdBatchCode(MuxCommand):
     """
@@ -294,7 +339,7 @@ class CmdBatchCode(MuxCommand):
             codes = BATCHCODE.parse_file(python_path)
         except UnicodeDecodeError, err:
             lnum = err.linenum
-            caller.msg(UTF8_ERROR % (python_path, lnum))
+            caller.msg(_UTF8_ERROR % (python_path, lnum))
             return
 
         if not codes:
@@ -326,15 +371,34 @@ class CmdBatchCode(MuxCommand):
             show_curr(caller)
         else:
             caller.msg("Running Batch-code processor - Automatic mode for %s ..." % python_path)
-            # add the 'safety' cmdset in case the batch processing adds cmdsets to us
-            for inum in range(len(codes)):
-                # loop through the batch file
-                if not batch_code_exec(caller):
-                    return
-                step_pointer(caller, 1)
-            string = "  Batchfile '%s' applied." % python_path
-            caller.msg("{G%s" % string)
-            purge_processor(caller)
+
+            procpool = False
+            if "PythonProcPool" in utils.server_services():
+                if utils.uses_database("sqlite3"):
+                   caller.msg("Batchprocessor disabled ProcPool under SQLite3.")
+                else:
+                    procpool=True
+            if procpool:
+                # run in parallel process
+                def callback(r):
+                    caller.msg("  {GBatchfile '%s' applied." % python_path)
+                    purge_processor(caller)
+                def errback(e):
+                    caller.msg("  {RError from processor: '%s'" % e)
+                    purge_processor(caller)
+                utils.run_async(_PROCPOOL_BATCHCODE_SOURCE, codes=codes, caller=caller, at_return=callback, at_err=errback)
+            else:
+                # un in-process (will block)
+                for inum in range(len(codes)):
+                    # loop through the batch file
+                    if not batch_code_exec(caller):
+                        return
+                    step_pointer(caller, 1)
+                # clean out the safety cmdset and clean out all other temporary attrs.
+                string = "  Batchfile '%s' applied." % python_path
+                caller.msg("{G%s" % string)
+                purge_processor(caller)
+
 
 #------------------------------------------------------------
 # State-commands for the interactive batch processor modes

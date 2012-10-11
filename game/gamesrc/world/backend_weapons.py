@@ -6,7 +6,7 @@ from game.gamesrc.objects.world.items import Weapon, Armor, Potion
 #CODE (Generate all items for loot tables)
 
 #begin artifact item creation
-storage = search.objects('storage', global_search=True)[0]
+storage = search.objects('storage')[0]
 hammer = create.create_object(Weapon, key="An\'Karith's Hammer", location=storage, aliases=['epic_hammer'])
 hammer.db.damage = "4d10"
 hammer.db.crit_range = "18-20"

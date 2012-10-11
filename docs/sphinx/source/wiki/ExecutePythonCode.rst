@@ -1,4 +1,4 @@
-The ``@py`` command
+The \`@py\` command
 ===================
 
 The ``@py`` command supplied with the default command set of Evennia
@@ -10,7 +10,8 @@ to just anybody.
 
 ::
 
-    @py 1+2  <<< 3
+    @py 1+2 
+    <<< 3
 
 Available variables
 -------------------
@@ -33,7 +34,8 @@ found in ``src/utils/utils.py``, but also accessible through
 
 ::
 
-    @py from ev import utils; utils.time_format(33333) <<< Done.
+    @py from ev import utils; utils.time_format(33333)
+    <<< Done.
 
 Note that we didn't get any return value, all we where told is that the
 code finished executing without error. This is often the case in more
@@ -43,7 +45,9 @@ system to echo it to us explicitly with ``self.msg()``.
 
 ::
 
-    @py from ev import utils; self.msg(utils.time_format(33333)) 09:15 <<< Done.
+    @py from ev import utils; self.msg(utils.time_format(33333))
+    09:15
+    <<< Done.
 
 If you were to use Python's standard ``print``, you will see the result
 in your current ``stdout`` (your terminal by default), *if* you are
@@ -60,7 +64,14 @@ Locating an object is best done using ``self.search()``:
 
 ::
 
-    @py self.search("red_ball") <<< Ball @py self.search("red_ball").db.color = "red" <<< Done. @py self.search("red_ball").db.color <<< red
+    @py self.search("red_ball")
+    <<< Ball 
+
+    @py self.search("red_ball").db.color = "red"
+    <<< Done. 
+
+    @py self.search("red_ball").db.color
+    <<< red
 
 ``self.search()`` is by far the most used case, but you can also search
 other database tables for other Evennia entities like scripts or
@@ -69,28 +80,31 @@ entries found in ``ev.search_*``.
 
 ::
 
-    @py ev.search_script("sys_game_time") <<< [<src.utils.gametime.GameTime object at 0x852be2c>]
+    @py ev.search_script("sys_game_time")
+    <<< [<src.utils.gametime.GameTime object at 0x852be2c>]
 
 (Note that since this becomes a simple statement, we don't have to wrap
 it in ``self.msg()`` to get the output). You can also use the database
 model managers directly (accessible through the ``objects`` properties
-of database models or as ``ev.db_*``). This is a bit more flexible since
-it gives you access to the full range of database search methods defined
-in each manager.
+of database models or as ``ev.managers.*``). This is a bit more flexible
+since it gives you access to the full range of database search methods
+defined in each manager.
 
 ::
 
-    @py ev.db_scripts.script_search("sys_game_time") <<< [<src.utils.gametime.GameTime object at 0x852be2c>]
+    @py ev.managers.scripts.script_search("sys_game_time")
+    <<< [<src.utils.gametime.GameTime object at 0x852be2c>]
 
 The managers are useful for all sorts of database studies.
 
 ::
 
-    @py ev.db_configvalues.all() <<< [<ConfigValue: default_home]>, <ConfigValue:site_name>, ...]
+    @py ev.managers.configvalues.all()
+    <<< [<ConfigValue: default_home]>, <ConfigValue:site_name>, ...]
 
 In doing so however, keep in mind the difference between `Typeclasses
 and Database Objects <Typeclasses.html>`_: Using the search commands in
-the managers will return *!TypeClasses*. Using Django's default search
+the managers will return *TypeClasses*. Using Django's default search
 methods (``get``, ``filter`` etc) will return *Database objects*. This
 distinction can often be disregarded, but as a convention you should try
 to stick with the manager search functions and work with TypeClasses in
@@ -98,7 +112,15 @@ most situations.
 
 ::
 
-    # this uses Evennia's manager method get_id().  # It returns a Character typeclass instance @py ev.db_objects.get_id(1).__class__ <<< Character# this uses the standard Django get() query.  # It returns a django database model instance. @py ev.db_objects.get(id=1).__class__ <<< <class 'src.objects.models.ObjectDB'>
+    # this uses Evennia's manager method get_id(). 
+    # It returns a Character typeclass instance
+    @py ev.managers.objects.get_id(1).__class__
+    <<< Character
+
+    # this uses the standard Django get() query. 
+    # It returns a django database model instance.
+    @py ev.managers.objects.get(id=1).__class__
+    <<< <class 'src.objects.models.ObjectDB'>
 
 Running a Python Parser outside the game
 ========================================
@@ -124,5 +146,12 @@ tab-completion and ``__doc__``-string reading.
 
 ::
 
-    $ python manage.py shellIPython 0.10 -- An enhanced Interactive Python ...In [1]: import ev In [2]: ev.db_objects.all() Out[3]: [<ObjectDB: Harry>, <ObjectDB: Limbo>, ...]
+    $ python manage.py shell
+
+    IPython 0.10 -- An enhanced Interactive Python
+    ...
+
+    In [1]: import ev
+    In [2]: ev.managers.objects.all()
+    Out[3]: [<ObjectDB: Harry>, <ObjectDB: Limbo>, ...]
 

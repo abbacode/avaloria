@@ -12,24 +12,24 @@ class Migration(DataMigration):
             for obj in orm.ObjectDB.objects.all():
                 if obj.db_cmdset_storage == "game.gamesrc.commands.basecmdset.DefaultCmdSet":
                     obj.db_cmdset_storage = "src.commands.default.cmdset_default.DefaultCmdSet"
-                    obj.save() 
+                    obj.save()
                 if obj.db_typeclass_path == "game.gamesrc.objects.baseobjects.Character":
                     obj.db_typeclass_path = "src.objects.objects.Character"
                     obj.save()
                 if obj.db_typeclass_path == "game.gamesrc.objects.baseobjects.Object":
                     obj.db_typeclass_path = "src.objects.objects.Object"
-                    obj.save()                    
+                    obj.save()
                 if obj.db_typeclass_path == "game.gamesrc.objects.baseobjects.Room":
                     obj.db_typeclass_path = "src.objects.objects.Room"
-                    obj.save()                    
+                    obj.save()
                 if obj.db_typeclass_path == "game.gamesrc.objects.baseobjects.Exit":
                     obj.db_typeclass_path = "src.objects.objects.Exit"
-                    obj.save()                    
-                    
+                    obj.save()
+
         except utils.DatabaseError:
             "We are starting from scratch. Ignore."
             pass
-              
+
 
 
     def backwards(self, orm):

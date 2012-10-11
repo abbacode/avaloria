@@ -19,6 +19,13 @@ __all__ = ("ObjManipCommand", "CmdSetObjAlias", "CmdCopy",
            "CmdLock", "CmdExamine", "CmdFind", "CmdTeleport",
            "CmdScript")
 
+try:
+    # used by @set
+    from ast import literal_eval as _LITERAL_EVAL
+except ImportError:
+    # literal_eval is not available before Python 2.6
+    _LITERAL_EVAL = None
+
 # used by @find
 CHAR_TYPECLASS = settings.BASE_CHARACTER_TYPECLASS
 
@@ -111,7 +118,7 @@ class CmdSetObjAlias(MuxCommand):
         objname = self.lhs
 
         # Find the object to receive aliases
-        obj = caller.search(objname, global_search=True)
+        obj = caller.search(objname)
         if not obj:
             return
         if self.rhs == None:
@@ -538,6 +545,8 @@ class CmdDestroy(MuxCommand):
             if not obj:
                 self.caller.msg(" (Objects to destroy must either be local or specified with a unique dbref.)")
                 return ""
+            if not "override" in self.switches and obj.dbid == int(settings.CHARACTER_DEFAULT_HOME):
+                return "\nYou are trying to delete CHARACTER_DEFAULT_HOME. If you want to do this, use the /override switch."
             objname = obj.name
             if not obj.access(caller, 'delete'):
                 return "\nYou don't have permission to delete %s." % objname
@@ -844,7 +853,7 @@ class CmdLink(MuxCommand):
             if dest:
                 string = "%s is an exit to %s." % (obj.name, dest.name)
             else:
-                string = "%s is not an exit. Its home location is %s." % obj.home
+                string = "%s is not an exit. Its home location is %s." % (obj.name, obj.home)
 
         else:
             # We gave the command @link 'obj = ' which means we want to
@@ -1174,11 +1183,19 @@ class CmdSetAttribute(ObjManipCommand):
     def convert_from_string(self, strobj):
         """
         Converts a single object in *string form* to its equivalent python
-        type. Handles floats, ints, and limited nested lists and dicts
+        type.
+
+         Python earlier than 2.6:
+        Handles floats, ints, and limited nested lists and dicts
         (can't handle lists in a dict, for example, this is mainly due to
         the complexity of parsing this rather than any technical difficulty -
         if there is a need for @set-ing such complex structures on the
         command line we might consider adding it).
+         Python 2.6 and later:
+        Supports all Python structures through literal_eval as long as they
+        are valid Python syntax. If they are not (such as [test, test2], ie
+        withtout the quotes around the strings), the entire structure will
+        be converted to a string and a warning will be given.
 
         We need to convert like this since all data being sent over the
         telnet connection by the Player is text - but we will want to
@@ -1189,7 +1206,8 @@ class CmdSetAttribute(ObjManipCommand):
 
         def rec_convert(obj):
             """
-            Helper function of recursive conversion calls.
+            Helper function of recursive conversion calls. This is only
+            used for Python <=2.5. After that literal_eval is available.
             """
             # simple types
             try: return int(obj)
@@ -1209,18 +1227,20 @@ class CmdSetAttribute(ObjManipCommand):
                              for pair in obj[1:-1].split(',') if ":" in pair])
             # if nothing matches, return as-is
             return obj
-        if strobj.strip() and strobj.strip()[0] in ("'", '"', "(", "{ ", "["):
-            # this is a structure starting with a proper python structure,
-            # so treat it as such.
+
+        if _LITERAL_EVAL:
+            # Use literal_eval to parse python structure exactly.
             try:
-                # under python 2.6, literal_eval can do this for us.
-                from ast import literal_eval
-                return literal_eval(strobj)
-            except ImportError:
-                # fall back to old recursive solution (don't support nested lists/dicts)
-                return rec_convert(strobj.strip())
+                return _LITERAL_EVAL(strobj)
+            except (SyntaxError, ValueError):
+                # treat as string
+                string = "{RNote: Value was converted to string. If you don't want this, "
+                string += "use proper Python syntax, like enclosing strings in quotes.{n"
+                self.caller.msg(string)
+                return utils.to_str(strobj)
         else:
-            return strobj
+            # fall back to old recursive solution (does not support nested lists/dicts)
+            return rec_convert(strobj.strip())
 
     def func(self):
         "Implement the set attribute - a limited form of @py."
@@ -1270,10 +1290,9 @@ class CmdSetAttribute(ObjManipCommand):
                     string += "\nCreated attribute %s/%s = %s" % (obj.name, attr, value)
                 except SyntaxError:
                     # this means literal_eval tried to parse a faulty string
-                    string = "{RPython syntax error in your value. By assigning a value starting with"
-                    string += "\none of {r'{R, {r\"{R, {r[{R, {r({R or {r{{R we assume you are entering a proper Python"
-                    string += "\nprimitive such as a list or a dictionary. You must then also use correct"
-                    string += "\nPython syntax. Remember especially to put quotes around all strings.{n"
+                    string = "{RCritical Python syntax error in your value. Only primitive Python structures"
+                    string += "\nare allowed. You also need to use correct Python syntax. Remember especially"
+                    string += "\nto put quotes around all strings inside lists and dicts.{n"
         # send feedback
         caller.msg(string.strip('\n'))
 
@@ -1537,6 +1556,7 @@ class CmdExamine(ObjManipCommand):
     aliases = ["@ex","ex", "exam", "examine"]
     locks = "cmd:perm(examine) or perm(Builders)"
     help_category = "Building"
+    arg_regex = r"\s.*?|$"
 
     player_mode = False
 
@@ -1601,7 +1621,7 @@ class CmdExamine(ObjManipCommand):
                    "perms":"\n{wPermissions{n: %s",
                    "locks":"\n{wLocks{n:",
                    "cmdset":"\n{wCurrent Cmdset(s){n:\n %s",
-                   "cmdset_avail":"\n{wActual commands available to %s (incl. lock-checks, external cmds etc){n:\n %s",
+                   "cmdset_avail":"\n{wCommands available to %s (all cmdsets + exits and external cmds){n:\n %s",
                    "scripts":"\n{wScripts{n:\n %s",
                    "exits":"\n{wExits{n: ",
                    "characters":"\n{wCharacters{n: ",
@@ -1616,7 +1636,7 @@ class CmdExamine(ObjManipCommand):
                    "perms":"\nPermissions: %s",
                    "locks":"\nLocks:",
                    "cmdset":"\nCurrent Cmdset(s):\n %s",
-                   "cmdset_avail":"\nActual commands available to %s (incl. lock-checks, external cmds, etc):\n %s",
+                   "cmdset_avail":"\nCommands available to %s (all cmdsets + exits and external cmds):\n %s",
                    "scripts":"\nScripts:\n %s",
                    "exits":"\nExits: ",
                    "characters":"\nCharacters: ",
@@ -1653,12 +1673,12 @@ class CmdExamine(ObjManipCommand):
 
         if not (len(obj.cmdset.all()) == 1 and obj.cmdset.current.key == "Empty"):
             # list the current cmdsets
-            cmdsetstr = "\n".join([utils.fill(cmdset, indent=2) for cmdset in str(obj.cmdset).split("\n")])
-            string += headers["cmdset"] % cmdsetstr
+            all_cmdsets = obj.cmdset.all() + (obj.player and obj.player.cmdset.all() or [])
+            all_cmdsets.sort(key=lambda x:x.priority, reverse=True)
+            string += headers["cmdset"] % ("\n ".join("%s (prio %s)" % (cmdset.path, cmdset.priority) for cmdset in all_cmdsets))
+            #cmdsetstr = "\n".join([utils.fill(cmdset, indent=2) for cmdset in str(obj.cmdset).split("\n")])
 
             # list the actually available commands
-            #from src.commands.cmdhandler import get_and_merge_cmdsets
-            #avail_cmdset = get_and_merge_cmdsets(obj)
             avail_cmdset = sorted([cmd.key for cmd in avail_cmdset if cmd.access(obj, "cmd")])
 
             cmdsetstr = utils.fill(", ".join(avail_cmdset), indent=2)

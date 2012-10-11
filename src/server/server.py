@@ -21,13 +21,16 @@ import django
 from django.db import connection
 from django.conf import settings
 
+from src.players.models import PlayerDB
 from src.scripts.models import ScriptDB
 from src.server.models import ServerConfig
 from src.server import initial_setup
 
-from src.utils.utils import get_evennia_version, mod_import
+from src.utils.utils import get_evennia_version, mod_import, make_iter
 from src.comms import channelhandler
 from src.server.sessionhandler import SESSIONS
+
+_SA = object.__setattr__
 
 if os.name == 'nt':
     # For Windows we need to handle pid files manually.
@@ -37,10 +40,10 @@ if os.name == 'nt':
 SERVER_RESTART = os.path.join(settings.GAME_DIR, 'server.restart')
 
 # module containing hook methods
-SERVER_HOOK_MODULE = mod_import(settings.AT_SERVER_STARTSTOP_MODULE)
+SERVER_STARTSTOP_MODULE = mod_import(settings.AT_SERVER_STARTSTOP_MODULE)
 
-# i18n
-from django.utils.translation import ugettext as _
+# module containing plugin services
+SERVER_SERVICES_PLUGIN_MODULES = [mod_import(module) for module in make_iter(settings.SERVER_SERVICES_PLUGIN_MODULES)]
 
 #------------------------------------------------------------
 # Evennia Server settings
@@ -52,11 +55,13 @@ VERSION = get_evennia_version()
 AMP_ENABLED = True
 AMP_HOST = settings.AMP_HOST
 AMP_PORT = settings.AMP_PORT
+AMP_INTERFACE = settings.AMP_INTERFACE
 
 # server-channel mappings
 IMC2_ENABLED = settings.IMC2_ENABLED
 IRC_ENABLED = settings.IRC_ENABLED
 RSS_ENABLED = settings.RSS_ENABLED
+
 
 #------------------------------------------------------------
 # Evennia Main Server object
@@ -84,8 +89,6 @@ class Evennia(object):
         self.sessions = SESSIONS
         self.sessions.server = self
 
-        print '\n' + '-'*50
-
         # Database-specific startup optimizations.
         self.sqlite3_prep()
 
@@ -96,11 +99,6 @@ class Evennia(object):
 
         # initialize channelhandler
         channelhandler.CHANNELHANDLER.update()
-
-        # Make info output to the terminal.
-        self.terminal_output()
-
-        print '-'*50
 
         # set a callback if the server is killed abruptly,
         # by Ctrl-C, reboot etc.
@@ -172,7 +170,7 @@ class Evennia(object):
         if not last_initial_setup_step:
             # None is only returned if the config does not exist,
             # i.e. this is an empty DB that needs populating.
-            print _(' Server started for the first time. Setting defaults.')
+            print ' Server started for the first time. Setting defaults.'
             initial_setup.handle_setup(0)
             print '-'*50
         elif int(last_initial_setup_step) >= 0:
@@ -180,8 +178,8 @@ class Evennia(object):
             # modules and setup will resume from this step, retrying
             # the last failed module. When all are finished, the step
             # is set to -1 to show it does not need to be run again.
-            print _(' Resuming initial setup from step %(last)s.' % \
-                {'last': last_initial_setup_step})
+            print ' Resuming initial setup from step %(last)s.' % \
+                {'last': last_initial_setup_step}
             initial_setup.handle_setup(int(last_initial_setup_step))
             print '-'*50
 
@@ -200,15 +198,8 @@ class Evennia(object):
         [(p.typeclass, p.at_init()) for p in PlayerDB.get_all_cached_instances()]
 
         # call server hook.
-        if SERVER_HOOK_MODULE:
-            SERVER_HOOK_MODULE.at_server_start()
-
-    def terminal_output(self):
-        """
-        Outputs server startup info to the terminal.
-        """
-        print _(' %(servername)s Server (%(version)s) started.') % {'servername': SERVERNAME, 'version': VERSION}
-        print '  amp (Portal): %s' % AMP_PORT
+        if SERVER_STARTSTOP_MODULE:
+            SERVER_STARTSTOP_MODULE.at_server_start()
 
     def set_restart_mode(self, mode=None):
         """
@@ -271,6 +262,7 @@ class Evennia(object):
                 # don't call disconnect hooks on reset
                 yield [(o.typeclass, o.at_server_shutdown()) for o in ObjectDB.get_all_cached_instances()]
             else: # shutdown
+                yield [_SA(p, "is_connected", False) for p in PlayerDB.get_all_cached_instances()]
                 yield [(o.typeclass, o.at_disconnect(), o.at_server_shutdown()) for o in ObjectDB.get_all_cached_instances()]
 
             yield [(p.typeclass, p.at_server_shutdown()) for p in PlayerDB.get_all_cached_instances()]
@@ -278,8 +270,8 @@ class Evennia(object):
 
             ServerConfig.objects.conf("server_restart_mode", "reset")
 
-        if SERVER_HOOK_MODULE:
-            SERVER_HOOK_MODULE.at_server_stop()
+        if SERVER_STARTSTOP_MODULE:
+            SERVER_STARTSTOP_MODULE.at_server_stop()
         # if _reactor_stopping is true, reactor does not need to be stopped again.
         if os.name == 'nt' and os.path.exists(SERVER_PIDFILE):
             # for Windows we need to remove pid files manually
@@ -306,23 +298,32 @@ application = service.Application('Evennia')
 # and is where we store all the other services.
 EVENNIA = Evennia(application)
 
-# The AMP protocol handles the communication between
-# the portal and the mud server. Only reason to ever deactivate
-# it would be during testing and debugging.
+print '-' * 50
+print ' %(servername)s Server (%(version)s) started.' % {'servername': SERVERNAME, 'version': VERSION}
 
 if AMP_ENABLED:
+
+    # The AMP protocol handles the communication between
+    # the portal and the mud server. Only reason to ever deactivate
+    # it would be during testing and debugging.
+
+    ifacestr = ""
+    if AMP_INTERFACE != '127.0.0.1':
+        ifacestr = "-%s" % AMP_INTERFACE
+    print '  amp (to Portal)%s:%s' % (ifacestr, AMP_PORT)
 
     from src.server import amp
 
     factory = amp.AmpServerFactory(EVENNIA)
-    amp_service = internet.TCPServer(AMP_PORT, factory)
+    amp_service = internet.TCPServer(AMP_PORT, factory, interface=AMP_INTERFACE)
     amp_service.setName("EvenniaPortal")
     EVENNIA.services.addService(amp_service)
-
 
 if IRC_ENABLED:
 
     # IRC channel connections
+
+    print '  irc enabled'
 
     from src.comms import irc
     irc.connect_all()
@@ -331,14 +332,25 @@ if IMC2_ENABLED:
 
     # IMC2 channel connections
 
+    print '  imc2 enabled'
+
     from src.comms import imc2
     imc2.connect_all()
 
 if RSS_ENABLED:
 
     # RSS feed channel connections
+
+    print '  rss enabled'
+
     from src.comms import rss
     rss.connect_all()
+
+for plugin_module in SERVER_SERVICES_PLUGIN_MODULES:
+    # external plugin protocols
+    plugin_module.start_plugin_services(EVENNIA)
+
+print '-' * 50 # end of terminal output
 
 # clear server startup mode
 ServerConfig.objects.conf("server_starting_mode", delete=True)

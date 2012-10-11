@@ -86,6 +86,9 @@ class CmdGroupTalk(Command):
             caller.msg("{RWhat do you want to say?{n")
             return
         group = caller.db.group
+        if group is None:
+            self.caller.msg("You are not in a group.")
+            return
         channel = group.db.channel
         channel.msg("{W[{cParty{n{W]<{G%s{n{W>: %s"% (caller.name, self.what))
 
@@ -333,12 +336,15 @@ class CmdTalk(Command):
             self.caller.msg("usage: talk to <npc> <message>")
             return
         npc = self.caller.search(self.npc, global_search=False)
-        if npc is not None:
-            self.caller.msg("{mYou tell %s: %s{n" % (npc.name, self.message)) 
-            npc.dictate_action(self.caller, self.message)  
+        if hasattr(npc, "combatant"):
+            if npc is not None:
+                self.caller.msg("{mYou tell %s: %s{n" % (npc.name, self.message)) 
+                npc.dictate_action(self.caller, self.message)  
+            else:
+                self.caller.msg("I don not see anyone around by that name.")
+                return
         else:
-            self.caller.msg("I don not see anyone around by that name.")
-            return
+            self.caller.msg("You can't talk to that, are you mad?")
             
         
 

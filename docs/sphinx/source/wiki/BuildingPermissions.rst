@@ -32,7 +32,7 @@ as well. By default Evennia creates the following hierarchy:
    console or import files from the hard drive.
 #. *Builders* has all the build commands, but cannot affect other
    players or mess with the server.
-#. *!PlayerHelpers* are almost like a normal *Player*, but they can also
+#. *PlayerHelpers* are almost like a normal *Player*, but they can also
    add help files to the database.
 #. *Players* is the default group that new players end up in. A new
    player have permission to use tells, to use and create new channels.

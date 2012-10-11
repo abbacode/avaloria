@@ -160,7 +160,20 @@ create a module there with the following functions:
 
 ::
 
-    # the caller is automatically added as first argument def get_health(character):     "Get health, stored as simple attribute"         return character.db.health  def get_stamina(character):     "Get stamina level, stored as simple attribute"     return character.db.stamina def get_skill(character, skillname, master=False):     """we assume skills are stored as a dictionary         stored in an attribute. Master skills are         stored separately (for whatever reason)"""     if master:         return character.db.skills_master.get(skillname, "NoSkill")     return character.db.skills.get(skillname, "NoSkill")
+    # the caller is automatically added as first argument
+    def get_health(character):
+        "Get health, stored as simple attribute"    
+        return character.db.health 
+    def get_stamina(character):
+        "Get stamina level, stored as simple attribute"
+        return character.db.stamina
+    def get_skill(character, skillname, master=False):
+        """we assume skills are stored as a dictionary 
+           stored in an attribute. Master skills are 
+           stored separately (for whatever reason)"""
+        if master:
+            return character.db.skills_master.get(skillname, "NoSkill")
+        return character.db.skills.get(skillname, "NoSkill")
 
 Done, the functions will return what we want assuming Characters do
 store this information in our game. Let's finish up the first part of
@@ -168,7 +181,25 @@ the portal protocol:
 
 ::
 
-    # this method could be named differently depending on the  # protocol you are using (this is telnet) def lineReceived(self, string):    # (does stuff to analyze the incoming string)    # ...    outdict =     if GET_HEALTH:        # call get_health(char)        outdict["get_health"] = ([], )    elif GET_STAMINA:        # call get_mana(char)        outdict["get_stamina"] = ([], )    elif GET_MASTER_SKILL_SMITH:        # call get_skill(char, "smithing", master=True)        outdict["get_skill"] = (["smithing"], 'master':True)   [...]   self.sessionhandler.oob_data_out(outdict)
+    # this method could be named differently depending on the 
+    # protocol you are using (this is telnet)
+    def lineReceived(self, string):
+       # (does stuff to analyze the incoming string)
+       # ...
+       outdict = {}
+       if GET_HEALTH:
+           # call get_health(char)
+           outdict["get_health"] = ([], {})
+       elif GET_STAMINA:
+           # call get_mana(char)
+           outdict["get_stamina"] = ([], {})
+       elif GET_MASTER_SKILL_SMITH:
+           # call get_skill(char, "smithing", master=True)
+           outdict["get_skill"] = (["smithing"], {'master':True})
+
+       [...]
+
+       self.sessionhandler.oob_data_out(outdict)   
 
 The Server will properly accept this and call the relevant functions to
 get their return values for the health, stamina and skill. The return
@@ -178,7 +209,17 @@ being passed back to the Portal. We need to define
 
 ::
 
-    def oob_data_out(self, data):     # the indata is a dictionary funcname:retval    outstring = ""     for funcname, retval in data.items():         if funcname == 'get_health':             # convert to the right format for sending back to client, store             # in outstring ...      [...]     # send off using the protocols send method (this is telnet)     sendLine(outstring)
+    def oob_data_out(self, data):
+        # the indata is a dictionary {funcname:retval}
+
+        outstring = ""
+        for funcname, retval in data.items():
+            if funcname == 'get_health':
+                # convert to the right format for sending back to client, store
+                # in outstring ...
+         [...]
+        # send off using the protocols send method (this is telnet)
+        sendLine(outstring)
 
 As seen, ``oob_data`` takes the values and formats into a form the
 protocol understands before sending it off.
@@ -195,8 +236,74 @@ Loop over all relevant sessions. The Server will treat this like a
 Portal call and data will be sent back to be handled by the portal as
 normal.
 
+Adding custom Protocols
+=======================
+
+Evennia has a plugin-system that allows you to add new custom Protocols
+without editing any files in ``src/``. To do this you need to add the
+protocol as a new "service" to the application.
+
+Take a look at for example ``src/server/portal.py``, notably the
+sections towards the end of that file. These are where the various
+in-built services like telnet, ssh, webclient etc are added to the
+Portal (there is an equivalent but shorter list in
+``src/server.server.py``.
+
+To add a new service of your own (for example your own custom client
+protocol) to e.g. the Portal, create a new module in
+``game/gamesrc/conf/``. Let's call it ``myproc_plugin.py``. We need to
+tell the Server or Portal that they need to import this module. In
+``game/settings.py``, add one of the following:
+
+::
+
+    # add to the Server
+    SERVER_SERVICES_PLUGIN_MODULES.append('game.gamesrc.conf.myproc_plugin')
+    # or, if you want to add to the Portal
+    PORTAL_SERVICES_PLUGIN_MODULES.append('game.gamesrc.conf.myproc_plugin')
+
+This module can contain whatever you need to define your protocol, but
+it *must* contain a function ``start_plugin_services(app)``. This is
+called by the Portal as part of its upstart. The function
+``start_plugin_services`` must contain all startup code the server need.
+The ``app`` argument is a reference to the Portal application itself so
+the custom service can be added to it. The function should not return
+anything.
+
+This is how it can look:
+
+::
+
+    # game/gamesrc/conf/myproc_plugin.py
+
+    # here the new Portal Twisted protocol is defined
+    class MyOwnFactory( ... ):
+       [...]
+
+    # some configs
+    MYPROC_ENABLED = True # convenient off-flag to avoid having to edit settings all the time
+    MY_PORT = 6666
+
+    def start_plugin_services(portal):
+        "This is called by the Portal during startup"
+         if not MYPROC_ENABLED:
+             return 
+         # output to list this with the other services at startup
+         print "  myproc: %s" % MY_PORT
+
+         # some setup (simple example)
+         factory = MyOwnFactory()
+         my_service = internet.TCPServer(MY_PORT, factory)
+         # all Evennia services must be uniquely named
+         my_service.setName("MyService")
+         # add to the main portal application
+         portal.services.addService(my_service)
+
+One the module is defined and targeted in settings, just reload the
+server and your new protocol/services should start with the others.
+
 Assorted notes
---------------
+==============
 
 To take two examples, Evennia supports the *telnet* protocol as well as
 *webclient*, a custom ajax protocol. You'll find that whereas telnet is

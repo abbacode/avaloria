@@ -1,8 +1,7 @@
 Asynchronous code
 =================
 
-*This is considered an advanced topic, probably not useful for most
-users.*
+*This is considered an advanced topic.*
 
 Synchronous versus Asynchronous
 -------------------------------
@@ -17,7 +16,9 @@ Consider this piece of code:
 
 ::
 
-    print "before call ..." long_running_function() print "after call ..."
+    print "before call ..."
+    long_running_function()
+    print "after call ..."
 
 When run, this will print ``"before call ..."``, after which the
 ``long_running_function`` gets to work for however long time. Only once
@@ -43,7 +44,10 @@ use of the ``run_async()`` function in ``src/utils/utils.py``.
 
 ::
 
-    from ev import utils print "before call ..." utils.run_async(long_running_function) print "after call ..."
+    from ev import utils
+    print "before call ..."
+    utils.run_async(long_running_function)
+    print "after call ..."
 
 Now, when running this you will find that the program will not wait
 around for ``long_running_function`` to finish. Infact you will see
@@ -63,19 +67,20 @@ call to try to deal with the result from ``long_running_function`` above
 for processing any data from the function. Instead one has to use
 *callbacks*.
 
-``utils.run_async`` takes two optional arguments, ``at_return`` and
-``at_err``. Both of these should be function defitions. Each will be
-called automatically.
+``utils.run_async`` takes reserved arguments.
 
 -  ``at_return(r)`` (the *callback*) is called when the asynchronous
    function (``long_running_function`` above) finishes successfully. The
    argument ``r`` will then be the return value of that function (or
    ``None``). Example:
 
-::
+    ::
 
-    def at_return(r):      print r
+         def at_return(r):
+             print r    
 
+-  ``at_return_kwargs`` - an optional dictionary that will be fed as
+   keyword arguments to the ``at_return`` callback.
 -  ``at_err(e)`` (the *errback*) is called if the asynchronous function
    fails and raises an exception. This exception is passed to the
    errback wrapped in a *Failure* object ``e``. If you do not supply an
@@ -83,22 +88,122 @@ called automatically.
    writes errors to the evennia log. An example of an errback is found
    below:
 
-::
+    ::
 
-    def at_err(e):   
-        print "There was an error:", str(e)
+        def at_err(e):   
+            print "There was an error:", str(e)    
+
+-  ``at_err_kwargs`` - an optional dictionary that will be fed as
+   keyword arguments to the ``at_err`` errback.
 
 An example of making an asynchronous call from inside a
 `Command <Commands.html>`_ definition:
 
 ::
 
-    from ev import utils from game.gamesrc.commands.basecommand import Command      class CmdAsync(Command):   key = "asynccommand"   def func(self):                     def long_running_function():              #[... lots of time-consuming code              return final_value                def at_return(r):            self.caller.msg("The final value is %s" % r)       def at_err(e):            self.caller.msg("There was an error: %s" % e)       # do the async call, setting all callbacks        utils.run_async(long_running_function, at_return, at_err)
+    from ev import utils
+    from game.gamesrc.commands.basecommand import Command
+        
+    class CmdAsync(Command):
+
+       key = "asynccommand"
+
+       def func(self):     
+           
+           def long_running_function():  
+               #[... lots of time-consuming code  
+               return final_value
+           
+           def at_return(r):
+               self.caller.msg("The final value is %s" % r)
+
+           def at_err(e):
+               self.caller.msg("There was an error: %s" % e)
+
+           # do the async call, setting all callbacks
+           utils.run_async(long_running_function, at_return, at_err) 
 
 That's it - from here on we can forget about ``long_running_function``
 and go on with what else need to be done. *Whenever* it finishes, the
 ``at_return`` function will be called and the final value will pop up
 for us to see. If not we will see an error message.
+
+Process Pool
+------------
+
+The ``ProcPool`` is an Evennia subsystem that launches a pool of
+processes based on the `ampoule <https://launchpad.net/ampoule>`_
+package (included with Evennia). When active, ``run_async`` will use
+this pool to offload its commands. ``ProcPool`` is deactivated by
+default, it can be turned on with ``settings.PROCPOOL_ENABLED``. *It
+should be noted that the default SQLite3 database is not suitable for
+for multiprocess operation. So if you use ``ProcPool`` you should
+consider switching to another database such as MySQL or PostgreSQL.*
+
+The Process Pool makes several additional options available to
+``run_async``.
+
+The following keyword arguments make sense when ``ProcPool`` is active:
+
+-  ``use_thread`` - this force-reverts back to thread operation (as
+   above). It effectively deactivates all additional features
+   ``ProcPool`` offers.
+-  ``proc_timeout`` - this enforces a timeout for the running process in
+   seconds; after this time the process will be killed.
+-  ``at_return``, ``at_err`` - these work the same as above.
+
+In addition to feeding a single callable to ``run_async``, the first
+argument may also be a source string. This is a piece of python source
+code that will be executed in a subprocess via ``ProcPool``. Any extra
+keyword arguments to ``run_async`` that are not one of the reserved ones
+will be used to specify what will be available in the execution
+environment.
+
+There is one special variable used in the remove execution: ``_return``.
+This is a function, and all data fed to ``_return`` will be returned
+from the execution environment and appear as input to your ``at_return``
+callback (if it is defined). You can call ``_return`` multiple times in
+your code - the return value will then be a list.
+
+Example:
+
+::
+
+    from src.utils.utils import run_async
+
+    source = """
+    from time import sleep
+    sleep(5) # sleep five secs
+    val = testvar + 5
+    _return(val)
+    _return(val + 5)
+    """
+
+    # we assume myobj is a character retrieved earlier
+    # these callbacks will just print results/errors
+    def callback(ret):
+        myobj.msg(ret)
+    def errback(err):
+        myobj.msg(err)
+    testvar = 3
+
+    # run async
+    run_async(source, at_return=callback, at_err=errback, testvar=testvar)
+
+    # this will return '[8, 13]'
+
+You can also test the async mechanism from in-game using the ``@py``
+command:
+
+::
+
+     @py from src.utils.utils import run_async;run_async("_return(1+2)",at_return=self.msg)
+
+Note: The code execution runs without any security checks, so it should
+not be available to unprivileged users. Try
+``contrib.evlang.evlang.limited_exec`` for running a more restricted
+version of Python for untrusted users. This will use ``run_async`` under
+the hood.
 
 Assorted notes
 --------------
