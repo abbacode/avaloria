@@ -8,6 +8,7 @@ from src.utils import utils, create
 class ActionCommand(Command):
     
     def at_post_cmd(self):
+        self.caller.last_cmd = self.key + ' %s' %self.args.strip()
         temp_health = self.caller.db.attributes['temp_health']
         base_health = self.caller.db.attributes['health']
         temp_mana = self.caller.db.attributes['temp_mana']
@@ -17,6 +18,7 @@ class ActionCommand(Command):
         temp_balance = self.caller.db.attributes['temp_balance']
         balance = self.caller.db.attributes['balance']
         self.caller.msg("{RHP: (%s/%s){n {CMP: (%s/%s){n {yEXP: (%s/%s){n BAL:{g(%s/%s){n" % (temp_health, base_health, temp_mana, base_mana, exp_made, exp_needed, temp_balance, balance))
+        self.caller.db.quest_log.check_quest_flags(item=self.caller)
 
 class CmdInvite(Command):
     """
@@ -474,6 +476,10 @@ class CmdLoot(ActionCommand):
             self.caller.msg(m)
             return
         corpse = self.caller.search(self.what) 
+        if hasattr(corpse, 'lootable'):
+            if not corpse.db.lootable:
+                self.caller.msg("Already looted.")
+                return
         if corpse is not None:
             self.caller.loot(corpse=corpse)
         else:
@@ -598,7 +604,7 @@ class CmdUnEquip(Command):
             self.caller.msg("What did you want to unequip?  unequip <slot to equip>")
             return
         if self.what is not None:
-            obj = self.caller.search(self.what, global_search=False, ignore_errors=True)
+            obj = self.caller.search(self.what, global_search=False, ignore_errors=True)[0]
             if not obj:
                 self.caller.unequip_item(ite=self.what)
             else:

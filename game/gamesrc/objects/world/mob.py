@@ -2,6 +2,10 @@ import random
 from ev import Object
 from collections import deque
 from src.utils import create
+from game.gamesrc.conf import config as avconfig
+
+
+AVCONFIG = avconfig.config
 
 class Mob(Object):
     """
@@ -149,7 +153,7 @@ class Mob(Object):
         self.db.pre_death_name = self.name
         self.db.desc = "A dead %s." % self.key
         self.key = "{rCorpse of %s{n" % self.key
-        self.aliases = ['corpse', self.key.lower()]
+        self.aliases += ['corpse', self.key.lower()]
         self.db.lootable = True
         if self.db.reanimator:
             self.db.reanimate = True
@@ -278,7 +282,7 @@ class Mob(Object):
 
         rn = random.random()
         if self.db.rating in 'hero':
-            if rn < 0.25:
+            if rn < AVCONFIG['hero_mob_rare_loot_rate']:
                 num_of_items = random.randrange(1,2)
                 loot_generator = create.create_object("game.gamesrc.objects.world.generators.LootGenerator")
                 loot = loot_generator.create_loot_set(loot_rating='rare', number_of_items=num_of_items, item_type='mixed')
@@ -286,7 +290,7 @@ class Mob(Object):
                     item.move_to(self, quiet=True)
                 loot_generator.delete()
                     
-        if rn < 0.5:
+        if rn < AVCONFIG['mob_physical_loot_drop_rate']:
             num_of_items = random.randrange(1,3)
             loot_generator = create.create_object("game.gamesrc.objects.world.generators.LootGenerator")
             ratings = ['uncommon', 'average', 'rare']

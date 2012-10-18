@@ -639,7 +639,9 @@ class Object(TypeClass):
         exits = []
         users = []
         things = []
+        
         for content in [con for con in self.contents if con.access(pobject, 'view')]:
+            print content
             if content.db.quest_item:
                 on_quest = pobject.on_quest(content.db.quest)
                 if not on_quest:

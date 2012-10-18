@@ -147,12 +147,28 @@ class QuestManager(Object):
                             if structure_manager.db.structures[struct].db.level > 1:
                                 quest_obj.tick_counter_objective(objective, caller=character)
                                 break
+                    elif 'use' in quest_objectives[objective]['type']:
+                        command = quest_objectives[objective]['type'].split('_')[1]
+                        print "command: %s last_cmd: %s" % (command, character.last_cmd)
+                        if character.last_cmd.strip() == command.strip():
+                            quest_obj.tick_counter_objective(objective, caller=character)
+                        
+                   
         self.cleanup_completed_quests()
                             
 #    def check_prereqs(self):
           
-    def find_quest(self, quest):
+    def find_quest(self, quest, completed=False):
         active_quests = self.db.active_quests
+        completed_quests = self.db.completed_quests
+
+        if completed:
+            if quest in completed_quests:
+                quest = completed_quests[quest]
+                return quest
+            else:
+                return None
+
         if quest in active_quests:
             quest = active_quests[quest]
             return quest

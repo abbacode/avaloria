@@ -27,6 +27,7 @@ def holds(accessing_obj, accessed_obj, *args, **kwargs):
     accessed_obj.location == accessing_obj), or if accessing_obj itself holds an
     object matching the given key.
     """
+    print "checking holds..."
     try:
         # commands and scripts don't have contents, so we are usually looking
         # for the contents of their .obj property instead (i.e. the object the
@@ -42,14 +43,15 @@ def holds(accessing_obj, accessed_obj, *args, **kwargs):
         # helper function. Compares both dbrefs and keys/aliases.
         objid = str(objid)
         dbref = utils.dbref(objid)
-        #print "checking dbrefs for %s: %s" % (objid, dbref)
+        print "checking dbrefs for %s: %s" % (objid, dbref)
         if dbref and any((True for obj in contents if obj.id == dbref)):
             return True
 
         objid = objid.lower()
         for obj in contents:
-            #print "objid: %s\t obj.key: %s" % (objid, obj.key.lower())
+            print "objid: %s\t obj.key: %s" % (objid, obj.key.lower())
             for thing in obj.contents:
+                print thing
                 if thing.key.lower() == objid or objid in [al.lower() for al in thing.aliases]:
                     return True
         return any((True for obj in contents
@@ -60,11 +62,11 @@ def holds(accessing_obj, accessed_obj, *args, **kwargs):
     else:
         try:
             if check_holds(accessed_obj.id):
-         #       print "holds: accessed_obj.id - True"
+                print "holds: accessed_obj.id - True"
                 return True
         except Exception:
             pass
-       # print "holds: accessed_obj.obj.id -", hasattr(accessed_obj, "obj") and check_holds(accessed_obj.obj.id)
+        print "holds: accessed_obj.obj.id -", hasattr(accessed_obj, "obj") and check_holds(accessed_obj.obj.id)
         return hasattr(accessed_obj, "obj") and check_holds(accessed_obj.obj.id)
 
 def myfalse(accessing_obj, accessed_obj, *args, **kwargs):

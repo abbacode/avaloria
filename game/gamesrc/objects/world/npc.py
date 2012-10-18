@@ -12,13 +12,14 @@ class EnemyNpc(Mob):
         self.db.dialogue = []
         self.db.combat_dialogue = []
         self.db.reanimate = False
+        self.db.reanimator = True
 
     def death(self):
         self.db.pre_death_desc = self.db.desc
         self.db.desc = "A dead %s." % self.key
         self.db.pre_death_name = self.key
         self.key = "{rCorpse of %s{n" % self.key
-        self.aliases = ['corpse', 'Corpse of %s' % self.key, self.key.lower()]
+        self.aliases = ['reanimator',  'Corpse of %s' % self.key, self.key.lower()]
         self.db.lootable = True
         self.db.corpse = True
         self.db.reanimate = True
@@ -31,11 +32,13 @@ class EnemyNpc(Mob):
         self.db.attributes = attributes
 
     def reanimate(self):
+        self.db.aliases = ['reanimator', self.key.lower(), 'mob']
         self.db.corpse = False
         self.db.lootable = False
         self.db.reanimate = False
         self.db.desc = self.db.pre_death_desc
         self.key = self.db.pre_death_name
+        self.generate_physical_loot()
         self.refresh_attributes()
 
     def interact(self, caller, action=None):

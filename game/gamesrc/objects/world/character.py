@@ -54,6 +54,7 @@ class CharacterClass(Character):
         self.db.group = None
         self.db.combat_queue = deque([])
         self.db.quest_flags = {}
+        self.db.flags = {'tutorial_done': False, 'tutorial_started': False, }
         self.db.attributes = attributes
         self.db.equipment= { 'weapon': None, 'armor': None, 'shield': None, 'neck': None, 'left finger': None, 'right finger': None, 'back': None, 'trinket': None}
         self.db.skills = []
@@ -120,6 +121,16 @@ class CharacterClass(Character):
         """
         pass
 
+    def do_tutorial(self):
+        flags = self.db.flags
+        self.msg("You disappear in a puff of smoke.")
+        self.location.msg_contents("%s disappears in a puff of smoke" % self.name, exclude=self)
+        tutorial1 = self.search("tutorial1", global_search=True)
+        self.move_to(tutorial1, quiet=True)
+        flags['tutorial_started'] = True
+        self.db.flags = flags
+
+        
     def at_object_receive(self, moved_obj, source_location):
         questlog = self.db.quest_log
         if moved_obj.db.quest_item:
@@ -322,7 +333,9 @@ class CharacterClass(Character):
                     self.msg("You loot: %s" % item.name)
                     self.location.msg_contents("%s looted: %s" % (self.name, item.name), exclude=self)
             if corpse.db.reanimate:
+                corpse.db.lootable = False
                 return
+            self.db.target = None
             corpse.delete()
         else:
             self.msg("{rThis does not seem to be a corpse, or has no loot.{n")
@@ -574,6 +587,7 @@ class CharacterClass(Character):
             self.msg("You are now using %s as your trinket." % ite.name)
         else:
             self.msg("{r%s is not equippable in any slot!{n" % ite)
+        
     
     def unequip_item(self, ite=None):
         """
@@ -780,6 +794,7 @@ Which attributes would you like to improve?
         attributes['experience_currency'] += int(exp_to_award)
         difference = int(attributes['experience_needed']) - exp_to_award
         if difference == 0:
+            self.db.attributes = attributes
             self.level_up(zero_out_exp=True)
             return
         elif difference < 0:
@@ -881,7 +896,7 @@ Which attributes would you like to improve?
         caller.msg("{R%s declines your invitation.{n" % self.name)
         return
 
-    def on_quest(self, quest):
+    def on_quest(self, quest, completed=False):
         """
         return true if on said quest,
         false otherwise.

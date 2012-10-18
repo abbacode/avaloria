@@ -326,7 +326,7 @@ def prompt_yesno(caller, question="", yescode="", nocode="", default="N"):
     cmdyes.key = "yes"
     cmdyes.aliases = ["y"]
     # this will be executed in the context of the yes command (so self.caller will be available)
-    cmdyes.code = yescode + "\nself.caller.cmdset.delete('menucmdset')\ndel self.caller.db._menu_data"
+    cmdyes.code = "self.caller.cmdset.delete('menucmdset')\ndel self.caller.db._menu_data\n" + yescode
 
     cmdno = CmdMenuNode()    
     cmdno.key = "no"

@@ -1,0 +1,15 @@
+Another important thing to learn is how to acquire new skills.  This is fairly simple
+in the land of Avaloria.  Simply find, or purchase the appropriate training manual for
+the desired skill and then use the 'use' command to read the book and learn the skill.
+For example: use Training Manual
+
+Once you do this the skill will be added to your known skills list and you will be able
+to spend experience points to increase the skill level of your known skills.  You can
+do this with the 'skills' command.  Take this training manual near me and learn the skill
+is teaches.
+
+    {GObjectives{n:
+        -use the 'get' command to pick up the training manual
+        -use the 'use' command to traing the skill the manual teaches to you.
+
+Learn a new skill via Training Manual.

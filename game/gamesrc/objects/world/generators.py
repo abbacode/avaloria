@@ -129,6 +129,7 @@ class LootGenerator(Object):
         return weapon
 
     def set_shield_armor(self, shield):
+        shield.db.shield = True
         if self.loot_rating is 'average':
             v = random.randrange(1, 3)
         elif self.loot_rating is 'uncommon':
@@ -602,8 +603,9 @@ class MobGenerator(Object):
             self.db.ratings = ['average', 'strong']
             self.db.spider_prefixes = [ 'Common', 'Large', 'Hulking', 'Behemoth' ]
             self.db.pigmy_prefixes = [ 'Small', 'Mature', 'Young']
+            self.db.gnoll_prefixes = [ 'Juvenile', 'Adult', 'Ancient']
             self.db.ancestral_spirit_prefixes = [ 'Ethereal', 'Shadowy', 'Lightbourne', 'Ancestral' ]
-            self.db.average_mob_names = ['Spider', 'Pigmy', 'Spirit']
+            self.db.average_mob_names = ['Spider', 'Pigmy', 'Spirit', 'Gnoll']
             mob_name_original = random.choice(self.db.average_mob_names)
             if 'Spider' in mob_name_original:
                 prefix = random.choice(self.db.spider_prefixes)
@@ -611,6 +613,8 @@ class MobGenerator(Object):
                 prefix = random.choice(self.db.pigmy_prefixes)
             elif 'Spirit' in mob_name_original:
                 prefix = random.choice(self.db.ancestral_spirit_prefixes)
+            elif 'Gnoll' in mob_name_original:
+                prefix = random.choice(self.db.gnoll_prefixes)
             mob_name = "%s %s" % (prefix, mob_name_original)
             mob = create.create_object("game.gamesrc.objects.world.mob.Mob", key="%s" % mob_name, location=self.location)
             mob.aliases = ['kill_dungeon_mobs','mob_runner', 'irregular_runner', 'ruins_mobs', 'kill_ruins_mobs', 'kill_%s' % mob_name_original.lower()]
@@ -650,6 +654,17 @@ class MobGenerator(Object):
             mob.db.rating = random.choice(self.db.ratings)
             mob.db.is_kos = True
             mob.db.mob_type = '%s' % mob_name_original.lower()
+        elif 'tutorial' in self.db.dungeon_type:
+            pass
+
+        try:
+            mob.generate_stats()
+            mob.generate_skillset()
+            mob.generate_rewards()
+            mob.update_stats()
+        except UnboundLocalError:
+            return None
+
         rn = random.random()
         if rn <= .40:
             weapon = self.search('mob_blade', global_search=True, ignore_errors=True)[0]
@@ -660,17 +675,14 @@ class MobGenerator(Object):
             equipment['weapon'] = mob_weapon
             mob.db.equipment = equipment
 
-        mob.generate_stats()
-        mob.generate_skillset()
-        mob.generate_rewards()
-        mob.update_stats()
         return mob
             
     def generate_mob_set(self, number_of_mobs):
         mob_set = []
-        print number_of_mobs
         for i in range(0, number_of_mobs):
             mob = self.generate_mob_type()
+            if mob is None:
+                return None
             mob_set.append(mob)
             print mob
         return mob_set

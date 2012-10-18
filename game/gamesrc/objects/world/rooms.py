@@ -22,6 +22,21 @@ class PlayerLairExit(Object):
         caller.msg("{CYou arrive in The Crossroads.{n")
 
 
+class PlayerLairEnterance(Object):
+    """
+    This represents a portal to the particular characters lair.
+    """
+    def at_object_creation(self):
+        self.name = "Lair Portal"
+        self.aliases = ['portal', 'Portal']
+        self.db.desc = "A swirling, purple-white portal.  As you look at it, you know for a fact it leads to your stronghold."
+        
+    def on_use(self, caller):
+        lair = caller.db.lair
+        caller.msg("{CYou step through the portal.{n")
+        caller.move_to(lair)
+        caller.msg("{CYou have arrived home.{n")
+
                 
 
 
@@ -57,7 +72,10 @@ class DungeonRoom(Room):
             if hasattr(item, 'mob_type'):
                 item.db.should_update = True
             if hasattr(item, 'actions'):
-                item.interact(caller, action='greeting')
+                try:
+                    item.interact(caller, action='greeting')
+                except KeyError:
+                    pass
 
     def at_object_leave(self, moved_obj, target_location):
         manager = self.db.manager
@@ -153,10 +171,11 @@ class Zone(Object):
         self.db.map = {}
         self.db.path_map = {}
         self.db.grid_size = None
-        self.db.valid_zones = ['dungeon', 'woodlands', 'marshlands']
+        self.db.valid_zones = ['dungeon', 'woodlands', 'marshlands', 'tutorial']
         self.db.zone_type = 'marshlands'
         self.db.player_map = {}
         self.db.quest_items = []
+        self.db.looted = False
         labels = string.ascii_uppercase
         self.db.x_axis_labels = list(labels)
         self.db.y_axis_labels = [x for x in range(0, len(self.db.x_axis_labels))]
@@ -168,6 +187,11 @@ class Zone(Object):
         self.set_zone_level()
 
 
+    def refresh_mg_dungeon_type(self):
+        mgen = self.db.mob_generator
+        mgen.db.dungeon_type = self.db.zone_type
+        
+
     def find_by_cell(self, cell):
         map = self.db.path_map
         for key,value in map.items():
@@ -177,6 +201,8 @@ class Zone(Object):
     def spawn_enemy_npcs(self):
         for npc in self.db.enemy_npcs:
             object = self.search('%s' % npc.strip(), global_search=True)
+            if object is None:
+                return
             rooms = self.search('%s_enemy_npc_spawn' % self.db.zone_type, global_search=True, ignore_errors=True)
             if rooms is None:
                 return
@@ -198,7 +224,9 @@ class Zone(Object):
                 spawn_rooms.remove(room)
 
         for item in self.db.quest_items:
+            print "Item: " + item
             obj = storage.search('%s' % item, global_search=False, ignore_errors=True)[0]
+            print "object: " + obj.name
             if type(spawn_rooms) == type(list()):
                 room = random.choice(spawn_rooms)    
             else:
@@ -212,7 +240,7 @@ class Zone(Object):
         
     def generate_zone_path(self):
         path_map = self.db.path_map
-        rooms = self.search('marshlands_room', global_search=True, ignore_errors=True)
+        rooms = self.search('%s_room' % self.db.zone_type, global_search=True, ignore_errors=True)
         print rooms
         for room in rooms:
             path_map["%s" % room.db.cell_number] = room
@@ -282,13 +310,14 @@ class Zone(Object):
         mg.db.level = self.db.zone_level
         num_mobs = random.randrange(3,7)
         mob_set = mg.generate_mob_set(num_mobs)
-       
-        for mob in mob_set:
-            if mob is None:
-                print "normal mob gen failed somewhere"
-                continue
-            mob.move_to(room, quiet=True)
-            room.msg_contents("You feel as if someone is watching you...")
+        
+        if mob_set is not None: 
+            for mob in mob_set:
+                if mob is None:
+                    print "normal mob gen failed somewhere"
+                    continue
+                mob.move_to(room, quiet=True)
+                room.msg_contents("You feel as if someone is watching you...")
 
         if self.db.is_dungeon is True:
             if room.db.last_room:

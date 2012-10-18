@@ -21,7 +21,11 @@ class CharacterSentinel(Script):
         self.db.points_flag = False
         self.db.brawling_level_last_seen = 0
         self.db.weaving_level_last_seen = 0
+        self.db.prompt_sent = False
             
+    def handle_no(self):
+        pass
+
     def at_repeat(self):
         attributes = self.obj.db.attributes
 
@@ -57,5 +61,21 @@ class CharacterSentinel(Script):
                 attributes['temp_balance'] += 1
             self.obj.db.attributes = attributes
 
+        cflags = self.obj.db.flags
+        prompt_sent = self.db.prompt_sent
+        if cflags['tutorial_started'] and not prompt_sent and not cflags['tutorial_done']:
+            prompt_yesno(self.obj, question="Would you like to continure the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
+            self.db.prompt_sent = True
+            prompt_sent = True
+            
+        if not cflags['tutorial_done'] and not prompt_sent:
+            prompt_yesno(self.obj, question="Would you like to go through the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
+            self.db.prompt_sent = True
+
+            
+           
+        if 'Battle On!' in self.obj.db.quest_log.db.completed_quests.keys() and not cflags['tutorial_done']:
+            cflags['tutorial_done'] = True 
+            self.db.flags = cflags
         if self.obj.db.group is None:
             self.obj.db.grouped = False

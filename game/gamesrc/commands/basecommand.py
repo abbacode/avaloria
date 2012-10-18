@@ -149,6 +149,8 @@ class Command(BaseCommand):
         balance = self.caller.db.attributes['balance']
         self.caller.msg("{RHP: (%s/%s){n {CMP: (%s/%s){n {YEXP: (%s/%s){n BAL:{G(%s/%s){n" % (temp_health, base_health, temp_mana, base_mana, exp_made, exp_needed, temp_balance, balance))
         """
+        self.caller.db.quest_log.check_quest_flags(item=self.caller)
+        self.caller.last_cmd = self.key
 
 
     def parse(self):

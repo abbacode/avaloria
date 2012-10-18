@@ -50,6 +50,10 @@ class IrregularRunner(Script):
 class NpcRunner(Script):
     """
     Manages NPC's
+    subscribers = npc objects (global scope) with the 'npc_runner' alias
+
+    This script cycles through its subscribers calling the .update() function
+    on them.
     """
 
     def at_script_creation(self):
@@ -69,6 +73,15 @@ class NpcRunner(Script):
 class ZoneRunner(Script):
     """
     Updates the zone manager objects, firing off mob respawn and the like.
+
+    This script does three specific tasks:
+        - Reanimates mobs that are flagged to do so.
+        - Updates the subscribed zones (this means replenishing mobs and quest items)
+        - Deletes corpses that have not been looted.
+
+    subscribers = zone objects subscribed to this sentinel
+    reanimators = npc objects with the alias of 'reanimator'
+    corpses = corpse objects that have been left laying around ('corpse' alias).
     """
     def at_script_creation(self):
         self.key = "zone_runner"
@@ -85,14 +98,14 @@ class ZoneRunner(Script):
         self.ndb.reanimators = [search.objects(dbref) for dbref in self.db.reanimators]
 
     def at_repeat(self):
-        self.ndb.subscribers = search.objects('zone_runner')
-        self.ndb.corpses = search.objects('corpse')
-        self.ndb.reanimators = search.objects('reanimator')
         print "reanimate()"
+        self.ndb.reanimators = search.objects('reanimator')
         [reanimator.reanimate() for reanimator in self.ndb.reanimators if reanimator.db.corpse]
         print "update()"
+        self.ndb.subscribers = search.objects('zone_runner')
         [zone.update() for zone in self.ndb.subscribers if not zone.db.mobs_spawned ]
         print "corpse.delete()"
+        self.ndb.corpses = search.objects('corpse')
         [corpse.delete() for corpse in self.ndb.corpses if not corpse.db.reanimate ]
         
 class LairRunner(Script):

@@ -361,6 +361,7 @@ def holds(accessing_obj, accessed_obj, *args, **kwargs):
     accessed_obj.location == accessing_obj), or if accessing_obj itself holds an
     object matching the given key.
     """
+    print "in holds"
     try:
         # commands and scripts don't have contents, so we are usually looking
         # for the contents of their .obj property instead (i.e. the object the
@@ -380,7 +381,8 @@ def holds(accessing_obj, accessed_obj, *args, **kwargs):
             return True     
         for obj in contents:
             for thing in obj.contents:
-                if thing.key.lower() == objid or objid in [al.lower() for al in thing.aliases]:
+                print "%s => %s" % (thing.key.lower(), objid)
+                if thing.key.lower() == objid.lower() or objid in [al.lower() for al in thing.aliases]:
                     return True
 
         

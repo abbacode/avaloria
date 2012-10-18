@@ -34,6 +34,7 @@ class Item(Object):
             if self.db.attribute_bonuses[bonus] > 0:
                 character_attributes[bonus] = self.db.attribute_bonuses[bonus] + character_attributes[bonus]
         self.location.db.attributes = character_attributes
+        self.location.refresh_attributes()
         self.db.is_equipped = True
     
     def on_unequip(self):
@@ -42,6 +43,7 @@ class Item(Object):
             if self.db.attribute_bonuses[bonus] > 0:
                 character_attributes[bonus] = character_attributes[bonus] - self.db.attribute_bonuses[bonus]
         self.location.db.attributes = character_attributes
+        self.location.refresh_attributes()
         self.db.is_equipped = False
 
     def at_inspect(self, looker):
@@ -203,49 +205,95 @@ class Armor(Item):
         self.db.armor_rating = 1
         self.db.armor_type = None
         self.db.slot = 'armor'
+        self.db.shield = False
         self.db.equipable = True
         
     def at_inspect(self, looker):
-        if 'common' in self.db.item_level:
-            looker.msg("{W%s {n" % self.name)
-            m = "{wThis is a normal suit of armor, nothing much is special about it.{n"
-            looker.msg(m)
-            m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
-            looker.msg(m)
-            string = ""
-            for bonus in self.db.attribute_bonuses:
-                string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
-            looker.msg(string)  
-        elif 'uncommon' in self.db.item_level:
-            looker.msg("{g%s {n" % self.name)
-            m = "{wThis is a masterwork suit of armor made by an accomplished blacksmith.{n"
-            looker.msg(m)
-            m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
-            looker.msg(m)
-            string = ""
-            for bonus in self.db.attribute_bonuses:
-                string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
-            looker.msg(string)  
-        elif 'rare' in self.db.item_level:
-            looker.msg("{b%s {n" % self.name)
-            m = "{wThis is a magically embued set of armor.{n"
-            looker.msg(m)
-            m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
-            looker.msg(m)
-            string = ""
-            for bonus in self.db.attribute_bonuses:
-                string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
-            looker.msg(string)  
-        elif 'artifact' in self.db.item_level:
-            looker.msg("{m%s {n" % self.name)
-            m = "{yThis is an ancient, very unique suit of armor that is embued with powerful magic.{n"
-            looker.msg(m)
-            m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
-            looker.msg(m)
-            string = ""
-            for bonus in self.db.attribute_bonuses:
-                string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
-            looker.msg(string)  
+        if not self.db.shield:
+            if 'common' in self.db.item_level:
+                looker.msg("{W%s {n" % self.name)
+                m = "{wThis is a normal suit of armor, nothing much is special about it.{n"
+                looker.msg(m)
+                m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
+                looker.msg(m)
+                string = ""
+                for bonus in self.db.attribute_bonuses:
+                    string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
+                looker.msg(string)  
+            elif 'uncommon' in self.db.item_level:
+                looker.msg("{g%s {n" % self.name)
+                m = "{wThis is a masterwork suit of armor made by an accomplished blacksmith.{n"
+                looker.msg(m)
+                m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
+                looker.msg(m)
+                string = ""
+                for bonus in self.db.attribute_bonuses:
+                    string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
+                looker.msg(string)  
+            elif 'rare' in self.db.item_level:
+                looker.msg("{b%s {n" % self.name)
+                m = "{wThis is a magically embued set of armor.{n"
+                looker.msg(m)
+                m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
+                looker.msg(m)
+                string = ""
+                for bonus in self.db.attribute_bonuses:
+                    string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
+                looker.msg(string)  
+            elif 'artifact' in self.db.item_level:
+                looker.msg("{m%s {n" % self.name)
+                m = "{yThis is an ancient, very unique suit of armor that is embued with powerful magic.{n"
+                looker.msg(m)
+                m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
+                looker.msg(m)
+                string = ""
+                for bonus in self.db.attribute_bonuses:
+                    string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
+                looker.msg(string)  
+        else:
+            if 'common' in self.db.item_level:
+                looker.msg("{W%s {n" % self.name)
+                m = "{wThis is a normal shield crafted by one of many average blacksmiths in the land.  It is quite{n"
+                m += "{wplain and has no remarkable features to speak of.{n"
+                looker.msg(m)
+                m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
+                looker.msg(m)
+                string = ""
+                for bonus in self.db.attribute_bonuses:
+                    string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
+                looker.msg(string)
+            elif 'uncommon' in self.db.item_level:
+                looker.msg("{g%s {n" % self.name)
+                m = "{wThis is a masterwork shield crafted by one of but a few Grandmaster blacksmiths in Avaloria.  It's{n"
+                m += "{wcraftsmenship is exquisite as it is purposeful.{n"
+                looker.msg(m)
+                m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
+                looker.msg(m)
+                string = ""
+                for bonus in self.db.attribute_bonuses:
+                    string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
+                looker.msg(string)
+            elif 'rare' in self.db.item_level:
+                looker.msg("{b%s {n" % self.name)
+                m = "{wThis is a magically embued shield that has been enhanced by a powerful wizard.{n"
+                looker.msg(m)
+                m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
+                looker.msg(m)
+                string = ""
+                for bonus in self.db.attribute_bonuses:
+                    string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
+                looker.msg(string)
+            elif 'artifact' in self.db.item_level:
+                looker.msg("{m%s {n" % self.name)
+                m = "{yThis is an ancient, very unique shield that is embued with powerful magic.{n"
+                looker.msg(m)
+                m = "Armor Value:\t{g%s{n\nValue:\t{y%s{n\nType:\t{g%s{n\n" % (self.db.armor_rating, self.db.value, self.db.armor_type)
+                looker.msg(m)
+                string = ""
+                for bonus in self.db.attribute_bonuses:
+                    string += "{w%s: +%s {n" % (bonus, self.db.attribute_bonuses[bonus])
+                looker.msg(string)
+ 
 
     def on_equip(self):
         """

@@ -33,7 +33,7 @@ class Lair(Room):
         looker.msg("{bWelcome to your new home.  Check help for any concerns or questions{n")
 
     def generate_locks(self):
-        self.locks.add("edit:id(%s) or perm(Immortals);get:false();enter:id(%s)" % (self.db.owner, self.db.owner))
+        self.locks.add("edit:id(%s) or perm(Immortals);get:false();enter:id(%s)" % (self.db.owner.name, self.db.owner))
         
     def add_currency(self, to_add):
         attributes = self.db.attributes
@@ -54,14 +54,14 @@ class Lair(Room):
             self.db.attributes = attributes
        
     def set_deity(self):
-        owner = self.search(self.db.owner, global_search=True)
+        owner = self.search(self.db.owner.name, global_search=True)
         attributes = self.db.attributes
         attributes['deity'] = owner.db.attributes['deity']
         self.db.attributes = attributes
  
     def level_up(self, zero_out=False):
         attributes = self.db.attributes
-        owner = self.search(self.db.owner, global_search=False)
+        owner = self.search(self.db.owner.name, global_search=False)
         attributes['level'] += 1
         if zero_out:
             attributes['gold_spent_this_level'] = 0
@@ -120,7 +120,7 @@ class Lair(Room):
             
     def attract_followers(self):
         attraction = self.db.attributes['attraction']
-        character = self.search(self.db.owner, global_search=True)
+        character = self.search(self.db.owner.name, global_search=True)
         self.figure_available_henchman()
         low_level_range = "1,4"
         mid_level_range = "3,8"
@@ -186,7 +186,7 @@ class Lair(Room):
     def display_summary(self, caller):
         structure_manager = self.search(self.structure_manager_id, global_search=False)
         built_structures = structure_manager.db.already_built.split(';')
-        owner = self.search(self.db.owner, global_search=True)
+        owner = self.search(self.db.owner.name, global_search=True)
         msg = "{{CName:{{n {0:<20}{{COwner: {{n{1:<25}{{CLevel: {{n{2:<30}{{n\n".format(self.name, owner.name, self.db.attributes['level'])
         caller.msg(msg)
         msg = "{{GCurrent Structures: {{n{0:<100}{{n\n".format(built_structures)
@@ -208,7 +208,7 @@ class Lair(Room):
     def update(self):
         structure_manager = self.search(self.structure_manager_id, global_search=False)
         dungeon_manager = self.search(self.db.dungeon_manager_id, global_search=False)
-        character = self.search(self.db.owner, global_search=False)
+        character = self.search(self.db.owner.name, global_search=False)
         self.attract_followers()
 
         if structure_manager.db.already_built is not None:

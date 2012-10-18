@@ -1,0 +1,14 @@
+One of the most important things that you can learn is how to communicate with others.  There
+is an easy way to do this within the realm of Avaloria.  This can be accomplished by using the
+'ooc' command.  All you must do is type: ooc message you want you send.
+
+Try it.  Say something. The channel you speak on can be heard by all the other generals in the 
+land.  So perhaps you want to be courteous and nice when you communicate, some may even offer to
+help you.
+
+
+    {GObjectives{n:
+        -Use the ooc command to talk on the public chat channel.
+
+Use the ooc command.
+

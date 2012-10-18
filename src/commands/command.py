@@ -185,6 +185,7 @@ class Command(object):
         """
         This hook is called before self.parse() on all commands
         """
+        self.caller.last_cmd = self.key
         pass
 
     def at_post_cmd(self):
@@ -192,6 +193,8 @@ class Command(object):
         This hook is called after the command has finished executing
         (after self.func()).
         """
+        if hasattr(self.caller, "quest_log"):
+            self.caller.db.quest_log.check_quest_flags(item=self.caller)
         pass
 
     def parse(self):

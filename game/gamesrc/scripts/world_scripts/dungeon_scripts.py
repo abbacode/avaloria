@@ -1,7 +1,9 @@
 import random
 from src.utils import create, utils
 from game.gamesrc.scripts.basescript import Script
+from game.gamesrc.conf import config as avconfig
 
+AVCONFIG = avconfig.config
 
 
 class MobSpawner(Script):
@@ -63,7 +65,7 @@ class TreasureSpawner(Script):
             return
         
         if self.db.chest_spawn_attempt is False:
-            if rn < .10:
+            if rn < AVCONFIG['chest_spawn_rate']:
                 chest = create.create_object("game.gamesrc.objects.world.storage.StorageItem", key="Treasure Chest")
                 chest.location = self.obj
                 chest.generate_contents()

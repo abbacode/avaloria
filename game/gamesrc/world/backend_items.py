@@ -57,5 +57,13 @@ family_heirloom = create.create_object("game.gamesrc.objects.world.items.Item", 
 family_heirloom.desc = "A very bright gold necklace with a Large Karithian ruby set in the center of it."
 family_heirloom.db.quest_item = True
 family_heirloom.db.quest = "An Item Of Importance"
+training_book = rend.copy()
+training_book.name = "Training Manual"
+training_book.db.quest_item = True
+training_book.db.quest = "Learning New Skills"
+spellbook = create.create_object("game.gamesrc.objects.world.spells.SpellBook", location=location, key="Spell Tome")
+spellbook.db.quest_item = True
+spellbook.db.spell = "mageshield"
+spellbook.db.quest = "Learning Spells"
 
 

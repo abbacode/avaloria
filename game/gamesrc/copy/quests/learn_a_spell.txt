@@ -1,0 +1,17 @@
+Magic is abundant in Avaloria.  Most inhabitants and creatures posess innate magical ability.
+All one must do is find a spell tome for the appropriate spell and use it to learn the knowledge
+stored within.  Magic spells use up a designated amount of your mana upon each cast.  If you
+can not affored to cast the spell, it will fail.
+
+On the ground next to me you will find a spell tome.  Pick it up with the 'get' command and then
+read it by using the 'use' command.  Example: use spell tome
+
+Once you read and retain the knowledge, you will be able to view the spell in your spellbook by
+issues the command: show spells
+
+    {GObjectives{n:
+        -Pick up the spell tome.
+        -Read the spell tome to learn the spell
+
+Learn a spell from the Spell Tome.
+
