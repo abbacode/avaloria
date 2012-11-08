@@ -53,17 +53,22 @@ deity_seal = create.create_object("game.gamesrc.objects.world.items.Item", locat
 deity_seal.db.quest_item = True
 deity_seal.db.desc = "A Red-Gold medallion with the known seal of your deity engraved on the face."
 deity_seal.db.quest = "Seal Of Seals"
+deity_seal.locks.add("view:onquest(Seal Of Seals)")
 family_heirloom = create.create_object("game.gamesrc.objects.world.items.Item", location=location, aliases=['family heirloom', 'FAMILY HEIRLOOM'], key="Family Heirloom")
 family_heirloom.desc = "A very bright gold necklace with a Large Karithian ruby set in the center of it."
 family_heirloom.db.quest_item = True
 family_heirloom.db.quest = "An Item Of Importance"
+family_heirloom.locks.add("view:onquest(An Item Of Importance)")
 training_book = rend.copy()
 training_book.name = "Training Manual"
 training_book.db.quest_item = True
 training_book.db.quest = "Learning New Skills"
+training_book.locks.add("view:onquest(Learning New Skills)")
 spellbook = create.create_object("game.gamesrc.objects.world.spells.SpellBook", location=location, key="Spell Tome")
 spellbook.db.quest_item = True
 spellbook.db.spell = "mageshield"
 spellbook.db.quest = "Learning Spells"
+spellbook.locks.add("view:onquest(Learning Spells)")
+
 
 

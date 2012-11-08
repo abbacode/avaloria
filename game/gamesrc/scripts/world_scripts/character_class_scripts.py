@@ -63,14 +63,19 @@ class CharacterSentinel(Script):
 
         cflags = self.obj.db.flags
         prompt_sent = self.db.prompt_sent
+        if not hasattr(self.obj, '_menu_data'):
+            cflags['in_menu'] = False
+
         if cflags['tutorial_started'] and not prompt_sent and not cflags['tutorial_done']:
-            prompt_yesno(self.obj, question="Would you like to continure the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
-            self.db.prompt_sent = True
-            prompt_sent = True
+            if not cflags['in_menu']: 
+                prompt_yesno(self.obj, question="Would you like to go through the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
+                self.db.prompt_sent = True
+                prompt_sent = True
             
         if not cflags['tutorial_done'] and not prompt_sent:
-            prompt_yesno(self.obj, question="Would you like to go through the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
-            self.db.prompt_sent = True
+            if not cflags['in_menu']: 
+                prompt_yesno(self.obj, question="Would you like to continue through the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
+                self.db.prompt_sent = True
 
             
            
@@ -79,3 +84,4 @@ class CharacterSentinel(Script):
             self.db.flags = cflags
         if self.obj.db.group is None:
             self.obj.db.grouped = False
+        self.obj.flags = cflags

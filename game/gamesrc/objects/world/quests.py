@@ -149,9 +149,11 @@ class QuestManager(Object):
                                 break
                     elif 'use' in quest_objectives[objective]['type']:
                         command = quest_objectives[objective]['type'].split('_')[1]
-                        print "command: %s last_cmd: %s" % (command, character.last_cmd)
-                        if character.last_cmd.strip() == command.strip():
-                            quest_obj.tick_counter_objective(objective, caller=character)
+                        try:
+                            if character.last_cmd.strip() == command.strip():
+                                quest_obj.tick_counter_objective(objective, caller=character)
+                        except AttributeError:
+                            return
                         
                    
         self.cleanup_completed_quests()
@@ -292,7 +294,7 @@ class Quest(Object):
         
         
     def add_help_entry(self):
-        entry = create.create_help_entry(self.name, self.db.long_description, category="Quests", locks="view:holds(%s)" % self.name)
+        entry = create.create_help_entry(self.name, self.db.long_description, category="Quests", locks="view:onquest(%s)" % self.name)
         
     def format_objectives(self):
         objectives = self.db.objectives

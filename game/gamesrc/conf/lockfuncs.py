@@ -17,6 +17,20 @@ eventual tracebacks by logging the error and returning False.
 See many more examples of lock functions in src.locks.lockfuncs. 
 
 """
+def onquest(accessing_obj, accessed_obj, *args, **kwargs):
+    character = accessing_obj
+    quest = args[0]
+    ql = character.db.quest_log
+    if character.on_quest(quest):
+        return True
+    else:
+        return False
+
+def completed_quest(accessing_obj, accessed_obj, *args, **kwargs):
+    character = accessing_obj
+    quest = args[0]
+    return character.on_quest(quest, completed=True)
+
 def holds(accessing_obj, accessed_obj, *args, **kwargs):
     """
     Usage: 

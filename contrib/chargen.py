@@ -28,7 +28,7 @@ from src.commands.default.general import CmdLook
 from src.commands.default.cmdset_ooc import OOCCmdSet
 from src.objects.models import ObjectDB
 from src.utils import utils, create
-from game.gamesrc.objects.menusystem import *
+from contrib.menusystem import *
 from game.gamesrc.objects import copyreader
 
 CHARACTER_TYPECLASS = settings.BASE_CHARACTER_TYPECLASS
@@ -267,9 +267,9 @@ consistent balance reduction.
                     weapons_node = MenuNode("weapons", links=['confirm-bludgeon', 'confirm-blades', 'confirm-heavy'], linktexts=['Bludgeoning Weapons', 'Bladed Weapons', 'Heavy Weapons'], text=text)
                     nodes.append(weapons_node)
                 elif 'armor skills' in option:
-                    confirm_light = MenuNode("confirm-lightarmor", links=['END'], linktexts=['Begin your journey.'], code="self.caller.set_armor_skill('light')")
-                    confirm_medium = MenuNode("confirm-mediumarmor", links=['END'], linktexts=['Begin your journey'], code="self.caller.set_armor_skill('medium')")
-                    confirm_heavy = MenuNode("confirm-heavyarmor", links=['END'], linktexts=['Begin your journey'], code="self.caller.set_armor_skill('heavy')")  
+                    confirm_light = MenuNode("confirm-lightarmor", links=['END'], linktexts=['Begin Your Journey!'], code="self.caller.set_armor_skill('light')")
+                    confirm_medium = MenuNode("confirm-mediumarmor", links=['END'], linktexts=['Begin Your Journey!'], code="self.caller.set_armor_skill('medium')")
+                    confirm_heavy = MenuNode("confirm-heavyarmor", links=['END'], linktexts=['Begin Your Journey!'], code="self.caller.set_armor_skill('heavy')")  
                     nodes.append(confirm_light)
                     nodes.append(confirm_medium)
                     nodes.append(confirm_heavy)
@@ -306,9 +306,14 @@ Which path to do you desire to walk?
             start_node = MenuNode("START", text="{bWelcome to Avaloria.  Please proceed through the menu to customize your character.{n",
                         links=['race' ], linktexts=['Choose your race.'])
             nodes.append(start_node)
+            endnode = MenuNode("END", links=[], linktexts=[], code="self.caller.post_creation()")
+            nodes.append(endnode)
 #        node_string = ' '.join([node.key for node in nodes])
  #       self.obj.msg("{mDEBUG: nodes: %s{n" % node_string)
             menutree = MenuTree(caller=self.caller.character, nodes=nodes)
+            flags = new_character.db.flags 
+            flags['in_menu'] = True
+            self.caller.db.flags = flags
             menutree.start()
 
 

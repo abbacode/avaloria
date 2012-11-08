@@ -108,6 +108,22 @@ def false(*args, **kwargs):
 def none(*args, **kwargs):
     return False 
 
+def onquest(accessing_obj, accessed_obj, *args, **kwargs):
+    print "Checking onquest"
+    character = accessing_obj
+    quest = args[0]
+    ql = character.db.quest_log
+    if character.on_quest(quest):
+        return True
+    else:
+        print "False"
+        return False
+
+def completed_quest(accessing_obj, accessed_obj, *args, **kwargs):
+    character = accessing_obj
+    quest = args[0]
+    return character.on_quest(quest, completed=True)
+
 def perm(accessing_obj, accessed_obj, *args, **kwargs):
     """
     The basic permission-checker. Ignores case. 

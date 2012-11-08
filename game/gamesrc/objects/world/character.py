@@ -97,23 +97,25 @@ class CharacterClass(Character):
         self.db.spellbook = spellbook
         self.db.skill_log = skill_log
         self.db.quest_log = questlog
+        self.db.newattr = {'this': 'is a tester'}
         #friends list is atteched to the player
         player_lair_exit = create_object("game.gamesrc.objects.world.rooms.PlayerLairExit", location=lair)
 
     def rebuild_model(self):
         """
         Build a new character model to grab in new things that have been coded.
+        """
         nc = create_object("game.gamesrc.objects.world.character.CharacterClass")
-        valid_attributes = [(attr.key, attr.value) attr for attr in ObjAttribute.objects.filter(db_obj=nc)]
-        self_attributes = [(attr.key, attr.value) attr for attr in ObjAttribute.objects.filter(db_obj=self)]
+        valid_attributes = [(attr.key, attr.value, attr) for attr in ObjAttribute.objects.filter(db_obj=nc)]
+        self_attributes = [(attr.key, attr.value, attr) for attr in ObjAttribute.objects.filter(db_obj=self)]
         valid_attribute_num = len(valid_attributes)
         my_attribute_num = len(self_attributes)
         if valid_attribute_num != my_attribute_num:
             print "Found Character model changes, initiating changes."
             for attribute in valid_attributes:
                 if attribute[0] not in self.attributes:
-                new_attribute = ObjAttribute(db_obj=self, value=attribute
-        """      
+                    self.set_attribute(attribute[0], attribute[1])
+
 
     def character_summary(self):
         """
@@ -154,6 +156,7 @@ class CharacterClass(Character):
             self.cmdset.add(spells_cmdset.SpellsCmdSet)
             self.scripts.validate()
             self.scripts.add(cscripts.CharacterSentinel)
+        #self.rebuild_model()
 
     def at_disconnect(self):
         self.cmdset.clear()
@@ -167,7 +170,6 @@ class CharacterClass(Character):
         aspect.aliases = [aspect.name]
         aspect.name = '{Y!{n Aspect of %s' % self.db.attributes['deity'].title()
         aspect.db.real_name = "%s" % self.db.attributes['deity'].title()
-        aspect.do_dialog(caller=self, type='greeting')
         self.cmdset.add(character_cmdset.CharacterCommandSet)
         self.cmdset.add(combat_cmdset.DefaultCombatSet)
         self.cmdset.add(structure_cmdset.BuildCmdSet)
@@ -361,6 +363,13 @@ class CharacterClass(Character):
     End combat
     Begin setters used in menus.
     """ 
+    def post_creation(self):
+        self.move_to(self.db.lair, quiet=True)
+        #cflags['in_menu'] = False
+        self.at_first_login()
+       # aspect = self.search("Aspect of %s" % self.attributes['deity'], global_search=False, location=self.location, ignore_errors=True)[0]
+       # aspect.do_dialog(caller=self, type='greeting')
+        
     def set_weapon_skill(self, skill):
         """
         Set which weapon we specialize in.
@@ -409,8 +418,6 @@ class CharacterClass(Character):
             manager.add_item(skill_object.name, skill_object)
             self.db.percentages['heavy armor'] += skill_object.db.rank_modifier
             self.msg("You have become proficient in Heavy Armor.")
-        self.move_to(self.db.lair, quiet=True)
-        self.at_first_login()
                
             
 
@@ -778,6 +785,7 @@ Which attributes would you like to improve?
         if skill in skills.keys():
             character_skill = skills[skill]
             character_skill.level_up()
+        manager.generate_skill_menu(self)
 
     def spend_exp(self, exp):
         attributes = self.db.attributes
@@ -870,7 +878,7 @@ Which attributes would you like to improve?
         attributes['experience_needed'] = attributes['experience_needed'] - attributes['experience_made']
         attributes['attribute_points'] = attributes['attribute_points'] + (int(attributes['intelligence'] / 2))
         self.db.attributes = attributes
-        self.msg("{bYou have gained a level of experience! You are now level %s! {n" % attributes['level'])
+        self.msg("{CYou have gained a level of experience! You are now level %s! {n" % attributes['level'])
 
     def negotiate_group_invite(self, inviter, invitee):
         """
@@ -902,12 +910,16 @@ Which attributes would you like to improve?
         false otherwise.
         """
         manager = self.db.quest_log
-        quest = manager.find_quest(quest)
+        print "objects.world.character.CharacterClass => %s" % quest
+        if completed:
+            print "in completed"
+            quest = manager.find_quest(quest, completed=True)
+        else:
+            print "non completed"
+            quest = manager.find_quest(quest)
         if quest is None:
             return False
-            self.db.on_quest = False
         else:
-            self.db.on_quest = True
             return True
 
     """

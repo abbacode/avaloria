@@ -25,6 +25,8 @@ HINT: Use the talk command, type: help talk  to find out more.
 #
 @open damp chamber = tutorial2
 #
+@lock damp chamber = view:completed_quest(Learning New Skills)
+#
 damp chamber
 #
 @desc 
@@ -41,6 +43,8 @@ yet to be seen.
 #
 @open well lit chamber = tutorial3
 #
+@lock well lit chamber = view:completed_quest(Learning Spells)
+#
 well lit chamber
 #
 @desc
@@ -54,7 +58,7 @@ combatants from escaping.
 #
 @create/drop Lair Portal;portal;:world.rooms.PlayerLairEnterance
 #
-@lock Lair Portal = "view:holds("Battle On!")"
+@lock Lair Portal = view:completed_quest(Battle On!)
 #
 @teleport limbo
 

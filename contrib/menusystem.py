@@ -153,7 +153,7 @@ class MenuTree(object):
     'START' and 'END' respectively.
 
     """
-    def __init__(self, caller, nodes=None, startnode="START", endnode="END", exec_end="look"):
+    def __init__(self, caller, nodes=None, startnode="START", endnode="END", exec_end=None):
         """
         We specify startnode/endnode so that the system knows where to
         enter and where to exit the menu tree. If nodes is given, it
@@ -193,20 +193,30 @@ class MenuTree(object):
         if key == self.endnode:
             # if we was given the END node key, we clean up immediately.
             self.caller.cmdset.delete("menucmdset")
-            del self.caller.db._menu_data
+            node = self.tree.get(key, None)
+            if node:
+                if node.code:
+                    exec(node.code)
             if self.exec_end != None:
                 self.caller.execute_cmd(self.exec_end)
+            del self.caller.db._menu_data
             return
         # not exiting, look for a valid code.
         node = self.tree.get(key, None)
         if node:
             if node.code:
+                endcode = False
                 # Execute eventual code active on this
                 # node. self.caller is available at this point.
+                if 'END' in node.code: endcode = True
+                
                 try:
                     exec(node.code)
+                    if endcode:
+                        return
                 except Exception, e:
                     self.caller.msg("{rCode could not be executed for node %s. Continuing anyway.{n" % key)
+                    self.caller.msg("%s" % e)
             # clean old menu cmdset and replace with the new one
             self.caller.cmdset.delete("menucmdset")
             self.caller.cmdset.add(node.cmdset)
@@ -226,7 +236,7 @@ class MenuNode(object):
 
     """
     def __init__(self, key, text="", links=None, linktexts=None,
-                 keywords=None, cols=1, helptext=None, selectcmds=None, code="", nodefaultcmds=False, separator=""):
+                 keywords=None, cols=1, helptext=None, selectcmds=None, code="", nodefaultcmds=False, separator="-"):
         """
         key       - the unique identifier of this node.
         text      - is the text that will be displayed at top when viewing this node.
@@ -313,7 +323,7 @@ class MenuNode(object):
         for row in ftable:
             string +="\n" + "".join(row)
         # store text
-        self.text = self.separator + "\n" + string.rstrip()
+        self.text = 78* self.separator + "\n" + string.rstrip()
 
     def init(self, menutree):
         """
