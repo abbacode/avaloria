@@ -59,7 +59,7 @@ class QuestManager(Object):
             elif "green warden" in faction:
                 faction = "warden"
             factions = character.db.factions
-            factions[faction] += factions[faction] + quest_to_remove.db.faction_reward
+            factions[faction] += quest_to_remove.db.faction_reward
             character.db.factions = factions
        
             
