@@ -124,6 +124,16 @@ def completed_quest(accessing_obj, accessed_obj, *args, **kwargs):
     quest = args[0]
     return character.on_quest(quest, completed=True)
 
+def has_skill(accessing_obj, accessed_obj, *args, **kwargs):
+    character = accessing_obj
+    skill = args[0]
+    return character.has_skill(skill)
+
+def has_spell(accessing_obj, accessed_obj, *args, **kwargs):
+    character = accessing_obj
+    spell = args[0]
+    return character.has_spell(spell)
+
 def perm(accessing_obj, accessed_obj, *args, **kwargs):
     """
     The basic permission-checker. Ignores case. 
@@ -396,14 +406,8 @@ def holds(accessing_obj, accessed_obj, *args, **kwargs):
         if dbref and any((True for obj in contents if obj.id == dbref)):
             return True     
         for obj in contents:
-            for thing in obj.contents:
-                print "%s => %s" % (thing.key.lower(), objid)
-                if thing.key.lower() == objid.lower() or objid in [al.lower() for al in thing.aliases]:
-                    return True
-
-        
-        objid = objid.lower()
-        return any((True for obj in contents 
+            objid = objid.lower()
+            return any((True for obj in contents 
                     if obj.key.lower() == objid or objid in [al.lower() for al in obj.aliases]))
 
     if args and args[0]:
@@ -411,7 +415,6 @@ def holds(accessing_obj, accessed_obj, *args, **kwargs):
     else:        
         try:
             if check_holds(accessed_obj.id):
-                print "holds: accessed_obj.id - True"
                 return True
         except Exception:
             pass 

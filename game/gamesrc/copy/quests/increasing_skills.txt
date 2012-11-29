@@ -1,4 +1,4 @@
-To become to most proficient General in the land, training is paramount!  Each you skill you learn
+To become the most proficient General in the land, training is paramount!  Each you skill you learn
 can be improved by spending your accrued experience on it.  Each point in the skill increases numerous
 statistics about it including: chance to hit, damage amount, buff amount etc.  Each skill is able to be
 increased until level 100.

@@ -8,7 +8,7 @@ class CmdKick(Command):
     Command used to kick a target.  Must be trained in kick.
     """
     key = "kick"
-    locks = "cmd:holds(kick)" 
+    locks = "cmd:has_skill(kick)" 
     help_category = "Combat Skills"
 
     def func(self):
@@ -22,7 +22,7 @@ class CmdStrike(Command):
     Command used to perform a somewhat powerful melee blow. 
     """
     key = "strike"
-    locks = "cmd:holds(strike)"
+    locks = "cmd:has_skill(strike)"
     help_category = "Combat Skills"
    
     def func(self):
@@ -37,7 +37,7 @@ class CmdRend(Command):
     Command used to quick use the Rend skill.
     """
     key = 'rend'
-    locks = "cmd:holds(rend)"
+    locks = "cmd:has_skill(rend)"
     help_category = "Combat Skills"
     
     def func(self):
@@ -45,6 +45,35 @@ class CmdRend(Command):
         manager = caller.db.skill_log
         skill_obj = manager.find_item('rend')
         skill_obj.push_to_combat_queue()
+
+class CmdShieldBash(Command):
+    """
+    Command used to quick call the 'shield bash' ability.
+    """
+    key = 'shield bash'
+    aliases = 'sb'
+    help_category = "Combat Skills"
+    
+    def func(self):
+        caller = self.caller
+        manager = caller.db.skill_log
+        so = manager.find_item('shield bash')
+        so.push_to_combat_queue()
+
+class CmdCripple(Command):
+    """
+    Command used to quick call the 'Crippling Strike' skill.
+    """
+    key = 'cripple'
+    help_category = "Combat Skills"
+    
+    def func(self):
+        caller = self.caller
+        manager = caller.db.skill_log
+        so = manager.find_item('crippling strike')
+        so.push_to_combat_queue()
+
+
 
 class CombatSkillCmdSet(CmdSet):
     """
@@ -56,4 +85,6 @@ class CombatSkillCmdSet(CmdSet):
         self.add(CmdKick())
         self.add(CmdStrike())
         self.add(CmdRend())
+        self.add(CmdCripple())
+        self.add(CmdShieldBash())
 

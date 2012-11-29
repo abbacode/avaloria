@@ -259,13 +259,12 @@ class MageShield(Spell):
             target_attributes = target.db.attributes
             
         if target is None:
-            caller.msg("{bYou begin an incantation in the ancient arcane spell language.{n")
-            caller.msg("{gAs you speak, your entire body faintly glows casting a magical light around you{n.")
+            caller.msg("{GAs you speak, your entire body faintly glows casting a magical light around you{n.")
             caller.location.msg_contents("{y%s speaks in a gutteral tone as a faint magical shield shimmers into place around them.{n" % caller.name, exclude=caller)
             character_attributes['temp_armor_rating'] = character_attributes['temp_armor_rating'] + self.db.buff_amount
             caller.db.attributes = character_attributes
             caller.add_effect(self)
-            caller.msg("{gA protective barrier of magical energy forms around you. ( + %s to Armor Rating ){n" % self.db.buff_amount)
+            caller.msg("{GA protective barrier of magical energy forms around you. ( + %s to Armor Rating ){n" % self.db.buff_amount)
             caller.scripts.add("game.gamesrc.scripts.world_scripts.effects.ArmorClassBuff")
         else:
             caller.location.msg_contents("{y%s speaks in a gutteral tone, and gestures towards %s causing a faint magical shield to appear around them.{n" % (caller.name, target.name), exclude=caller)

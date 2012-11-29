@@ -199,6 +199,7 @@ class Zone(Object):
                 return value
 
     def spawn_enemy_npcs(self):
+        print "Zone->spawn_enemy_npcs: Beginning spawn run."
         for npc in self.db.enemy_npcs:
             object = self.search('%s' % npc.strip(), global_search=True)
             if object is None:
@@ -224,9 +225,7 @@ class Zone(Object):
                 spawn_rooms.remove(room)
 
         for item in self.db.quest_items:
-            print "Item: " + item
             obj = storage.search('%s' % item, global_search=False, ignore_errors=True)[0]
-            print "object: " + obj.name
             if type(spawn_rooms) == type(list()):
                 room = random.choice(spawn_rooms)    
             else:
@@ -236,7 +235,7 @@ class Zone(Object):
                 obj_copy.name = obj.name
                 obj_copy.move_to(room, quiet=True)
             else:
-                print "spawn logic not triggered"
+                print "Zone->spawn_quest_item: spawn logic not triggered."
         
     def generate_zone_path(self):
         path_map = self.db.path_map
@@ -248,8 +247,8 @@ class Zone(Object):
         self.db.path_map = path_map
 
     def calculate_mob_levels(self):
-        print "Calculating Mobs"
-        mobs = self.search("%s_mobs" % self.db.zone_type, global_search=True, ignore_errors=True)
+        print "Zone->calculate_mob_levels: calculating amount of mobs in each room."
+        mobs = self.search("%s_mobs" % self.db.mob_generator.dbref, global_search=True, ignore_errors=True)
         path_map = self.db.path_map
         counters = {}
         mob_map = {}
@@ -259,7 +258,6 @@ class Zone(Object):
                 continue
             else:
                 mob_map["%s" % mob.dbref] = cell
-        print mob_map
         for key in path_map:
             try:
                 if key in self.db.mob_counters.keys() and key is not 'None':
@@ -276,20 +274,19 @@ class Zone(Object):
                 counters['%s' % mob_map[key].db.cell_number] = counters['%s' % mob_map[key].db.cell_number] + 1
             except KeyError:
                 counters['%s' % mob_map[key].db.cell_number] = 1
-       
-        print "%s: %s (counters)" % (self.name, counters )
 
         try:
             del counters['None']
         except KeyError:
             pass
+        
+        print "Zone->calculate_mob_levels: %s: %s (counters)" % (self.name, counters )
 
         for counter in counters:
-            print counter
             if counter == 'None':
                 continue
             else:
-                print "Continuing with %s" % counter
+                print "Zone->calclulate_mob_levels: Replenishing Mobs in: %s" % counter
                 if int(counters[counter]) < 3:
                     self.replenish_mobs(counter) 
     
@@ -311,13 +308,14 @@ class Zone(Object):
         num_mobs = random.randrange(3,7)
         mob_set = mg.generate_mob_set(num_mobs)
         
+        print "Zone->replenish_mobs: Mobs generated %s" % mob_set 
         if mob_set is not None: 
             for mob in mob_set:
                 if mob is None:
-                    print "normal mob gen failed somewhere"
+                    print "Zone->replenish_mobs: a mob object returned None, something failed while generating."
                     continue
                 mob.move_to(room, quiet=True)
-                room.msg_contents("You feel as if someone is watching you...")
+            room.msg_contents("You feel as if someone is watching you...")
 
         if self.db.is_dungeon is True:
             if room.db.last_room:

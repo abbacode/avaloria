@@ -66,15 +66,20 @@ class CharacterSentinel(Script):
         if not hasattr(self.obj, '_menu_data'):
             cflags['in_menu'] = False
 
+
+        tutorial_rooms = self.obj.search("tutorial", ignore_errors=True, global_search=True)
+        if self.obj.location in tutorial_rooms:
+            return
+
         if cflags['tutorial_started'] and not prompt_sent and not cflags['tutorial_done']:
             if not cflags['in_menu']: 
-                prompt_yesno(self.obj, question="Would you like to go through the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
+                prompt_yesno(self.obj, question="Would you like to go continue through the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
                 self.db.prompt_sent = True
                 prompt_sent = True
             
         if not cflags['tutorial_done'] and not prompt_sent:
             if not cflags['in_menu']: 
-                prompt_yesno(self.obj, question="Would you like to continue through the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
+                prompt_yesno(self.obj, question="Would you like to go through the Avaloria Tutorial?", yescode="self.caller.do_tutorial()", nocode="", default="N")
                 self.db.prompt_sent = True
 
             

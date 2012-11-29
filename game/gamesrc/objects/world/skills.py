@@ -1,6 +1,6 @@
 import random
 from src.utils import create
-from gamesrc.objects.menusystem import *
+from contrib.menusystem import *
 from prettytable import PrettyTable
 from ev import Object
 
@@ -62,9 +62,14 @@ Spend your accrued experience points on the skills you know to increase their ra
 A higher rank means more of successful use, along with increasing other things behind 
 the scenes for the specific skill.
         """
-        start_node = MenuNode('START', cols=2, links=['%s' % skill.name for skill in skills_list], linktexts=['Increase %s' % skill.name for skill in skills_list], text=start_desc_text ) 
+        links=['%s' % skill.name for skill in skills_list]
+        linktexts=['Increase %s' % skill.name for skill in skills_list]
+        links.append('END')
+        linktexts.append('Exit Menu')
+        start_node = MenuNode('START', cols=2, links=links, linktexts=linktexts, text=start_desc_text ) 
         nodes = []
         nodes.append(start_node)
+        self.display_skills(caller)
         for skill in skills:
             skill = skills[skill]
             text = """
@@ -390,8 +395,10 @@ class ShieldBash(Skill):
                 damage = self.get_effect()
                 target.take_damage(damage)
                 character_attributes = self.unbalance(1, character_attributes)
-                caller.db.attributes = characte_attributes
+                caller.db.attributes = character_attributes
                 caller.msg("{CYou bash %s's face in for %s damage!" % (target.name, damage))
+                target.stunned = True
+                target.scripts.add('game.gamesrc.scripts.world_scripts.effects.StunEffect')
             else:
                 caller.msg("{CYou failed to Shield Bash %s!{n" % target.name)
                 return

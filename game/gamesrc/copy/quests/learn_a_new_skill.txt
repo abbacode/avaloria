@@ -10,6 +10,6 @@ is teaches.
 
     {GObjectives{n:
         -use the 'get' command to pick up the training manual
-        -use the 'use' command to traing the skill the manual teaches to you.
+        -use the 'use' command to train the skill the manual teaches to you.
 
 Learn a new skill via Training Manual.

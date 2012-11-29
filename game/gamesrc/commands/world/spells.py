@@ -10,7 +10,7 @@ class CmdFireball(Command):
     """
     
     key = 'fireball'
-    locks = "cmd:holds(fireball)"
+    locks = "cmd:has_spell(fireball)"
     help_category = 'Spells'
     aliases = ['fb']
 
@@ -32,7 +32,7 @@ class CmdMagicMissile(Command):
     """
 
     key = "magic missile"
-    locks = "cmd:holds(magic missile)"
+    locks = "cmd:has_spell(magic missile)"
     aliases = ['mm']
     help_category = 'Spells'
 

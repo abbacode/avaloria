@@ -121,7 +121,21 @@ class RendEffect(Effect):
             target.location.msg_contents("{c %s's wounds are gushing blood!{n" % target.name, exclude=[character])
             character.msg("{C%s bleeds for {R%s {Cpoints of damage.{n" % (target.name, dmg))
             
-           
+
+class StunEffect(Effect):
+    def at_script_creation(self):
+        Effect.at_script_creation(self)
+        self.interval = 3
+        self.repeats = 1
+        self.start_delay = True
+        
+    def at_start(self):
+        self.obj.db.target.msg("{C%s is dazed and confused!{n" % self.obj.name)
+        
+    def at_repeat(self):
+        self.obj.stunned = False
+        self.obj.db.target.msg("{C%s is no longer stunned!{n" % self.obj.name)
+                   
 class CrippleEffect(Effect):
 
     def at_script_creation(self):

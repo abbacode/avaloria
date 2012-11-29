@@ -218,14 +218,15 @@ class Mob(Object):
         self.db.attributes = attributes
         return
 
-    def update_stats(self):
+    def update_stats(self, thealth_and_mana=False):
         attributes = self.db.attributes
         attributes['health'] = (attributes['constitution'] * 2)
         attributes['mana'] = (attributes['intelligence'] * 2)
         attributes['attack_rating'] = (attributes['strength'] / 5)
         attributes['armor_rating'] = (attributes['dexterity'] / 5) + 6
-        attributes['temp_health'] = attributes['health']
-        attributes['temp_mana'] = attributes['mana']
+        if thealth_and_mana:
+            attributes['temp_health'] = attributes['health']
+            attributes['temp_mana'] = attributes['mana']
         attributes['temp_strength'] = attributes['strength']
         attributes['temp_dexterity'] = attributes['dexterity']
         attributes['temp_armor_rating'] = attributes['armor_rating']
@@ -458,6 +459,7 @@ class Mob(Object):
 
         player_map = zone_manager.db.player_map
         
+        print "Mob->update #%s: beginning player map check." % self.dbref
         if self.location.db.cell_number not in [ value for value in player_map.values()]:
             self.db.should_update = False
         try:
@@ -466,9 +468,10 @@ class Mob(Object):
                 dialogue = self.db.dialogue
                 d_msg = random.choice(dialogue)
                 self.location.msg_contents(d_msg)
-        except AttributeError:
+        except:
             pass
                 
+        print "Mob->update %s: beginning combat checks." % self.dbref
         if self.db.in_combat is True:
             #find the target, if none then get out of combat
             target = self.db.target

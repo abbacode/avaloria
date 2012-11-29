@@ -19,9 +19,9 @@ class MobRunner(Script):
         
     def at_repeat(self):
         self.ndb.mobs = search.objects('mob_runner')
-        print "update()"
+        print "MobRunner ==> update()"
         [mob.update() for mob in self.ndb.mobs if mob.db.should_update and mob is not None]
-        print "kos_tick(()"
+        print "MobRunner ==> kos_tick()"
         [mob.kos_tick() for mob in self.ndb.mobs if mob.db.is_kos and mob.db.should_update and mob is not None]
 
     def at_stop(self):
@@ -98,13 +98,13 @@ class ZoneRunner(Script):
         self.ndb.reanimators = [search.objects(dbref) for dbref in self.db.reanimators]
 
     def at_repeat(self):
-        print "reanimate()"
+        print "ZoneRunner ==> reanimate()"
         self.ndb.reanimators = search.objects('reanimator')
         [reanimator.reanimate() for reanimator in self.ndb.reanimators if reanimator.db.corpse]
-        print "update()"
+        print "ZoneRunner ==> update()"
         self.ndb.subscribers = search.objects('zone_runner')
         [zone.update() for zone in self.ndb.subscribers if not zone.db.mobs_spawned ]
-        print "corpse.delete()"
+        print "ZoneRunner ==> corpse.delete()"
         self.ndb.corpses = search.objects('corpse')
         [corpse.delete() for corpse in self.ndb.corpses if not corpse.db.reanimate ]
         

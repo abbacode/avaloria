@@ -19,7 +19,8 @@ class EnemyNpc(Mob):
         self.db.desc = "A dead %s." % self.key
         self.db.pre_death_name = self.key
         self.key = "{rCorpse of %s{n" % self.key
-        self.aliases = ['reanimator',  'Corpse of %s' % self.key, self.key.lower()]
+        self.aliases = []
+        self.aliases = ['reanimator', self.key, self.key.lower()]
         self.db.lootable = True
         self.db.corpse = True
         self.db.reanimate = True
@@ -32,7 +33,8 @@ class EnemyNpc(Mob):
         self.db.attributes = attributes
 
     def reanimate(self):
-        self.db.aliases = ['reanimator', self.key.lower(), 'mob']
+        self.aliases = []
+        self.aliases = ['reanimator', self.key.lower(), 'mob']
         self.db.corpse = False
         self.db.lootable = False
         self.db.reanimate = False

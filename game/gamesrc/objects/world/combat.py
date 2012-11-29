@@ -142,7 +142,7 @@ class CombatManager(Object):
             crit_roll = None
         
         crit = False
-        if self.attacker_initiative > self.defender_initiative:
+        if self.attacker_initiative > self.defender_initiative or self.defender.db.stunned:
             if 'attack' in atk_action: 
                 attack_roll = self.attacker.attack_roll()
                 if crit_roll:
@@ -151,15 +151,18 @@ class CombatManager(Object):
                             crit = True
                             break
 
-                if attack_roll >= self.defender.db.attributes['armor_rating']:
-                    dodge_result = self.check_for_dodge(self.db.defender)
+                if attack_roll >= self.defender.db.attributes['armor_rating'] or self.defender.db.stunned:
+                    if not self.defender.db.stunned:
+                        dodge_result = self.check_for_dodge(self.db.defender)
+                    else:
+                        dodge_result = None
                     self.attacker.armor_unbalance_check()
                     if dodge_result:
                         self.attacker.msg("{c%s dodged your attack!{n" % self.defender.name)
-                    if 'defend' in def_action:
+                    if 'defend' in def_action and not self.defender.db.stunned:
                         self.attacker.msg("%s is in a defensive position, negating your attack." % self.defender.name)
                         return
-                    elif 'attack' in def_action:
+                    elif 'attack' in def_action and not self.defender.db.stunned:
                         defender_attack_roll = self.defender.attack_roll()
                         if defender_attack_roll >= self.attacker.db.attributes['temp_armor_rating']:
                             self.score_hit(who='defender')
@@ -188,7 +191,7 @@ class CombatManager(Object):
                     self.attacker.msg("{b%s and yourself seem to have defended at the same time, so you stare at each other viciously.{n" % self.defender.name)
             elif 'skill' in atk_action:
                 split = atk_action.split(':')
-                self.attacker.msg("You prepare to use the skill: {g%s{n!" % split[1].title())
+                #self.attacker.msg("You prepare to use the skill: {g%s{n!" % split[1].title())
                 #self.check_for_combo( )
                 manager = self.attacker.db.skill_log
                 character_skills = manager.db.skills
@@ -223,7 +226,7 @@ class CombatManager(Object):
                             self.score_miss(who="attacker")
                     elif 'skill' in atk_action:
                         split = atk_action.split(':')
-                        self.attacker.msg("You prepare to use the skill: {C%s{n!" % split[1].title())
+                        #self.attacker.msg("You prepare to use the skill: {C%s{n!" % split[1].title())
                         manager = self.attacker.db.skill_log
                         character_skills = manager.db.skills
                         if split[1] in character_skills.keys():
@@ -234,7 +237,9 @@ class CombatManager(Object):
 
                     if dodge_result:
                         return
-
+    
+                    if self.defender.db.stunned:
+                        return
                     self.score_hit(who='defender')
                 else:
                     self.score_miss(who='defender')
@@ -255,7 +260,7 @@ class CombatManager(Object):
                             self.score_miss(who="attacker")
                     elif 'skill' in atk_action:
                         split = atk_action.split(':')
-                        self.attacker.msg("You prepare to use the skill: {C%s{n!" % split[1].title())
+                        #self.attacker.msg("You prepare to use the skill: {C%s{n!" % split[1].title())
                         manager = self.attacker.db.skill_log
                         character_skills = manager.db.skills
                         if split[1] in character_skills.keys():

@@ -108,13 +108,10 @@ class Lair(Room):
         structure_manager = self.search(self.structure_manager_id, global_search=False)
         structures_built = structure_manager.db.already_built.split(';')
         avail_henchman = self.db.available_henchman
-        print avail_henchman
         if 'Gold Mine' in structures_built:
             avail_henchman.append('Imp')
-            print "adding imp"
         elif 'Training Grounds' in structures_built:
             avail_henchman.append('Goblin')
-            print "adding goblin"
         
         self.db.available_henchman = avail_henchman
             

@@ -251,15 +251,26 @@ class CmdTransmute(Command):
             self.what = self.args.split(",")
         else:
             self.what = self.args.strip()
-            self.caller.msg("args: %s" % self.what)
 
     def func(self):
         attributes = self.caller.db.attributes
+        if self.caller.db.in_combat:
+            self.caller.msg("{RCan't sell during combat!")
         if len(self.args) < 1:
             self.caller.msg("Please supply the name of the item you want to transmute")
             return
         if hasattr(self.what, "strip"):
             item_obj = self.caller.search(self.what, global_search=False)
+            if item_obj.is_typeclass('game.gamesrc.objects.world.spells.SpellManager'):
+                self.caller.msg("{RNot sellable.{n")
+                return
+            if item_obj.is_typeclass('game.gamesrc.objects.world.quests.QuestManager'):
+                self.caller.msg("{RNot sellable.{n")
+                return
+            if item_obj.is_typeclass('game.gamesrc.objects.world.skills.SkillManager'):
+                self.caller.msg("{RNot sellable.{n")
+                return
+
             if item_obj is None:
                 return
             gold_to_award = item_obj.db.value
@@ -293,6 +304,8 @@ class CmdLairTeleport(Command):
         self.what = self.args.strip()
 
     def func(self):
+        if self.caller.db.in_combat:
+            self.caller.msg("{RCan't do that in combat, try fleeing.")
         if len(self.what) < 1:
             self.caller.msg("Please specify where you want to go")
             return
@@ -334,6 +347,9 @@ class CmdTalk(Command):
         self.message = ' '.join(args)
 
     def func(self):
+        if self.caller.db.in_combat:
+            self.caller.msg("{RCan't talk to people while in combat!")
+            return
         if len(self.args) < 1:
             self.caller.msg("usage: talk to <npc> <message>")
             return
@@ -527,6 +543,9 @@ class CmdOpen(Command):
         self.what = self.args.strip()
     
     def func(self):
+        if self.caller.db.in_combat:
+            self.caller.msg("{RCan't open things while in combat!")
+            return
         if len(self.args) < 1:
             self.caller.msg("What object did you want to open?")
             return
@@ -564,6 +583,8 @@ class CmdEquip(Command):
             self.what = self.args.strip()
 
     def func(self):
+        if self.caller.db.in_combat:
+            self.caller.msg("{RCan't equip while in combat!")
         if len(self.args) < 1:
             self.caller.msg("What did you want to equip?  equip <item to equip>")
             return
@@ -600,15 +621,14 @@ class CmdUnEquip(Command):
             self.what = self.args.strip()
 
     def func(self):
+        if self.caller.db.in_combat:
+            self.caller.msg("{RCan't unequip while in combat!")
+            return
         if len(self.args) < 1:
             self.caller.msg("What did you want to unequip?  unequip <slot to equip>")
             return
         if self.what is not None:
-            obj = self.caller.search(self.what, global_search=False, ignore_errors=True)[0]
-            if not obj:
-                self.caller.unequip_item(ite=self.what)
-            else:
-                self.caller.unequip_item(ite=obj.db.slot)
+            self.caller.unequip_item(ite=self.what)
         else:
             self.caller.unequip_item()
 
@@ -625,6 +645,8 @@ class CmdAddTo(Command):
     locks = "cmd:all()"
 
     def func(self):
+        if self.caller.db.in_combat:
+            return
         self.caller.create_attribute_menu(caller=self.caller)
 
 class CmdSkills(Command):
@@ -637,6 +659,8 @@ class CmdSkills(Command):
 
     def func(self):
         manager = self.caller.db.skill_log
+        if self.caller.db.in_combat:
+            return
         if len(manager.db.skills) < 1:
             self.caller.msg("You have no skills.")
             return

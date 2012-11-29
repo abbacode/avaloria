@@ -41,9 +41,9 @@ class QuestManager(Object):
 
       
         if quest_to_remove.db.faction_reward is not None:
-            print "trying deity faction crap"
+            print "QuestManager->complete_quest: trying deity faction."
             if not hasattr(quest_to_remove.db.faction, 'lower'):
-                print "trying faction_indexing"
+                print "QuestManager->complete_quest: trying faction_indexing"
                 if character.db.attributes['deity'] in "an'karith":
                     faction_index = quest_to_remove.db.faction.index("karith")
                 elif character.db.attributes['deity'] in "green warden":
@@ -52,11 +52,8 @@ class QuestManager(Object):
                     faction_index = quest_to_remove.db.faction.index(character.db.attributes['deity'])
 
                 faction = quest_to_remove.db.faction[faction_index]
-                print faction_index
-                print faction
             else:
                 faction = quest_to_remove.db.faction
-                print faction
             if "an'karith" in faction:
                 faction = 'karith'
             elif "green warden" in faction:
@@ -97,15 +94,14 @@ class QuestManager(Object):
         structure_manager = self.search(character.db.lair.db.structure_manager_id, location=character.db.lair, global_search=False)
         active_quests  = self.db.active_quests
         active_quests_temp = active_quests
-        print "DEBUG->QuestManager.check_quest_flags: Checking active quests"
+        print "QuestManager.check_quest_flags: Checking active quests"
         for quest in active_quests_temp:
             quest_obj = active_quests[quest]
             quest_objectives = quest_obj.db.objectives
-            print "DEBUG->QuestManager.check_quest_flags: Checking objectives for %s" % quest_obj.name
+            print "QuestManager.check_quest_flags: Checking objectives for %s" % quest_obj.name
             for objective in quest_objectives:
-                print "DEBUG->QuestManager.check_quest_flags: Checking %s" % objective
+                print "QuestManager.check_quest_flags: Checking %s" % objective
                 if quest_objectives[objective]['completed']:
-                    print "DEBUG->QuestManager.check_quest_flags: skipping"
                     continue
                 if mob is not None:
                     if 'kill_%s' % mob.db.mob_type in quest_objectives[objective]['type']:
@@ -130,7 +126,7 @@ class QuestManager(Object):
                         quest_obj.tick_counter_objective(objective, caller=self.db.character)
                     elif 'gather_%s' % item.name.lower() in quest_objectives[objective]['type']:
                         quest_obj.tick_counter_objective(objective, caller=self.db.character)
-                    elif 'loot_rare_item' in quest_objectives[objective]['type']:
+                    elif 'loot_rare_item' in quest_objectives[objective]['type'] and item.db.lootset == 'rare':
                         quest_obj.tick_counter_objective(objective, caller=self.db.character)
                     elif 'build' in quest_objectives[objective]['type']:
                         if 'gold_mine' in quest_objectives[objective]['type']:
@@ -263,7 +259,6 @@ class Quest(Object):
     
     def complete_objective(self, objectives, objective, caller):
         objectives[objective]['completed'] = True
-        print objectives
         caller.msg("{yYou have completed a quest objective!{n")
         self.check_objectives(objectives,caller)
 

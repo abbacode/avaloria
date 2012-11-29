@@ -59,8 +59,10 @@ family_heirloom.desc = "A very bright gold necklace with a Large Karithian ruby 
 family_heirloom.db.quest_item = True
 family_heirloom.db.quest = "An Item Of Importance"
 family_heirloom.locks.add("view:onquest(An Item Of Importance)")
-training_book = rend.copy()
-training_book.name = "Training Manual"
+training_book = create.create_object("game.gamesrc.objects.world.skills.TrainingBook", key="Training Manual", location=location)
+training_book.db.skill="rend"
+training_book.db.desc = "A thick training manual which details the use and learning of a certain skill, granting the reader the ability to use said skill." 
+training_book.db.value = 0
 training_book.db.quest_item = True
 training_book.db.quest = "Learning New Skills"
 training_book.locks.add("view:onquest(Learning New Skills)")

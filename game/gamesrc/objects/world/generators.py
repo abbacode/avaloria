@@ -590,7 +590,7 @@ class MobGenerator(Object):
                 prefix = random.choice(self.db.apparition_prefixes)
             mob_name = "%s %s" % (prefix, mob_name)
             mob = create.create_object("game.gamesrc.objects.world.mob.Mob", key = "%s" % mob_name, location=self.location) 
-            mob.aliases = ['kill_dungeon_mobs', 'mob_runner', 'irregular_runner', 'kill_crypt_mobs', 'crypt_mobs', 'kill_undead', 'kill_%s' % mob.name.lower()]
+            mob.aliases = ['%s_mobs' % self.dbref, 'kill_dungeon_mobs', 'mob_runner', 'irregular_runner', 'kill_crypt_mobs', 'crypt_mobs', 'kill_undead', 'kill_%s' % mob.name.lower()]
             try:
                 mob.desc = copyreader.read_file("gamesrc/copy/mobs/%s_%s.txt" % (prefix.lower(), mob_name.lower()))
             except:
@@ -617,7 +617,7 @@ class MobGenerator(Object):
                 prefix = random.choice(self.db.gnoll_prefixes)
             mob_name = "%s %s" % (prefix, mob_name_original)
             mob = create.create_object("game.gamesrc.objects.world.mob.Mob", key="%s" % mob_name, location=self.location)
-            mob.aliases = ['kill_dungeon_mobs','mob_runner', 'irregular_runner', 'ruins_mobs', 'kill_ruins_mobs', 'kill_%s' % mob_name_original.lower()]
+            mob.aliases = ['%s_mobs' % self.dbref, 'kill_dungeon_mobs','mob_runner', 'irregular_runner', 'ruins_mobs', 'kill_ruins_mobs', 'kill_%s' % mob_name_original.lower()]
             mob.db.attributes['level'] = level
             mob.db.rating = random.choice(self.db.ratings)
             mob.db.mob_type = '%s' % mob_name_original.lower()
@@ -649,7 +649,7 @@ class MobGenerator(Object):
             mob = create.create_object("game.gamesrc.objects.world.mob.Mob", key = "%s" % mob_name, location=self.location)
             mob.db.deity = deity
             mob.desc = desc
-            mob.aliases = ['kill_%s' % deity, 'kill_%s' % mob_name.lower(), 'mob_runner', 'irregular_runner','kill_marshlands', 'kill_%s' % mob_name_original.lower(), 'marshlands_mobs']
+            mob.aliases = ['%s_mobs' % self.dbref,'kill_%s' % deity, 'kill_%s' % mob_name.lower(), 'mob_runner', 'irregular_runner','kill_marshlands', 'kill_%s' % mob_name_original.lower(), 'marshlands_mobs']
             mob.db.attributes['level'] = level
             mob.db.rating = random.choice(self.db.ratings)
             mob.db.is_kos = True
@@ -684,7 +684,6 @@ class MobGenerator(Object):
             if mob is None:
                 return None
             mob_set.append(mob)
-            print mob
         return mob_set
 
     def generate_boss_mob(self):

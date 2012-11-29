@@ -48,8 +48,10 @@ class CharacterClass(Character):
         attributes['temp_armor_rating'] = self.db.attributes['armor_rating']
         attributes['temp_dexterity'] = self.db.attributes['dexterity']
         attributes['temp_strength'] = self.db.attributes['strength']
+        attributes['temp_constitution'] = self.db.attributes['constitution']
+        attributes['temp_intelligence'] = self.db.attributes['intelligence']
         self.db.factions = { 'slyth': 0, 'warden': 0, 'unknowns': 0, 'karith': 0, 'legion': 0, 'kaylynne': 0, 'molto': 0 }
-        self.db.percentages = { 'dodge': 0.05, 'block': 0.0, 'heavy armor': 0.10, 'medium armor': 0.10, 'light armor': 0.10, 'bludgeon': 0.10, 'blades': 0.10, 'heavy': 0.10, 'constitution_bonus': 0.0, 'spell_damage_bonus': 0.0, 'melee_damage_bonus': 0.0, 'spell_fizzle_chance': 0.25, 'spell_buff_bonus': 0.0 }
+        self.db.percentages = { 'dodge': 0.05, 'block': 0.0, 'heavy armor': 0.10, 'medium armor': 0.10, 'light armor': 0.10, 'bludgeon': 0.10, 'blades': 0.10, 'heavy': 0.10, 'dexterity_bonus': 0.0, 'intelligence_bonus': 0.0, 'strength_bonus': 0.0, 'constitution_bonus': 0.0, 'spell_damage_bonus': 0.0, 'melee_damage_bonus': 0.0, 'spell_fizzle_chance': 0.25, 'spell_buff_bonus': 0.0 }
         self.db.effects = {}
         self.db.group = None
         self.db.combat_queue = deque([])
@@ -61,6 +63,7 @@ class CharacterClass(Character):
         self.db.spells = []
         self.db.in_combat = False
         self.db.unbalanced = False
+        self.db.crippled = False
         self.db.grouped = False
         self.db.target = None
         #player item creation
@@ -97,24 +100,38 @@ class CharacterClass(Character):
         self.db.spellbook = spellbook
         self.db.skill_log = skill_log
         self.db.quest_log = questlog
-        self.db.newattr = {'this': 'is a tester'}
         #friends list is atteched to the player
         player_lair_exit = create_object("game.gamesrc.objects.world.rooms.PlayerLairExit", location=lair)
 
     def rebuild_model(self):
         """
         Build a new character model to grab in new things that have been coded.
+        We generate a new character model, check its attributes versus this model.
+        If we find differences, we add the necessary attribute to the model.
+
+        TODO: Allow for parsing dictionaries for new key/value pairs.
+              Ignore objects, or find a way to instantiate the particular object needed.
+
+        This will currently support adding of any *completely* new data structure other than 
+        object references.  May need to update the call to this to be asynchronously done.
         """
         nc = create_object("game.gamesrc.objects.world.character.CharacterClass")
         valid_attributes = [(attr.key, attr.value, attr) for attr in ObjAttribute.objects.filter(db_obj=nc)]
         self_attributes = [(attr.key, attr.value, attr) for attr in ObjAttribute.objects.filter(db_obj=self)]
+        self_attribute_keys = [x[0] for x in self_attributes]
         valid_attribute_num = len(valid_attributes)
         my_attribute_num = len(self_attributes)
         if valid_attribute_num != my_attribute_num:
-            print "Found Character model changes, initiating changes."
+            print "CharacterClass->rebuild_model: Possible Character model changes, checking further."
             for attribute in valid_attributes:
-                if attribute[0] not in self.attributes:
+                if attribute[0] not in self_attribute_keys:
+                    print "CharacterClass->rebuild_model: %s is not found on %s, setting attribute now." % (attribute[0], self.name)
                     self.set_attribute(attribute[0], attribute[1])
+        #delete the extra crap made on generating a new character
+        lair = nc.db.lair
+        lair.delete()
+        nc.delete()
+        return
 
 
     def character_summary(self):
@@ -140,7 +157,7 @@ class CharacterClass(Character):
         try:
             if 'rare' in moved_obj.db.lootset:
                 questlog.check_quest_flags(mob=None, item=moved_obj)
-        except AttributeError:
+        except:
             pass
            
     def at_post_login(self): 
@@ -156,7 +173,7 @@ class CharacterClass(Character):
             self.cmdset.add(spells_cmdset.SpellsCmdSet)
             self.scripts.validate()
             self.scripts.add(cscripts.CharacterSentinel)
-        #self.rebuild_model()
+        self.rebuild_model()
 
     def at_disconnect(self):
         self.cmdset.clear()
@@ -205,11 +222,18 @@ class CharacterClass(Character):
         if base_stats is True:
             attributes['attack_rating'] = self.db.attributes['strength'] / 5
             attributes['armor_rating'] = (self.db.attributes['dexterity'] / 5) + 10
+            try:
+                if self.db.effects['temp_armor_rating_buff']:
+                    attributes['armor_rating'] += self.db.effects['temp_armor_rating_buff']['buff_amount']
+            except KeyError:
+                pass
             if self.db.equipment['armor'] is not None:
                 attributes['armor_rating'] += self.db.equipment['armor'].db.armor_rating
             self.db.attributes = attributes
         attributes['temp_dexterity'] = self.db.attributes['dexterity']
         attributes['temp_strength'] = self.db.attributes['strength']
+        attributes['temp_constitution'] = self.db.attributes['constitution']
+        attributes['temp_intelligence'] = self.db.attributes['intelligence']
         attributes['temp_attack_rating'] = self.db.attributes['attack_rating']
         attributes['temp_armor_rating'] = self.db.attributes['armor_rating']
         self.db.attributes = attributes
@@ -660,8 +684,8 @@ class CharacterClass(Character):
     def pretty_table(self, type='Attributes'):
         table = PrettyTable()
         str_bonus = self.db.attributes['temp_strength'] - self.db.attributes['strength']
-        #int_bonus = self.db.attributes['temp_intelligence'] - self.db.attributes['intelligence']
-        #con_bonus = self.db.attributes['temp_constitution'] - self.db.attributes['constitution']
+        int_bonus = self.db.attributes['temp_intelligence'] - self.db.attributes['intelligence']
+        con_bonus = self.db.attributes['temp_constitution'] - self.db.attributes['constitution']
         dex_bonus = self.db.attributes['temp_dexterity'] - self.db.attributes['dexterity']
         not_equipped = ""
         if type == 'Attributes':
@@ -673,8 +697,8 @@ class CharacterClass(Character):
             table.add_row(["Gender:", self.db.attributes['gender']," "])
             table.add_row(["Level:", self.db.attributes['level'], " "])
             table.add_row(["Strength:", self.db.attributes['temp_strength'], "+%s" % str_bonus])
-            table.add_row(["Intelligence:", self.db.attributes['intelligence'], " "])
-            table.add_row(["Constitution:", self.db.attributes['constitution'], " "])
+            table.add_row(["Intelligence:", self.db.attributes['intelligence'], "+%s" %int_bonus])
+            table.add_row(["Constitution:", self.db.attributes['constitution'], "%s" % con_bonus])
             table.add_row(["Dexterity:", self.db.attributes['temp_dexterity'], "+%s" % dex_bonus])
             table.add_row(["Health:", self.db.attributes['temp_health'], " "])
             table.add_row(["Mana:", self.db.attributes['temp_mana'], " "])
@@ -722,7 +746,8 @@ class CharacterClass(Character):
         nodes = []
         welcome_text = """
 Which attributes would you like to improve?
-        """
+%s
+        """ % self.pretty_table()
         node0 = MenuNode('START', links=['strength', 'constitution', 'intelligence', 'dexterity', 'END'], linktexts=['Spend points in Strength', 'Spend points in Constitution', 'Spend points in Intelligence', 'Spend points in Dexterity', 'Exit'], text = welcome_text)
         str_text = "Select the amount of points to spend on this attribute:"
         nodes.append(node0)
@@ -738,7 +763,7 @@ Which attributes would you like to improve?
             for x in range (1, 4):
                 if x == 1:
                     points = 1
-                    node = MenuNode('%s-%s' % (thing, x), links=['START', 'END'], linktexts=['Back to Selection', 'Exit Attribute Menu'],code="self.caller.add_attribute_points(\'%s\',%s); self.goto(self.startnode)" % (thing, points))
+                    node = MenuNode('%s-%s' % (thing, x), links=['START', 'END'], linktexts=['Back to Selection', 'Exit Attribute Menu'],code="self.caller.add_attribute_points(\'%s\',%s)" % (thing, points))
                 elif x == 2:
                     points = 5
                     node = MenuNode('%s-%s' % (thing, x), links=['START', 'END'], linktexts=['Back to Selection', 'Exit Attribute Menu'], code="self.caller.add_attribute_points(\'%s\',%s)" % (thing, points))
@@ -922,12 +947,26 @@ Which attributes would you like to improve?
         else:
             return True
 
+    def has_skill(self, skill):
+        manager = self.db.skill_log
+        if skill in manager.skills.keys():
+            return True
+        else:
+            return False
+    
+    def has_spell(self, spell):
+        manager = self.db.spellbook
+        if spell in manager.spells.keys():
+            return True
+        else:
+            return False
+    
     """
     Effects Management
     """
     def add_effect(self, to_add):
         effects = self.db.effects
-        effect = { 'name': to_add.name, 'description': to_add.db.desc, 'attribute_affected': to_add.db.attribute_affected_display, 'duration': (to_add.db.duration / 60) }
+        effect = { 'buff_amount': to_add.db.buff_amount, 'name': to_add.name, 'description': to_add.db.desc, 'attribute_affected': to_add.db.attribute_affected_display, 'duration': (to_add.db.duration / 60) }
         effects['%s_buff' % to_add.db.attribute_affected] = effect
         self.db.effects = effects
     
@@ -989,7 +1028,7 @@ class FriendList(Object):
     def add_friend(self, caller, friend):
         character_obj = self.search(friend, global_search=True)
         if not character_obj:
-            friend_player_obj = self.search('*%s'%friend, global_search=True, player=True, ignore_errors=True)[0]
+            friend_player_obj = self.search('*%s'%friend, global_search=True, ignore_errors=True)[0]
             friend_player_obj = friend_player_obj.player
         else:
             friend_player_obj = character_obj.player
@@ -1087,6 +1126,7 @@ class CharacterGroup(Object):
         channel.msg("{RParty disbanded.{n")
         for member in members:
             member.db.group = None
+            channel.disconnect_from(member)
         channel.delete()
         self.delete()
 
