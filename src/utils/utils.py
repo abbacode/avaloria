@@ -6,11 +6,11 @@ be of use when designing your own game.
 
 """
 
-import os, sys, imp, types, math
-import textwrap, datetime, random
+import os, sys, imp, types, math, re
+import textwrap, datetime, random, traceback, inspect
 from inspect import ismodule
 from collections import defaultdict
-from twisted.internet import threads
+from twisted.internet import threads, defer, reactor
 from django.contrib.contenttypes.models import ContentType
 from django.conf import settings
 
@@ -38,6 +38,7 @@ def is_iter(iterable):
         return True
     except AttributeError:
         return False
+
 
 def make_iter(obj):
     "Makes sure that the object is always iterable."
@@ -87,9 +88,15 @@ def list_to_string(inlist, endsep="and", addquote=False):
     """
     This pretty-formats a list as string output, adding
     an optional alternative separator to the second to last entry.
-    If addquote is True, the outgoing strints will be surrounded by quotes.
+    If addquote is True, the outgoing strings will be surrounded by quotes.
 
-    [1,2,3] -> '1, 2 and 3'
+    Examples:
+     no endsep:
+        [1,2,3] -> '1, 2, 3'
+     with endsep=='and':
+        [1,2,3] -> '1, 2 and 3'
+     with addquote and endsep
+        [1,2,3] -> '"1", "2" and "3"'
     """
     if not inlist:
         return ""
@@ -223,6 +230,7 @@ def datetime_format(dtobj):
     """
     Takes a datetime object instance (e.g. from django's DateTimeField)
     and returns a string describing how long ago that date was.
+
     """
 
     year, month, day = dtobj.year, dtobj.month, dtobj.day
@@ -277,12 +285,14 @@ def pypath_to_realpath(python_path, file_ending='.py'):
         return "%s%s" % (path, file_ending)
     return path
 
-def dbref(dbref):
+def dbref(dbref, reqhash=True):
     """
     Converts/checks if input is a valid dbref Valid forms of dbref
     (database reference number) are either a string '#N' or
     an integer N.  Output is the integer part.
     """
+    if reqhash and not (isinstance(dbref, basestring) and dbref.startswith("#")):
+        return None
     if isinstance(dbref, basestring):
         dbref = dbref.lstrip('#')
         try:
@@ -489,7 +499,20 @@ def uses_database(name="sqlite3"):
         engine = settings.DATABASE_ENGINE
     return engine == "django.db.backends.%s" % name
 
-
+def delay(to_return, delay=2, callback=None):
+    """
+    Delay the return of a value.
+    Inputs:
+      to_return (any) - this will be returned by this function after a delay
+      delay (int) - the delay in seconds
+      callback (func(r)) - if given, this will be called with the to_return after delay seconds
+    Returns:
+      deferred that will fire with to_return after delay seconds
+    """
+    d = defer.Deferred()
+    callb = callback or d.callback
+    reactor.callLater(delay, callb, to_return)
+    return d
 
 _FROM_MODEL_MAP = None
 _TO_DBOBJ = lambda o: (hasattr(o, "dbobj") and o.dbobj) or o
@@ -671,8 +694,6 @@ def run_async(to_execute, *args, **kwargs):
     # handle special reserved input kwargs
     callback = kwargs.pop("at_return", None)
     errback = kwargs.pop("at_err", None)
-    print callback
-    print errback
     callback_kwargs = kwargs.pop("at_return_kwargs", {})
     errback_kwargs = kwargs.pop("at_err_kwargs", {})
 
@@ -784,11 +805,10 @@ def mod_import(module):
         from within an exception. errmsg is optional and
         adds an extra line with added info.
         """
-        from traceback import format_exc
         from twisted.python import log
         print errmsg
 
-        tracestring = format_exc()
+        tracestring = traceback.format_exc()
         if tracestring:
             for line in tracestring.splitlines():
                 log.msg('[::] %s' % line)
@@ -810,14 +830,19 @@ def mod_import(module):
         # first try to import as a python path
         try:
             mod = __import__(module, fromlist=["None"])
-        except ImportError:
+        except ImportError, ex:
+            # check just where the ImportError happened (it could have been an erroneous
+            # import inside the module as well). This is the trivial way to do it ...
+            if str(ex) != "Import by filename is not supported.":
+                #log_trace("ImportError inside module '%s': '%s'" % (module, str(ex)))
+                raise
 
-            # try absolute path import instead
+            # error in this module. Try absolute path import instead
 
             if not os.path.isabs(module):
                 module = os.path.abspath(module)
             path, filename = module.rsplit(os.path.sep, 1)
-            modname = filename.rstrip('.py')
+            modname = re.sub(r"\.py$", "", filename)
 
             try:
                 result = imp.find_module(modname, [path])

@@ -243,7 +243,7 @@ BASE_SCRIPT_TYPECLASS = "src.scripts.scripts.DoNothing"
 # dbref (default is Limbo #2). If you want more advanced control over
 # start locations, copy the "create" command from
 # src/commands/default/unloggedin.py and customize.
-CHARACTER_DEFAULT_HOME = "5"
+CHARACTER_DEFAULT_HOME = "#2"
 
 ######################################################################
 # Batch processors
@@ -431,6 +431,7 @@ TEMPLATE_LOADERS = (
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware', # 1.4?
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.middleware.doc.XViewMiddleware',

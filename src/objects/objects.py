@@ -15,9 +15,24 @@ That an object is controlled by a player/user is just defined by its
 they control by simply linking to a new object's user property.
 """
 
+import datetime
+from django.conf import settings
 from src.typeclasses.typeclass import TypeClass
 from src.commands import cmdset, command
+from src.comms.models import Channel
 __all__ = ("Object", "Character", "Room", "Exit")
+
+_GA = object.__getattribute__
+_SA = object.__setattr__
+_DA = object.__delattr__
+
+
+_CONNECT_CHANNEL = None
+try:
+    _CONNECT_CHANNEL = Channel.objects.filter(db_key=settings.CHANNEL_CONNECTINFO[0])[0]
+except Exception, e:
+    print e
+    pass
 
 #
 # Base class to inherit from.
@@ -81,7 +96,7 @@ class Object(TypeClass):
          execute_cmd(raw_string)
          msg(message, from_obj=None, data=None)
          msg_contents(message, exclude=None, from_obj=None, data=None)
-         move_to(destination, quiet=False, emit_to_obj=None, use_destination=True)
+         move_to(destination, quiet=False, emit_to_obj=None, use_destination=True, to_none=False)
          copy(new_key=None)
          delete()
          is_typeclass(typeclass, exact=False)
@@ -226,7 +241,7 @@ class Object(TypeClass):
         self.dbobj.msg_contents(message, exclude=exclude, from_obj=from_obj, data=data)
 
     def move_to(self, destination, quiet=False,
-                emit_to_obj=None, use_destination=True):
+                emit_to_obj=None, use_destination=True, to_none=False):
         """
         Moves this object to a new location. Note that if <destination> is an
         exit object (i.e. it has "destination"!=None), the move_to will
@@ -242,6 +257,8 @@ class Object(TypeClass):
         use_destination (bool): Default is for objects to use the "destination" property
                               of destinations as the target to move to. Turning off this
                               keyword allows objects to move "inside" exit objects.
+        to_none - allow destination to be None. Note that no hooks are run when moving
+                      to a None location. If you want to run hooks, run them manually.
         Returns True/False depending on if there were problems with the move. This method
                 may also return various error messages to the emit_to_obj.
 
@@ -336,8 +353,17 @@ class Object(TypeClass):
           accessing_obj (Object)- object trying to access this one
           access_type (string) - type of access sought
           default (bool) - what to return if no lock of access_type was found
+
+        This function will call at_access_success or at_access_failure depending on the
+        outcome of the access check.
+
         """
-        return self.dbobj.access(accessing_obj, access_type=access_type, default=default)
+        if self.dbobj.access(accessing_obj, access_type=access_type, default=default):
+            self.at_access_success(accessing_obj, access_type)
+            return True
+        else:
+            self.at_access_failure(accessing_obj, access_type)
+            return False
 
     def check_permstring(self, permstring):
         """
@@ -358,11 +384,13 @@ class Object(TypeClass):
         parent doesn't work.
         """
         try:
-            return self.dbref == other or self.dbref == other.dbref
+            return _GA(_GA(self, "dbobj"),"dbid") == other \
+                or _GA(_GA(self, "dbobj"),"dbid") == _GA(_GA(other,"dbobj"),"dbid")
         except AttributeError:
            # compare players instead
             try:
-                return self.player.uid == other or self.player.uid == other.player.uid
+                return _GA(_GA(_GA(self, "dbobj"),"player"),"uid") == other \
+                    or _GA(_GA(_GA(self, "dbobj"),"player"),"uid") == _GA(_GA(other, "player"),"uid")
             except AttributeError:
                 return False
 
@@ -374,8 +402,8 @@ class Object(TypeClass):
         This sets up the default properties of an Object,
         just before the more general at_object_creation.
 
-        Don't change this, instead edit at_object_creation() to
-        overload the defaults (it is called after this one).
+        You normally don't need to change this unless you change some fundamental
+        things like names of permission groups.
         """
         # the default security setup fallback for a generic
         # object. Overload in child for a custom setup. Also creation
@@ -383,15 +411,14 @@ class Object(TypeClass):
         # controller, for example)
 
         dbref = self.dbobj.dbref
-
-        self.locks.add("control:id(%s) or perm(Immortals)" % dbref)  # edit locks/permissions, delete
-        self.locks.add("examine:perm(Builders)")  # examine properties
-        self.locks.add("view:all()") # look at object (visibility)
-        self.locks.add("edit:perm(Wizards)")   # edit properties/attributes
-        self.locks.add("delete:perm(Wizards)") # delete object
-        self.locks.add("get:all()")   # pick up object
-        self.locks.add("call:true()") # allow to call commands on this object
-        self.locks.add("puppet:id(%s) or perm(Immortals) or pperm(Immortals)" % dbref) # restricts puppeting of this object
+        self.locks.add(";".join(["control:perm(Immortals)",  # edit locks/permissions, delete
+                                 "examine:perm(Builders)",   # examine properties
+                                 "view:all()",               # look at object (visibility)
+                                 "edit:perm(Wizards)",       # edit properties/attributes
+                                 "delete:perm(Wizards)",     # delete object
+                                 "get:all()",                # pick up object
+                                 "call:true()",              # allow to call commands on this object
+                                 "puppet:id(%s) or perm(Immortals) or pperm(Immortals)" % dbref])) # restricts puppeting of this object
 
     def basetype_posthook_setup(self):
         """
@@ -478,6 +505,23 @@ class Object(TypeClass):
         """
         pass
 
+    def at_access_success(self, accessing_obj, access_type):
+        """
+        This hook is called whenever accessing_obj succeed a lock check of type access_type
+        on this object, for whatever reason. The return value of this hook is not used,
+        the lock will still pass regardless of what this hook does (use lockstring/funcs to tweak
+        the lock result).
+        """
+        pass
+
+    def at_access_failure(self, accessing_obj, access_type):
+        """
+        This hook is called whenever accessing_obj fails a lock check of type access_type
+        on this object, for whatever reason. The return value of this hook is not used, the
+        lock will still fail regardless of what this hook does (use lockstring/funcs to tweak the
+        lock result).
+        """
+        pass
 
     # hooks called when moving the object
 
@@ -563,13 +607,22 @@ class Object(TypeClass):
         """
         pass
 
-
     def at_before_traverse(self, traversing_object):
         """
         Called just before an object uses this object to
         traverse to another object (i.e. this object is a type of Exit)
 
         The target location should normally be available as self.destination.
+        """
+        pass
+
+    def at_traverse(self, traversing_object, target_location):
+        """
+        This hook is responsible for handling the actual traversal, normally
+        by calling traversing_object.move_to(target_location). It is normally
+        only implemented by Exit objects. If it returns False (usually because move_to
+        returned False), at_after_traverse below should not be called and
+        instead at_failed_traverse should be called.
         """
         pass
 
@@ -603,9 +656,11 @@ class Object(TypeClass):
         msg is passed on to the user sesssion. If this
         method returns False, the msg will not be
         passed on.
-
-        msg = the message received
-        from_obj = the one sending the message
+        Input:
+            msg = the message received
+            from_obj = the one sending the message
+        Output:
+            boolean True/False
         """
         return True
 
@@ -632,32 +687,26 @@ class Object(TypeClass):
         """
         if not pobject:
             return
-        string = "{c%s{n" % self.name
-        desc = self.attr("desc")
+        # get and identify all objects
+        visible = (con for con in self.contents if con != pobject and con.access(pobject, "view"))
+        exits, users, things = [], [], []
+        for con in visible:
+            key = con.key
+            if con.destination:
+                exits.append(key)
+            elif con.has_player:
+                users.append("{c%s{n" % key)
+            else:
+                things.append(key)
+        # get description, build string
+        string = "{c%s{n" % self.key
+        desc = self.db.desc
         if desc:
             string += "\n %s" % desc
-        exits = []
-        users = []
-        things = []
-        
-        for content in [con for con in self.contents if con.access(pobject, 'view')]:
-            if content == pobject:
-                continue
-            name = content.name
-            if content.destination:
-                exits.append(name)
-            elif content.has_player:
-                users.append(name)
-            else:
-                things.append(name)
         if exits:
             string += "\n{wExits:{n " + ", ".join(exits)
         if users or things:
-            string += "\n{wYou see: {n"
-            if users:
-                string += "{c" + ", ".join(users) + "{n "
-            if things:
-                string += ", ".join(things)
+            string += "\n{wYou see:{n " + ", ".join(users + things)
         return string
 
     def at_desc(self, looker=None):
@@ -712,16 +761,16 @@ class Character(Object):
         """
         Setup character-specific security
 
-        Don't change this, instead edit at_object_creation() to
-        overload the defaults (it is called after this one).
+        You should normally not need to overload this, but if you do, make
+        sure to reproduce at least the two last commands in this method (unless
+        you want to fundamentally change how a Character object works).
+
         """
         super(Character, self).basetype_setup()
-        self.locks.add("get:false()") # noone can pick up the character
-        self.locks.add("call:false()") # no commands can be called on character from outside
-
+        self.locks.add(";".join(["get:false()",  # noone can pick up the character
+                                 "call:false()"])) # no commands can be called on character from outside
         # add the default cmdset
-        from settings import CMDSET_DEFAULT
-        self.cmdset.add_default(CMDSET_DEFAULT, permanent=True)
+        self.cmdset.add_default(settings.CMDSET_DEFAULT, permanent=True)
         # no other character should be able to call commands on the Character.
         self.cmdset.outside_access = False
 
@@ -747,6 +796,10 @@ class Character(Object):
             self.location.msg_contents("%s has left the game." % self.name, exclude=[self])
             self.db.prelogout_location = self.location
             self.location = None
+        if _CONNECT_CHANNEL:
+            now = datetime.datetime.now()
+            now = "%02i-%02i-%02i(%02i:%02i)" % (now.year, now.month, now.day, now.hour, now.minute)
+            _CONNECT_CHANNEL.tempmsg("[%s, %s]: {R%s disconnected{n" % (_CONNECT_CHANNEL.key, now, self.key))
 
     def at_post_login(self):
         """
@@ -763,7 +816,13 @@ class Character(Object):
 
         self.location.msg_contents("%s has entered the game." % self.name, exclude=[self])
         self.location.at_object_receive(self, self.location)
-
+        # call look
+        self.execute_cmd("look")
+        # send to connect channel, if available
+        if _CONNECT_CHANNEL:
+            now = datetime.datetime.now()
+            now = "%02i-%02i-%02i(%02i:%02i)" % (now.year, now.month, now.day, now.hour, now.minute)
+            _CONNECT_CHANNEL.tempmsg("[%s, %s]: {G%s connected{n" % (_CONNECT_CHANNEL.key, now, self.key))
 
 
 #
@@ -780,14 +839,12 @@ class Room(Object):
         Simple setup, shown as an example
         (since default is None anyway)
 
-        Don't change this, instead edit at_object_creation() to
-        overload the defaults (it is called after this one).
         """
 
         super(Room, self).basetype_setup()
-        self.locks.add("get:false();puppet:false()") # would be weird to puppet a room ...
+        self.locks.add(";".join(["get:false()",
+                                 "puppet:false()"])) # would be weird to puppet a room ...
         self.location = None
-
 
 #
 # Exits
@@ -829,23 +886,16 @@ class Exit(Object):
             locks = "cmd:all()" # should always be set to this.
             obj = None
             arg_regex=r"\s.*?|$"
+            is_exit = True      # this helps cmdhandler disable exits in cmdsets with no_exits=True.
 
             def func(self):
                 "Default exit traverse if no syscommand is defined."
 
                 if self.obj.access(self.caller, 'traverse'):
                     # we may traverse the exit.
-
-                    old_location = None
-                    if hasattr(self.caller, "location"):
-                        old_location = self.caller.location
-
-                    # call pre/post hooks and move object.
-                    self.obj.at_before_traverse(self.caller)
-                    self.caller.move_to(self.obj.destination)
-                    self.obj.at_after_traverse(self.caller, old_location)
-
+                    self.obj.at_traverse(self.caller, self.obj.destination)
                 else:
+                    # exit is locked
                     if self.obj.db.err_traverse:
                         # if exit has a better error message, let's use it.
                         self.caller.msg(self.obj.db.err_traverse)
@@ -860,6 +910,7 @@ class Exit(Object):
         cmd.aliases = exidbobj.aliases
         cmd.locks = str(exidbobj.locks)
         cmd.destination = exidbobj.db_destination
+        cmd.auto_help = False
         # create a cmdset
         exit_cmdset = cmdset.CmdSet(None)
         exit_cmdset.key = '_exitset'
@@ -874,15 +925,15 @@ class Exit(Object):
         """
         Setup exit-security
 
-        Don't change this, instead edit at_object_creation() to
-        overload the default locks (it is called after this one).
+        You should normally not need to overload this - if you do make sure you
+        include all the functionality in this method.
         """
         super(Exit, self).basetype_setup()
 
         # setting default locks (overload these in at_object_creation()
-        self.locks.add("puppet:false()") # would be weird to puppet an exit ...
-        self.locks.add("traverse:all()") # who can pass through exit by default
-        self.locks.add("get:false()")    # noone can pick up the exit
+        self.locks.add(";".join(["puppet:false()", # would be weird to puppet an exit ...
+                                 "traverse:all()", # who can pass through exit by default
+                                 "get:false()"]))   # noone can pick up the exit
 
         # an exit should have a destination (this is replaced at creation time)
         if self.dbobj.location:
@@ -903,6 +954,28 @@ class Exit(Object):
 
     def at_object_creation(self):
         "Called once, when object is first created (after basetype_setup)."
+        pass
+
+    def at_traverse(self, traversing_object, target_location):
+        """
+        This implements the actual traversal. The traverse lock has already been
+        checked (in the Exit command) at this point.
+        """
+        source_location = traversing_object.location
+        if traversing_object.move_to(target_location):
+            self.at_after_traverse(traversing_object, source_location)
+        else:
+            if self.db.err_traverse:
+                # if exit has a better error message, let's use it.
+                self.caller.msg(self.db.err_traverse)
+            else:
+                # No shorthand error message. Call hook.
+                self.at_failed_traverse(traversing_object)
+
+    def at_after_traverse(self, traversing_object, source_location):
+        """
+        Called after a successful traverse.
+        """
         pass
 
     def at_failed_traverse(self, traversing_object):

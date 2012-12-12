@@ -31,8 +31,8 @@ class CmdFriends(MuxCommand):
                 friends_list.add(self.caller, self.what)
             elif 'remove' in switches:
                 friends_list.remove(self.caller, self.what)
-            else:
-                friendslist.list_friends(self.caller)
+        else:
+            friendslist.list_friends(self.caller)
 
 class DefaultCmdSet(CmdSet):
     """

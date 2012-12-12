@@ -11,6 +11,7 @@ import sys
 import django, twisted
 
 from django.conf import settings
+from src.server.caches import get_cache_sizes
 from src.server.sessionhandler import SESSIONS
 from src.scripts.models import ScriptDB
 from src.objects.models import ObjectDB
@@ -149,20 +150,22 @@ class CmdPy(MuxCommand):
                           'ev':ev,
                           'inherits_from':utils.inherits_from}
 
-        caller.msg(">>> %s" % pycode)
+        caller.msg(">>> %s" % pycode, data={"raw":True})
         try:
             ret = eval(pycode, {}, available_vars)
-            ret = "<<< %s" % str(ret)
+            if ret != None:
+                ret = "{n<<< %s" % str(ret)
         except Exception:
             try:
                 exec(pycode, {}, available_vars)
-                ret = "<<< Done."
+                ret = "{n<<< Done."
             except Exception:
                 errlist = traceback.format_exc().split('\n')
                 if len(errlist) > 4:
                     errlist = errlist[4:]
-                ret = "\n".join("<<< %s" % line for line in errlist if line)
-        caller.msg(ret)
+                ret = "\n".join("{n<<< %s" % line for line in errlist if line)
+        if ret != None:
+            caller.msg(ret)
 
 # helper function. Kept outside so it can be imported and run
 # by other commands.
@@ -262,7 +265,7 @@ class CmdScripts(MuxCommand):
             scripts = ScriptDB.objects.get_all_scripts(key=args)
             if not scripts:
                 # try to find an object instead.
-                objects = ObjectDB.objects.object_search(args, caller=caller, global_search=True)
+                objects = ObjectDB.objects.object_search(args, caller=caller)
                 if objects:
                     scripts = []
                     for obj in objects:
@@ -271,6 +274,9 @@ class CmdScripts(MuxCommand):
         else:
             # we want all scripts.
             scripts = ScriptDB.objects.get_all_scripts()
+            if not scripts:
+                caller.msg("No scripts are running.")
+                return
 
         if not scripts:
             string = "No scripts found with a key '%s', or on an object named '%s'." % (args, args)
@@ -605,13 +611,11 @@ class CmdServerLoad(MuxCommand):
         if not utils.host_os_is('posix'):
             string = "Process listings are only available under Linux/Unix."
         else:
-            global _resource, _idmapper, _attribute_cache
+            global _resource, _idmapper
             if not _resource:
                 import resource as _resource
             if not _idmapper:
                 from src.utils.idmapper import base as _idmapper
-            if not _attribute_cache:
-                from src.typeclasses.models import _ATTRIBUTE_CACHE as _attribute_cache
 
             import resource
             loadavg = os.getloadavg()
@@ -682,51 +686,12 @@ class CmdServerLoad(MuxCommand):
             ftable = utils.format_table(table, 5)
             for row in ftable:
                 string += "\n  " + row[0] + row[1] + row[2]
-            # attribute cache
-            size = sum([sum([getsizeof(obj) for obj in dic.values()]) for dic in _attribute_cache.values()])/1024.0
-            count = sum([len(dic) for dic in _attribute_cache.values()])
-            string += "\n{w On-entity Attribute cache usage:{n %5.2f MB (%i items)" % (size, count)
+            # get sizes of other caches
+            attr_cache_info, field_cache_info, prop_cache_info = get_cache_sizes()
+            #size = sum([sum([getsizeof(obj) for obj in dic.values()]) for dic in _attribute_cache.values()])/1024.0
+            #count = sum([len(dic) for dic in _attribute_cache.values()])
+            string += "\n{w On-entity Attribute cache usage:{n %5.2f MB (%i attrs)" % (attr_cache_info[1], attr_cache_info[0])
+            string += "\n{w On-entity Field cache usage:{n %5.2f MB (%i fields)" % (field_cache_info[1], field_cache_info[0])
+            string += "\n{w On-entity Property cache usage:{n %5.2f MB (%i props)" % (prop_cache_info[1], prop_cache_info[0])
         caller.msg(string)
-
-# class CmdPs(MuxCommand):
-#     """
-#     list processes
-
-#     Usage
-#       @ps
-
-#     Shows the process/event table.
-#     """
-#     key = "@ps"
-#     locks = "cmd:perm(ps) or perm(Builders)"
-#     help_category = "System"
-
-#     def func(self):
-#         "run the function."
-
-#         nscripts = ScriptDB.objects.count()
-#         repeat_scripts = ScriptDB.objects.filter(db_interval__gt=0)
-#         nrepeat_scripts = ScriptDB.objects.filter(db_interval__le=0)
-
-#         string = "\n{wNon-timed scripts:{n -- PID name desc --"
-#         if not nrepeat_scripts:
-#             string += "\n <None>"
-#         for script in nrepeat_scripts:
-#             string += "\n {w%i{n %s %s" % (script.id, script.key, script.desc)
-
-#         string += "\n{wTimed scripts:{n -- PID name [time/interval][repeats] desc --"
-#         if not repeat_scripts:
-#             string += "\n <None>"
-#         for script in repeat_scripts:
-#             repeats = "[inf] "
-#             if script.repeats:
-#                 repeats = "[%i] " % script.repeats
-#             time_next = "[inf/inf]"
-#             if script.time_until_next_repeat() != None:
-#                 time_next = "[%d/%d]" % (script.time_until_next_repeat(), script.interval)
-#             string += "\n {w%i{n %s %s%s%s" % (script.id, script.key,
-#                                            time_next, repeats, script.desc)
-#         string += "\n{wTotal{n: %d scripts." % len(all_scripts)
-#         self.caller.msg(string)
-
 

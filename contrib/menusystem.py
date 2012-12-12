@@ -153,7 +153,7 @@ class MenuTree(object):
     'START' and 'END' respectively.
 
     """
-    def __init__(self, caller, nodes=None, startnode="START", endnode="END", exec_end=None):
+    def __init__(self, caller, nodes=None, startnode="START", endnode="END", exec_end='look'):
         """
         We specify startnode/endnode so that the system knows where to
         enter and where to exit the menu tree. If nodes is given, it
@@ -209,7 +209,7 @@ class MenuTree(object):
                 # Execute eventual code active on this
                 # node. self.caller is available at this point.
                 if 'END' in node.code: endcode = True
-                
+               
                 try:
                     exec(node.code)
                     if endcode:
@@ -459,3 +459,5 @@ class CmdMenuTest(Command):
                          yescode="self.caller.msg('{gGood for you!{n')",
                          nocode="self.caller.msg('{GNow you are just being modest ...{n')",
                          default="N")
+
+

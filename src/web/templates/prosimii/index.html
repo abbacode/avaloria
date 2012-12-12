@@ -8,26 +8,30 @@
 
 {% block content %}
 <div class="rowOfBoxes">
-   <div class="twoThirds noBorderOnLeft">
+   <!--div class="twoThirds noBorderOnLeft"-->
+   <div class="noBorderOnLeft">
       <h1>Welcome!</h1>
+      <p>Welcome to your new installation of <a href="http://evennia.com">Evennia</a>, your friendly
+      neighborhood next-generation MUD development system and server. You are looking at Evennia's web
+      presence, which can be expanded to a full-fledged site as
+      needed. Through the <a href="/admin">admin interface</a> you can view and edit the
+      database without logging into the game.
+        {% if webclient_enabled %}
+        You can also connect to the game directly from your browser using our
+        <a href='/webclient'>online client</a>!<br></br>
+        {% endif %}
+      For more info, take your time to
+      peruse our extensive online <a href="http://code.google.com/p/evennia/wiki/Index">documentation</a>.
       <p>
-        Welcome to Avaloria!  A world of mystery, turmoil and wonder awaits you in the kingdom of Avaloria.  The Deities of the world are gearing up for yet another internal conflict causing untold changes to the world and ecosystem of the planet.  In the recent years, ice caps have melted back, allowing a completely new deity to surface and take hold turning the newly available land into a vast system of Swamps and Marshland.  However, most will not sit by and idly watch as their land is devoured by the never ending marshland.  The Green Warden, protector of the Forests is in direct conflict with Slyth, causing never before seen deity warfar spanning large swathes of land.
-        </p>
-        <p>
-        To the northwest portion of the continent, Mount Zuldrom stands as a monolithic representation of the entire Earthen identity,  Inside it's bowels stir the newly born creations of a darkness not yet seen in the entire history of Avaloria as a world.  Alongside the creatures of the dark lay ruins of the Earthen civilization, ripe for the taking if anyone could get to them.  The townfolk have been chattering away with rumors of the times changing.  Something big is happening soon and the entirety of the Avaloria's population knows it, from the Earthen deep in the Mountain, to the Erelania high above in the Zuldrom peaks; everyone is aware that a storm is on the horizon.  This is why the All Father, eldest of the God's has plucked your soul from the Sea of the Dead and returned you to a corpoeral body.  Avaloria needs as many heroes as it can muster as the twilight of this age draws to the a close, only those of stout mind and body will be able to stand against the overwhelming darkness.
-      <p>
-      Should you have any questions, concerns, or
-      if you want to help out, don't hesitate to come join the 
-      <a href="https://groups.google.com/forum/?fromgroups#!forum/avaloria-development">Avaloria Community</a> and get
-      your voice heard!
-      </p>
-
-      <p>
-        Bug reports, or issues with the game can be reported on the <a href="http://code.google.com/p/avaloria/issues">Issue Tracker</a>.
+      Should you have any questions, concerns, bug reports, or
+      if you want to help out, don't hesitate to join the Evennia community to make your voice heard! Drop a mail to the
+      <a href="http://evennia.com/discussions">mailing list</a> or to come say hi in the <a href="http://webchat.freenode.net/?channels=evennia">developer chatroom</a>. If you find bugs, please report them to our <a href="http://code.google.com/p/evennia/issues/list">Issue tracker</a>.
       </p>
    </div>
 
-   <div class="oneThird">
+   <!-- news app commented out since there are no news in the database originally -->
+
+   <!--div class="oneThird">
       <h1>Latest News</h1>
       {% for entry in news_entries %}
          <a href="/news/show/{{entry.id}}" class="newsHeading">{{entry.topic.name}}: {{entry.title}}</a>
@@ -37,8 +41,8 @@
 
       <div class="more"><a href="/news/archive">More News &raquo;</a></div>
 
-      <p class="filler"><!-- Filler para to extend left vertical line --></p>
-   </div>
+      <p class="filler"><!-- Filler para to extend left vertical line--></p>
+   </div-->
 </div>
 
 <div class="rowOfBoxes dividingBorderAbove">
@@ -46,8 +50,7 @@
    <div class="quarter noBorderOnLeft">
       <h1>Players</h1>
       <p>
-      There are currently <strong>{{num_players_connected}}</strong> connected,
-      and a total of <strong>{{num_players_registered}}</strong> registered. Of these, <strong>{{num_players_registered_recent}}</strong> were created this week, and <strong>{{num_players_connected_recent}}</strong> have connected within the last seven days.
+      There's currently <strong>{{num_players_connected}}</strong> connected out of a total of <strong>{{num_players_registered}}</strong> players registered. Of these, <strong>{{num_players_registered_recent}}</strong> were created this week, and <strong>{{num_players_connected_recent}}</strong> have connected within the last seven days.
       </p>
    </div>
 
@@ -64,15 +67,16 @@
    <div class="quarter">
       <h1>Database Stats</h1>
       <ul>
-      <li>{{num_players_registered}} players</li>
-      <li>{{num_rooms}} rooms ({{num_exits}} exits) </li>
-      <li>{{num_objects}} objects total</li>
+      <li>{{num_players_registered}} players (+ {{num_characters}} characters)</li>
+      <li>{{num_rooms}} rooms (+ {{num_exits}} exits)</li>
+      <li>{{num_others}} other objects</li>
+
       </ul>
    </div>
 
    <div class="quarter">
       <h1>Evennia</h1>
-      <p><a href="http://evennia.com">Evennia</a> is MUD server built in
+      <p><a href="http://evennia.com">Evennia</a> is an open-source MUD server built in
       <a href="http://python.org">Python</a>, on top of the
       <a href="http://twistedmatrix.com">Twisted</a> and
       <a href="http://djangoproject.com">Django</a> frameworks. This

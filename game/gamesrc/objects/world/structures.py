@@ -13,6 +13,7 @@ class Structure(Object):
     def at_object_creation(self):
         
         self.db.level = 0
+        self.db.completed_name = None
         self.db.gold_per_day = None
         self.db.cost = None
         self.db.gold_put_in = 0
@@ -34,6 +35,16 @@ class Structure(Object):
         de_level - remove a level.  can recurse to remove multiple levels.
         level_up - add a level + bonuses.
     """
+    def after_henchmen_assignment(self, henchman):
+        henchmen = self.db.assigned_henchmen
+        lab = self.db.lair_attributes_bonuses
+        tta = (henchman['count'] / henchman['afo'])
+        attr_add_amount = tta * henchman['attribute_mod_amount']
+        lab[henchman['attribute_mod']] = attr_add_amount
+        self.lair_attribute_bonuses = lab
+        
+    
+        
     def destroy(self):
         manager = self.location.search(self.db.structure_manager_id, global_search=False)
         character = self.location.search(manager.db.character_id, global_search=False)
@@ -100,6 +111,14 @@ class Structure(Object):
         else:
             self.name = '{B%s{n' % self.db.completed_name
             character.msg("{B%s has completed construction!{n" % self.name)
+            structures = manager.db.structures
+            structures[self.completed_name] = self
+            manager.db.structures = structures
+            quest_manager = character.db.quest_log
+            quest_manager.check_quest_flags(item=manager)
+            character.db.lair.aggregate_character_bonuses()
+            character.db.lair.apply_character_bonuses()
+            return
         if 'Gold Mine' in self.name:
             self.set_gold_per_day()
 
@@ -127,26 +146,28 @@ class Structure(Object):
         attribute_list = self.apply_attribute_bonuses(character_attributes, lair_attributes)
         quest_manager = character.db.quest_log
         quest_manager.check_quest_flags(item=manager)
-        character.db.attributes = attribute_list[0]
+        #character.db.attributes = attribute_list[0]
+        character.db.lair.aggregate_character_bonuses()
+        character.db.lair.apply_character_bonuses()
         character.db.lair.db.attributes = attribute_list[1]
-        character.refresh_attributes()
+        #character.refresh_attributes()
 
     def set_gold_per_day(self):
         if 'Gold Mine' in self.name:
             if self.db.level >= 20:
-                self.db.gold_per_day = 20
+                self.db.gold_per_day = 50
             elif self.db.level >= 17:
-                self.db.gold_per_day = 17
+                self.db.gold_per_day = 35
             elif self.db.level >= 14:
-                self.db.gold_per_day = 14
+                self.db.gold_per_day = 28
             elif self.db.level >= 11:
-                self.db.gold_per_day = 11
+                self.db.gold_per_day = 22
             elif self.db.level >= 8:
-                self.db.gold_per_day = 8
+                self.db.gold_per_day = 15
             elif self.db.level >= 5:
-                self.db.gold_per_day = 5
+                self.db.gold_per_day = 10 
             elif self.db.level >= 2:
-                self.db.gold_per_day = 2
+                self.db.gold_per_day = 5 
 
     def generate_attr_bonuses(self):
         if 'Gold Mine' in self.name:
@@ -169,7 +190,7 @@ class Structure(Object):
         elif 'Treasury' in self.name:
             self.db.gold_per_day = 10
             self.db.attribute_bonuses = { 'strength': 0, 'dexterity': 0, 'intelligence': 0, 'constitution': 0 }
-        elif 'Reinforced Doors' in self.name:
+        elif 'Reinforced Enterance' in self.name:
             self.db.attribute_bonuses = { 'strength': 0, 'dexterity': 1, 'intelligence': 0, 'constitution': 1 }
             self.db.lair_attribute_bonuses = {'defense_rating': 1}
         else:
@@ -229,9 +250,9 @@ class StructureManager(Object):
     """
     def at_object_creation(self):
         self.desc = "You see a large, red stone gripped by an talon-like Pedestal.  As you look at the object, you hear it's voice warmly invite you to touch it."
-        self.db.valid_structures = ['Gold Mine', 'Defenses', 'Reinforced Doors', 'Barracks', 'Training Grounds', 'Cave of Magi', 'Throne Room',
+        self.db.valid_structures = ['Gold Mine', 'Defenses', 'Reinforced Enterance', 'Barracks', 'Training Grounds', 'Cave of Magi', 'Throne Room',
                                     'Alchemist Lab', 'Treasury', ]
-        self.db.base_prices = { 'Gold Mine': 100, 'Defenses': 25, 'Reinforced Doors': 25, 'Barracks': 150, 'Training Grounds': 200, 'Cave of Magi': 500, 'Throne Room': 1000, 'Alchemist Lab': 650, 'Treasury': 2000 }
+        self.db.base_prices = { 'Gold Mine': 100, 'Defenses': 200, 'Reinforced Enterance': 200, 'Barracks': 450, 'Training Grounds': 650, 'Cave of Magi': 750, 'Throne Room': 1000, 'Alchemist Lab': 1250, 'Treasury': 2000 }
         self.db.already_built = "" 
         self.db.structures = {}
     
@@ -324,7 +345,6 @@ class StructureManager(Object):
             self.character.msg("{rYou do not have enough gold to put {y%s{n {rgold into this building's construction!{n"    % gold_to_start)
             return
 
-        self.character.spend_gold(gold_to_start)
         structure = create.create_object("game.gamesrc.objects.world.structures.Structure", key="{rUnder Construction: %s{n" % self.struct_name)
         structure.aliases = [ self.struct_name ]
         structure.db.completed_name = self.struct_name
@@ -334,8 +354,9 @@ class StructureManager(Object):
         structure.db.cost = self.db.base_prices[self.struct_name]
         structure.db.gold_to_level = structure.db.cost
         structure.db.structure_manager_id = self.dbref
-        structure.award_gold(gold_to_start)
         self.post_construction(structure)
+        structure.award_gold(gold_to_start)
+        self.character.spend_gold(gold_to_start)
         if structure.db.level > 0:
             structure.key = "{b%s{n" % self.struct_name
 
@@ -349,6 +370,7 @@ class StructureManager(Object):
             return None
 
     def post_construction(self, structure):
+        structures = self.db.structures
         if 'Mine' in structure.name:
             structure.db.desc = "A small mineshaft with a mine cart outside of it.  Looks like some sort of small creature could operate it."
             structure.db.desc += " There are small glints of gold within the shaft itself."
@@ -379,15 +401,17 @@ class StructureManager(Object):
         else:
             pass
         
-        self.db.structures[structure.name] = structure
+        structures[structure.completed_name] = structure
         character_attributes = self.character.db.attributes
         lair_attributes = self.character.db.lair.db.attributes
         attribute_list = structure.apply_attribute_bonuses(character_attributes, lair_attributes)
         questmanager = self.character.db.quest_log
         questmanager.check_quest_flags(item=self) 
-        self.character.db.attributes = attribute_list[0]
+        self.db.structures = structures
+        #self.character.db.lair.aggregate_character_bonuses()
+        #self.character.db.lair.apply_character_bonuses()
         self.character.db.lair.db.attributes = attribute_list[1]
-        self.character.refresh_attributes()
+        #self.character.refresh_attribute(character_attributes)
 
 class DungeonManager(Object):
     """

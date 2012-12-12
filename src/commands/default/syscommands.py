@@ -159,7 +159,6 @@ class SystemSendToChannel(MuxCommand):
             return
         if not channel.has_connection(caller):
             string = "You are not connected to channel '%s'."
-            string += caller
             caller.msg(string % channelkey)
             return
         if not channel.access(caller, 'send'):

@@ -98,6 +98,8 @@ class MuxCommand(Command):
 
         # split out switches
         switches = []
+        print switches
+        print "yep im a muxcommand"
         if args and len(args) > 1 and args[0] == "/":
             # we have a switch, or a set of switches. These end with a space.
             #print "'%s'" % args
@@ -127,6 +129,7 @@ class MuxCommand(Command):
         self.lhslist = lhslist
         self.rhs = rhs
         self.rhslist = rhslist
+        print self.switches
 
     def func(self):
         """

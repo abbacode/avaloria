@@ -11,7 +11,7 @@ class Lair(Room):
 
     def at_object_creation(self):
         self.db.desc="A large cavernous room, as long and as wide as the eye can see. A good place to build an empire."
-        self.db.attributes = { 'attraction': 0.15,'has_barracks': False, 'level': 1, 'defense_rating': 0, 'deity': None, 'gold_to_next_level': 200, 'gold_to_last_level': 200, 'gold_spent_this_level': 0, 'total_gold_spent': 0, 'attack_rating': 0 }
+        self.db.attributes = { 'attraction': 0.15,'has_barracks': False, 'level': 1, 'defense_rating': 0, 'deity': None, 'gold_to_next_level': 200, 'gold_to_last_level': 200, 'gold_spent_this_level': 0, 'total_gold_spent': 0, 'attack_rating': 0, 'health': 500, 'action_points': 10}
         self.db.henchmen = {}
         self.db.available_henchman = []
         self.db.structures = {}
@@ -19,6 +19,7 @@ class Lair(Room):
         self.db.gold_to_next_level = None
         self.db.gold_spent = None
         self.db.attribute_bonuses = {}
+        self.db.character_attribute_bonuses = { 'temp_strength': 0, 'temp_constitution': 0, 'temp_dexterity': 0, 'temp_intelligence': 0, 'temp_attack_rating': 0, 'temp_armor_rating': 0 }
         self.db.owner = None
         self.db.structure_manager_id = None
         self.aliases = ['lair_runner']
@@ -34,6 +35,39 @@ class Lair(Room):
 
     def generate_locks(self):
         self.locks.add("edit:id(%s) or perm(Immortals);get:false();enter:id(%s)" % (self.db.owner.name, self.db.owner))
+
+
+    def aggregate_character_bonuses(self):
+        manager = self.search(self.db.structure_manager_id, global_search=False)
+        cab = self.db.character_attribute_bonuses
+        structs = manager.db.structures
+        print structs
+        for struct in structs:
+            struct_obj = structs[struct]
+            print struct_obj.db.attribute_bonuses
+            for attr in struct_obj.db.attribute_bonuses:
+                print attr, struct_obj.db.attribute_bonuses[attr]
+                if struct_obj.db.attribute_bonuses[attr] == 1:
+                    cab['temp_%s' % attr] += 1
+                else:
+                    cab['temp_%s' % attr] += (struct_obj.db.attribute_bonuses[attr] - cab['temp_%s' % attr])
+        print cab
+        self.db.character_attribute_bonuses = cab
+        
+    def apply_character_bonuses(self):
+        cab = self.db.character_attribute_bonuses                 
+        character = self.db.owner
+        character_attributes = character.db.attributes
+        print character_attributes
+        for attr in cab:
+            print attr, cab[attr]
+            if cab[attr] > 1:
+                print "%s - %s" % (character_attributes[attr], (cab[attr] - 1))
+                character_attributes[attr] = character_attributes[attr] - (cab[attr] - 1) 
+            character_attributes[attr] += cab[attr]
+        print character_attributes
+            
+        character.db.attributes = character_attributes
         
     def add_currency(self, to_add):
         attributes = self.db.attributes
@@ -84,6 +118,9 @@ class Lair(Room):
         self.db.henchmen = henchmen
 
     def create_henchman(self, archtype=None):
+        """
+        'afo' - this is the amount of the type of henchmen it takes to get the attribute_mod_amount
+        """
         self.db.henchman_archtypes = ['Imp', 'Goblin', 'Ogre', 'Bandit', 'Hedge Wizards' ]
         henchmen = self.db.henchmen
         if archtype is not None:
@@ -92,15 +129,15 @@ class Lair(Room):
             name = random.choice(self.db.henchman_archtypes)
         print name
         if 'Imp' in name:
-            henchman = { 'name': name, 'str': 5, 'dex': 25, 'con': 5, 'int': 10, 'health':15, 'mana': 20, 'count': 1 }
+            henchman = { 'name': name, 'str': 5, 'dex': 25, 'con': 5, 'int': 10, 'health':15, 'mana': 20, 'count': 1 , 'attribute_mod': 'dexterity', 'attribute_mod_amount': 1, 'afo': 2}
         elif 'Goblin' in name:
-            henchman = { 'name': name, 'str': 10, 'dex': 15, 'con':15, 'int': 5, 'health': 30, 'mana': 5, 'count': 1 }
+            henchman = { 'name': name, 'str': 10, 'dex': 15, 'con':15, 'int': 5, 'health': 30, 'mana': 5, 'count': 1 , 'attribute_mod': 'defense', 'attribute_mod_amount': 1, 'afo': 2}
         elif 'Ogre' in name:
-            henchman = { 'name': name, 'str': 30, 'dex': 5, 'con': 28, 'int': 2, 'health': 100, 'mana': 0, 'count': 1}
+            henchman = { 'name': name, 'str': 30, 'dex': 5, 'con': 28, 'int': 2, 'health': 100, 'mana': 0, 'count': 1, 'attribute_mod': 'strength', 'attribute_mod_amount': 1, 'afo': 2}
         elif 'Bandit' in name:
-            henchman = { 'name': name, 'str': 15, 'dex': 19, 'con': 18, 'int': 10, 'health': 40, 'mana': 10, 'count': 1}
+            henchman = { 'name': name, 'str': 15, 'dex': 19, 'con': 18, 'int': 10, 'health': 40, 'mana': 10, 'count': 1, 'attribute_mod': 'constitution', 'attribute_mod_amount': 1, 'afo': 4}
         elif 'Hedge Wizards' in name:
-            henchman = { 'name': name, 'str': 10, 'dex': 17, 'con': 15, 'int': 35, 'health': 30, 'mana': 70, 'count': 1}
+            henchman = { 'name': name, 'str': 10, 'dex': 17, 'con': 15, 'int': 35, 'health': 30, 'mana': 70, 'count': 1, 'attribute_mod': 'intelligence', 'attribute_mod_amount': 1, 'afo': 2}
         henchmen[name] = henchman
         self.db.henchmen = henchmen
 
@@ -110,8 +147,14 @@ class Lair(Room):
         avail_henchman = self.db.available_henchman
         if 'Gold Mine' in structures_built:
             avail_henchman.append('Imp')
-        elif 'Training Grounds' in structures_built:
+        if 'Training Grounds' in structures_built:
             avail_henchman.append('Goblin')
+        if 'Magi' in structures_built:
+            avail_henchman.append('Hedge Wizards')
+        if 'Treasury' in structures_built:
+            avail_henchman.append('Ogre')
+        if 'Alchemist' in structures_built:
+            avail_henchman.append('Bandit')
         
         self.db.available_henchman = avail_henchman
             
@@ -130,13 +173,18 @@ class Lair(Room):
             try: 
                 if choice not in self.db.henchmen.keys():
                     self.create_henchman(archtype=choice)
-                    print "creating henchman"
                     character.msg("{CYour lair has attracted a %s to your cause.{n" % choice)
                 else:
                     if 'Imp' in choice:
                         structure = self.search('Gold Mine', global_search=False)
                     elif 'Goblin' in choice:
                         structure = self.search('Training Grounds', global_search=False)
+                    elif 'Ogre' in choice:
+                        structure = self.search('Treasury', global_search=False)
+                    elif 'Hedge Wizards' in choice:
+                        structure = self.search('Cave of Magi', global_search=False)
+                    elif 'Bandits' in choice:
+                        structure = self.search('Alchemist Lab', global_search=False)
                      
                     if structure.db.level <= 5:
                         split_list = low_level_range.split(',')
@@ -146,9 +194,11 @@ class Lair(Room):
                         split_list = high_level_range.splt(',')
 
                     num_henchmen = random.randrange(int(split_list[0]), int(split_list[1]))
-                    self.add_henchman(choice, 1)
-                    print "adding henchman"
-                    character.msg("{CYour lair attracts another %s to your cause.{n" % choice)
+                    self.add_henchman(choice, num_henchmen)
+                    if num_henchmen == 1:
+                        character.msg("{CYour lair attracts another %s to your cause.{n" % choice)
+                    else:
+                        character.msg("{CYour lair attracts %s more %s to your cause.{n" % (num_henchmen, choice))
             except IndexError:
                 print "Indexing Error"
                 return
@@ -158,28 +208,30 @@ class Lair(Room):
     def assign_henchman(henchman, structure, quantity, caller):
         """
         assign's a given henchman to the given structure.
+        
+        lair_henchmen - represents the lair's view of the henchmen quantity levels.
+        henchmen - represents the structures internal view of hechmen quantity levels.
         """
         structure_manager = self.search(self.structure_manager_id, global_search=False)
         structure_obj = structure_manager.find(structure)
+        lair_henchmen = self.db.henchmen
         if structure_obj:
-            henchmen = structure_obj.db.henchmen
+            henchmen = structure_obj.db.assigned_henchmen
             if henchman['count'] < quantity:
                 caller.msg("You do not have enough followers to assing that many.")
                 return 
             if henchman['name'] in henchmen:
                 henchmen[henchman['name']]['count'] += quantity
+                lair_henchmen[henchman['name']]['count'] -= quantity
             else:
                 henchmen[henchman['name']] = henchman
                 henchmen[henchman['name']]['count'] = quantity
-            structure_obj.after_henchmen_assignment(henchmen[henchman['name']]['count'])
+                lair_henchmen[henchman['name']]['count'] -= quantity
+            structure_obj.db.assigned_henchmen = henchmen
+            structure_obj.after_henchmen_assignment(henchmen[henchman['name']])
         else:
             return
             
-            
-        
-        
-        
-                
     def display_summary(self, caller):
         structure_manager = self.search(self.structure_manager_id, global_search=False)
         built_structures = structure_manager.db.already_built.split(';')
@@ -207,7 +259,7 @@ class Lair(Room):
         dungeon_manager = self.search(self.db.dungeon_manager_id, global_search=False)
         character = self.search(self.db.owner.name, global_search=False)
         self.attract_followers()
-
+        
         if structure_manager.db.already_built is not None:
             for structure in structure_manager.db.already_built.split(';'):
                 if structure == ' ':

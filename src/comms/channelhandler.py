@@ -90,10 +90,12 @@ class ChannelCommand(command.Command):
         msgobj.senders = sender
         msgobj.channels = channel
         # send new message object to channel
-        channel.msg(msgobj, from_obj=sender)
+        channel.msg(msgobj, senders=sender)
         self.caller.last_cmd = self.key
         if hasattr(caller, 'quest_log'):
-            caller.db.quest_log.check_quest_flags(item=caller)
+            if self.caller.on_quest('Speak And Be Heard'):
+                caller.db.quest_log.check_quest_flags(item=caller)
+
 
 class ChannelHandler(object):
     """

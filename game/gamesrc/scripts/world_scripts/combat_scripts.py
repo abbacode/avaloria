@@ -70,6 +70,7 @@ class InCombatState(Script):
             self.obj.death()
     
     def at_stop(self):
+        self.obj.post_combat()
         cm = self.obj.db.cm_id
         if cm is not None:
             cm.delete()

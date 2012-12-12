@@ -67,12 +67,16 @@ class TypedObjectManager(idmapper.manager.SharedMemoryManager):
     Common ObjectManager for all dbobjects.
     """
 
-    def dbref(self, dbref):
+    def dbref(self, dbref, reqhash=True):
         """
         Valid forms of dbref (database reference number)
         are either a string '#N' or an integer N.
         Output is the integer part.
+        reqhash - require input to be on form "#N" to be
+        identified as a dbref
         """
+        if reqhash and not (isinstance(dbref, basestring) and dbref.startswith("#")):
+            return None
         if isinstance(dbref, basestring):
             dbref = dbref.lstrip('#')
         try:
@@ -82,23 +86,12 @@ class TypedObjectManager(idmapper.manager.SharedMemoryManager):
             return None
         return dbref
 
-    #@returns_typeclass_list
-    #def get_with_attr(self, attribute_name, attribute_value=None):
-    #    """
-    #    Returns the typeclassed entity depending on having a given attribute.
-
-    #    attribute_name - only entities with an attribute of this name will be included in match
-    #    attribute_value - if != None, only entities with db.attribute_name=attribute_value will match.
-    #    """
-    #    self.filter() #TODO not implemented
-
-
     @returns_typeclass
     def get_id(self, dbref):
         """
         Find object with given dbref
         """
-        dbref = self.dbref(dbref)
+        dbref = self.dbref(dbref, reqhash=False)
         try:
             return self.get(id=dbref)
         except self.model.DoesNotExist:

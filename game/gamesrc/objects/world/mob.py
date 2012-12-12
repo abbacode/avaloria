@@ -53,6 +53,7 @@ class Mob(Object):
         self.db.attributes = attributes
         self.db.combat_type = 'brute'
         self.db.corpse = False
+        self.db.target = None
         self.db.in_combat = False
         self.db.reanimate = False
         self.db.reanimator = False
@@ -244,33 +245,8 @@ class Mob(Object):
         self.db.attributes = attributes
 
     def generate_skillset(self):
-        skills = self.db.skills
         if 'brute' in self.db.combat_type:
-            #self.scripts.add("game.gamesrc.scripts.world_scripts.mob_state_scripts.Kos")
-            if self.db.equipment['weapon'] is not None:
-                strike = create.create_object("game.gamesrc.objects.world.skills.Strike", key='strike', aliases=['mob_skills'])
-                strike.db.character = self
-                strike.move_to(self, quiet=True)
-                skills.append(strike)
-            kick = create.create_object("game.gamesrc.objects.world.skills.Kick", key='kick', aliases=['mob_skills'])
-            kick.db.character = self
-            skills.append(kick)
-            kick.move_to(self, quiet=True)
-            self.db.skills = skills
-        elif 'caster' in self.db.combat_type:
-            pass
-        elif 'healer' in self.db.combat_type:
-            spells = self.db.spells
-            heal = create.create_object("game.gamesrc.objects.world.spells.Heal", key='Heal')
-            spells.append(heal)
-            heal.move_to(self, quiet=True)
-            self.db.spells = spells
-        elif 'tank' in self.db.combat_type:
-            pass
-        elif 'dps' in self.db.combat_type:
-            pass
-        elif 'ranged_dps' in self.db.combat_type:
-            pass 
+            self.cmdset.add("game.gamesrc.commands.world.mob_cmdset.BruteCmdSet", permanent=True)
             
             
     def generate_physical_loot(self):

@@ -39,6 +39,7 @@ class CombatManager(Object):
     def score_hit(self, who, crit=False):
         character_weapon = self.attacker.db.equipment['weapon']
         skill_manager = self.attacker.db.skill_log
+        print "scoring a hit.."
         if 'attacker' in who:
             if crit:
                 damage_amount = self.attacker.get_damage()
@@ -107,6 +108,7 @@ class CombatManager(Object):
             return
         
     def process_action(self):
+        print "Processing combat action.."
         atk_queue = self.attacker_queue
         def_queue = self.defender_queue
         
@@ -131,6 +133,7 @@ class CombatManager(Object):
         self.defender_queue = def_queue
         self.defender.db.combat_queue = def_queue
         self.attacker.db.combat_queue = atk_queue
+        print 'Proper variables assigned..'
         
         #self.attacker.msg("{yYour Attack Queue: {g%s{n" % self.attacker_queue)
         self.attacker_initiative = self.attacker.initiative_roll()
@@ -143,6 +146,7 @@ class CombatManager(Object):
         
         crit = False
         if self.attacker_initiative > self.defender_initiative or self.defender.db.stunned:
+            print "Character attacking first..."
             if 'attack' in atk_action: 
                 attack_roll = self.attacker.attack_roll()
                 if crit_roll:
@@ -163,6 +167,9 @@ class CombatManager(Object):
                         self.attacker.msg("%s is in a defensive position, negating your attack." % self.defender.name)
                         return
                     elif 'attack' in def_action and not self.defender.db.stunned:
+                        print "checking for mob skill proc..."
+                        if self.check_for_mob_skill_proc():
+                            return
                         defender_attack_roll = self.defender.attack_roll()
                         if defender_attack_roll >= self.attacker.db.attributes['temp_armor_rating']:
                             self.score_hit(who='defender')
@@ -202,7 +209,11 @@ class CombatManager(Object):
             else:
                 pass
         else:
+            print "mob going first..."
             if 'attack' in def_action:
+                print "checking for mob skill proc..."
+                if self.check_for_mob_skill_proc():
+                    return
                 attack_roll = self.defender.attack_roll()
                 if attack_roll >= self.attacker.db.attributes['temp_armor_rating']:
                     dodge_result = self.check_for_dodge(self.db.attacker)
@@ -332,3 +343,20 @@ class CombatManager(Object):
             else:
                 self.score_miss(who="attacker")
         """
+
+    def check_for_mob_skill_proc(self):
+        chance = 0.20
+        rn = random.random()
+        print "chance => %s.....rn => %s" % (chance, rn)
+        if rn < chance:
+            if 'brute' in self.defender.db.combat_type:
+                print "picking a skill"
+                skills = ['bash', 'crush']
+                skill = random.choice(skills)
+                print "excecuting: %s" % skill
+                self.defender.execute_cmd('%s' % skill.strip())
+            return True
+        else:
+            return False
+            
+                

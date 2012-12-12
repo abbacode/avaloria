@@ -22,9 +22,9 @@ add the following line to the end of OOCCmdSet's at_cmdset_creation():
 
 """
 
-from django.conf import settings 
+from django.conf import settings
 from src.commands.command import Command
-from src.commands.default.general import CmdLook 
+from src.commands.default.general import CmdLook
 from src.commands.default.cmdset_ooc import OOCCmdSet
 from src.objects.models import ObjectDB
 from src.utils import utils, create
@@ -63,43 +63,43 @@ class CmdOOCLook(CmdLook):
         is that only the CmdCharacterCreate command adds this attribute,
         and thus e.g. player #1 will not be listed (although it will work).
         Existence in this list does not depend on puppeting rights though,
-        that is checked by the @ic command directly. 
+        that is checked by the @ic command directly.
         """
 
-        # making sure caller is really a player 
+        # making sure caller is really a player
         self.character = None
         if utils.inherits_from(self.caller, "src.objects.objects.Object"):
             # An object of some type is calling. Convert to player.
             #print self.caller, self.caller.__class__
-            self.character = self.caller 
+            self.character = self.caller
             if hasattr(self.caller, "player"):
                 self.caller = self.caller.player
 
         if not self.character:            
-            # ooc mode, we are players 
+            # ooc mode, we are players
 
             avail_chars = self.caller.db._character_dbrefs
             if self.args:
                 # Maybe the caller wants to look at a character
-                if not avail_chars: 
+                if not avail_chars:
                     self.caller.msg("You have no characters to look at. Why not create one?")
-                    return                                             
+                    return                                            
                 objs = ObjectDB.objects.get_objs_with_key_and_typeclass(self.args.strip(), CHARACTER_TYPECLASS)
                 objs = [obj for obj in objs if obj.id in avail_chars]
-                if not objs: 
+                if not objs:
                     self.caller.msg("You cannot see this Character.")
-                    return 
+                    return
                 self.caller.msg(objs[0].return_appearance(self.caller))
-                return 
+                return
 
-            # not inspecting a character. Show the OOC info. 
+            # not inspecting a character. Show the OOC info.
             charobjs = []
             charnames = []
             if self.caller.db._character_dbrefs:
                 dbrefs = self.caller.db._character_dbrefs                
                 charobjs = [ObjectDB.objects.get_id(dbref) for dbref in dbrefs]
                 charnames = [charobj.key for charobj in charobjs if charobj]
-            if charnames: 
+            if charnames:
                 charlist = "The following Character(s) are available:\n\n"
                 charlist += "\n\r".join(["{w    %s{n" % charname for charname in charnames])                    
                 charlist += "\n\n   Use {w@ic <character name>{n to switch to that Character."
@@ -117,7 +117,7 @@ class CmdOOCLook(CmdLook):
             self.caller.msg(string)
 
         else:
-            # not ooc mode - leave back to normal look 
+            # not ooc mode - leave back to normal look
             self.caller = self.character # we have to put this back for normal look to work.
             super(CmdOOCLook, self).func()
 
@@ -125,11 +125,11 @@ class CmdOOCCharacterCreate(Command):
     """
     creates a character
 
-    Usage: 
+    Usage:
       create <character name>
 
     This will create a new character, assuming
-    the given character name does not already exist. 
+    the given character name does not already exist.
     """
 
     key = "create"
@@ -138,21 +138,21 @@ class CmdOOCCharacterCreate(Command):
     def func(self):
         """
         Tries to create the Character object. We also put an
-        attribute on ourselves to remember it. 
+        attribute on ourselves to remember it.
         """
 
-        # making sure caller is really a player 
+        # making sure caller is really a player
         self.character = None
         if utils.inherits_from(self.caller, "src.objects.objects.Object"):
             # An object of some type is calling. Convert to player.
             #print self.caller, self.caller.__class__
-            self.character = self.caller 
+            self.character = self.caller
             if hasattr(self.caller, "player"):
                 self.caller = self.caller.player
 
         if not self.args:
             self.caller.msg("Usage: create <character name>")
-            return 
+            return
         charname = self.args.strip()
         split_charname = charname.split(' ')
         if len(split_charname) > 2:
@@ -161,15 +161,15 @@ class CmdOOCCharacterCreate(Command):
         old_char = ObjectDB.objects.get_objs_with_key_and_typeclass(charname, CHARACTER_TYPECLASS)
         if old_char:
             self.caller.msg("Character {c%s{n already exists." % charname)
-            return 
+            return
         # create the character
-        
+       
         new_character = create.create_object(CHARACTER_TYPECLASS, key=charname)
         if not new_character:
             self.caller.msg("{rThe Character couldn't be created. This is a bug. Please contact an admin.")
-            return 
+            return
         # make sure to lock the character to only be puppeted by this player
-        new_character.locks.add("puppet:id(%i) or pid(%i) or perm(Immortals) or pperm(Immortals)" % 
+        new_character.locks.add("puppet:id(%i) or pid(%i) or perm(Immortals) or pperm(Immortals)" %
                                 (new_character.id, self.caller.id))
 
         # save dbref
@@ -180,8 +180,8 @@ class CmdOOCCharacterCreate(Command):
             avail_chars = [new_character.id]
         self.caller.db._character_dbrefs = avail_chars
 
-        self.caller.msg("{gThe Character {c%s{g was successfully created!" % charname) 
-        
+        self.caller.msg("{gThe Character {c%s{g was successfully created!" % charname)
+       
         if self.caller.swap_character(new_character):
             attributes = new_character.db.attributes
             nodes = []
@@ -205,7 +205,7 @@ class CmdOOCCharacterCreate(Command):
                             race_node = MenuNode("%s" % race, text=text, links=['confirm-earthen', 'race'], linktexts=['Confirm Race Selection', 'Back to Races'])
                         nodes.append(race_node)
                     text = copyreader.read_file("%s/races/races_desc.txt" % copy_dir)
-                    root_race_node = MenuNode("%s" % option, text=text, links=['bardok', 'erelania', 'gerdling', 'earthen'], linktexts=['The Bardok', 'The Erelania', 'The Gerdling', 'The Earthen']) 
+                    root_race_node = MenuNode("%s" % option, text=text, links=['bardok', 'erelania', 'gerdling', 'earthen'], linktexts=['The Bardok', 'The Erelania', 'The Gerdling', 'The Earthen'])
                     nodes.append(root_race_node)
                 elif 'deity' in option:
                     deities = ['ankarith', 'slyth', 'green warden', 'kaylynne']
@@ -225,9 +225,9 @@ class CmdOOCCharacterCreate(Command):
                         elif 'kaylynne' in deity:
                             text = copyreader.read_file("%s/deities/kaylynne_desc.txt" % copy_dir)
                             deity_node = MenuNode("%s" % deity, text=text, links=['confirm-kaylynne', 'deity'], linktexts=['Confirm Deity Selection', 'Back to Deities'])
-                        nodes.append(deity_node) 
+                        nodes.append(deity_node)
                     deity_node_text = copyreader.read_file("%s/deities/deities_desc.txt" % copy_dir)
-                    root_deity_node = MenuNode("deity", text=deity_node_text, links=['ankarith', 'slyth', 'green warden', 'kaylynne'], 
+                    root_deity_node = MenuNode("deity", text=deity_node_text, links=['ankarith', 'slyth', 'green warden', 'kaylynne'],
                         linktexts=['An\'Karith', 'Slyth of the Glade', 'The Green Warden', 'Kaylynne'])
                     nodes.append(root_deity_node)
                 elif 'gender' in option:
@@ -298,7 +298,7 @@ in turn will result in stat loss and most likely death.
 --{rAlignment Selection{n--
 Which path to do you desire to walk?
 
-                    
+                   
                     alignment_node = MenuNode("alignment", text=text, links=['confirm-evil', 'confirm-good', 'START'],
                                             linktexts=['Path of Darkness', 'Path of Light', 'Back to Customization'])
                     nodes.append(alignment_node)
@@ -311,7 +311,7 @@ Which path to do you desire to walk?
 #        node_string = ' '.join([node.key for node in nodes])
  #       self.obj.msg("{mDEBUG: nodes: %s{n" % node_string)
             menutree = MenuTree(caller=self.caller.character, nodes=nodes)
-            flags = new_character.db.flags 
+            flags = new_character.db.flags
             flags['in_menu'] = True
             self.caller.db.flags = flags
             menutree.start()
@@ -326,4 +326,5 @@ class OOCCmdSetCharGen(OOCCmdSet):
         #super(OOCCmdSetCharGen, self).at_cmdset_creation()
         self.add(CmdOOCLook())
         self.add(CmdOOCCharacterCreate())
+
 

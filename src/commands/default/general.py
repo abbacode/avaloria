@@ -7,42 +7,16 @@ from django.conf import settings
 from src.server.sessionhandler import SESSIONS
 from src.utils import utils, search
 from src.objects.models import ObjectNick as Nick
-from src.commands.default.muxcommand import MuxCommand
+from src.commands.default.muxcommand import MuxCommand, MuxCommandOOC
 
 # limit symbol import for API
 __all__ = ("CmdHome", "CmdLook", "CmdPassword", "CmdNick",
            "CmdInventory", "CmdGet", "CmdDrop", "CmdQuit", "CmdWho",
            "CmdSay", "CmdPose", "CmdEncoding", "CmdAccess",
-           "CmdOOCLook", "CmdIC", "CmdOOC")
+           "CmdOOCLook", "CmdIC", "CmdOOC", "CmdColorTest")
 
 AT_SEARCH_RESULT = utils.variable_from_module(*settings.SEARCH_AT_RESULT.rsplit('.', 1))
 BASE_PLAYER_TYPECLASS = settings.BASE_PLAYER_TYPECLASS
-
-class CmdFriend(MuxCommand):
-    """
-    Displays all friends currently online.  Also allows for the addition and deletion of new friends.
-
-    usage: @friends/switches
-        -add: add the person given as a friend
-        -remove: remove the person given as a friend
-    """
-    key = "@friends"
-    help_category = 'general'
-    locks = "cmd:all()"
-
-    def func(self):
-        switches = self.switches
-        what = self.args
-        friendslist_player = self.caller.player
-        friendslist = friendslist_player.db.friends_list
-        if switches:
-            if 'add' in switches:
-                friendslist.add_friend(self.caller, what)
-            elif 'remove' in switches:
-                friendslist.remove_friend(self.caller, what)
-        else:
-            friendslist.list_friends(self.caller)
-    
 
 class CmdHome(MuxCommand):
     """
@@ -193,7 +167,7 @@ class CmdNick(MuxCommand):
         switches = self.switches
 
         nicks = Nick.objects.filter(db_obj=caller.dbobj).exclude(db_type="channel")
-        if 'list' in switches or self.cmdstring == "nicks":
+        if 'list' in switches:
             string = "{wDefined Nicks:{n"
             cols = [["Type"],["Nickname"],["Translates-to"] ]
             for nick in nicks:
@@ -307,7 +281,8 @@ class CmdGet(MuxCommand):
         if caller == obj:
             caller.msg("You can't get yourself.")
             return
-        if obj.location == caller:
+        #print obj, obj.location, caller, caller==obj.location
+        if caller == obj.location:
             caller.msg("You already hold that.")
             return
         if not obj.access(caller, 'get'):
@@ -355,7 +330,9 @@ class CmdDrop(MuxCommand):
 
         # now we send it into the error handler (this will output consistent
         # error messages if there are problems).
-        obj = AT_SEARCH_RESULT(caller, self.args, results, False)
+        obj = AT_SEARCH_RESULT(caller, self.args, results, False,
+                              nofound_string="You don't carry %s." % self.args,
+                              multimatch_string="You carry more than one %s:" % self.args)
         if not obj:
             return
 
@@ -638,7 +615,7 @@ class CmdAccess(MuxCommand):
 
 # OOC commands
 
-class CmdOOCLook(CmdLook):
+class CmdOOCLook(MuxCommandOOC, CmdLook):
     """
     ooc look
 
@@ -660,14 +637,6 @@ class CmdOOCLook(CmdLook):
     def func(self):
         "implement the ooc look command"
 
-        self.character = None
-        if utils.inherits_from(self.caller, "src.objects.objects.Object"):
-            # An object of some type is calling. Convert to player.
-            #print self.caller, self.caller.__class__
-            self.character = self.caller
-            if hasattr(self.caller, "player"):
-                self.caller = self.caller.player
-
         if not self.character:
             string = "You are out-of-character (OOC). "
             string += "Use {w@ic{n to get back to the game, {whelp{n for more info."
@@ -676,7 +645,7 @@ class CmdOOCLook(CmdLook):
             self.caller = self.character # we have to put this back for normal look to work.
             super(CmdOOCLook, self).func()
 
-class CmdIC(MuxCommand):
+class CmdIC(MuxCommandOOC):
     """
     Switch control to an object
 
@@ -701,8 +670,7 @@ class CmdIC(MuxCommand):
         Simple puppet method
         """
         caller = self.caller
-        if utils.inherits_from(caller, "src.objects.objects.Object"):
-            caller = caller.player
+        old_character = self.character
 
         new_character = None
         if not self.args:
@@ -712,10 +680,12 @@ class CmdIC(MuxCommand):
                 return
         if not new_character:
             # search for a matching character
-            new_character = search.search_objects(self.args)[0]
-        if not new_character:
-            # the search method handles error messages etc.
-            return
+            new_character = search.objects(self.args, caller)
+            if new_character:
+                new_character = new_character[0]
+            else:
+                # the search method handles error messages etc.
+                return
         if new_character.player:
             if new_character.player == caller:
                 caller.msg("{RYou already are {c%s{n." % new_character.name)
@@ -725,13 +695,9 @@ class CmdIC(MuxCommand):
         if not new_character.access(caller, "puppet"):
             caller.msg("{rYou may not become %s.{n" % new_character.name)
             return
-        old_char = None
-        if caller.character:
-            # save the old character. We only assign this to last_puppet if swap is successful.
-            old_char = caller.character
         if caller.swap_character(new_character):
             new_character.msg("\n{gYou become {c%s{n.\n" % new_character.name)
-            caller.db.last_puppet = old_char
+            caller.db.last_puppet = old_character
             if not new_character.location:
             # this might be due to being hidden away at logout; check
                 loc = new_character.db.prelogout_location
@@ -742,11 +708,10 @@ class CmdIC(MuxCommand):
                     new_character.location.msg_contents("%s has entered the game." % new_character.key, exclude=[new_character])
                     new_character.location.at_object_receive(new_character, new_character.location)
             new_character.execute_cmd("look")
-            new_character.at_post_login()
         else:
             caller.msg("{rYou cannot become {C%s{n." % new_character.name)
 
-class CmdOOC(MuxCommand):
+class CmdOOC(MuxCommandOOC):
     """
     @ooc - go ooc
 
@@ -789,3 +754,61 @@ class CmdOOC(MuxCommand):
 
         caller.msg("\n{GYou go OOC.{n\n")
         caller.execute_cmd("look")
+
+class CmdColorTest(MuxCommand):
+    """
+    testing colors
+
+    Usage:
+      @color ansi|xterm256
+
+    Print a color map along with in-mud color codes, while testing what is supported in your client.
+    Choices are 16-color ansi (supported in most muds) or the 256-color xterm256 standard.
+    No checking is done to determine your client supports color - if not you will
+    see rubbish appear.
+    """
+    key = "@color"
+    locks = "cmd:all()"
+    help_category = "General"
+
+    def func(self):
+        "Show color tables"
+
+        if not self.args or not self.args in ("ansi", "xterm256"):
+            self.caller.msg("Usage: @color ansi|xterm256")
+            return
+
+        if self.args == "ansi":
+            from src.utils import ansi
+            ap = ansi.ANSI_PARSER
+            # ansi colors
+            # show all ansi color-related codes
+            col1 = ["%s%s{n" % (code, code.replace("{","{{")) for code, _ in ap.ext_ansi_map[:-1]]
+            hi = "%ch"
+            col2 = ["%s%s{n" % (code, code.replace("%", "%%")) for code, _ in ap.mux_ansi_map[:-2]]
+            col3 = ["%s%s{n" % (hi+code, (hi+code).replace("%", "%%")) for code, _ in ap.mux_ansi_map[:-2]]
+            table = utils.format_table([col1, col2, col3], extra_space=1)
+            string = "ANSI colors:"
+            for row in table:
+                string += "\n" + "".join(row)
+            print string
+            self.caller.msg(string)
+            self.caller.msg("{{X and %%cx are black-on-black)")
+        elif self.args == "xterm256":
+            table = [[],[],[],[],[],[],[],[],[],[],[],[]]
+            for ir in range(6):
+                for ig in range(6):
+                    for ib in range(6):
+                        # foreground table
+                        table[ir].append("%%c%i%i%i%s{n" % (ir,ig,ib, "{{%i%i%i" % (ir,ig,ib)))
+                        # background table
+                        table[6+ir].append("%%cb%i%i%i%%c%i%i%i%s{n" % (ir,ig,ib,
+                                                                        5-ir,5-ig,5-ib,
+                                                                        "{{b%i%i%i" % (ir,ig,ib)))
+            table = utils.format_table(table)
+            string = "Xterm256 colors:"
+            for row in table:
+                string += "\n" + "".join(row)
+            self.caller.msg(string)
+            self.caller.msg("(e.g. %%c123 and %%cb123 also work)")
+

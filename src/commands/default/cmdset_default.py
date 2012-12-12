@@ -4,37 +4,11 @@ set.  Note that some commands, such as communication-commands are
 instead put in the OOC cmdset.
 """
 from src.commands.cmdset import CmdSet
-from src.commands.default.muxcommand import MuxCommand
+from game.gamesrc.commands.world.character_cmdset import CmdFriends
 from src.commands.default import general, help, admin, system
 from src.commands.default import building
 from src.commands.default import batchprocess
 
-"""
-class CmdFriends(MuxCommand):
-    Displays all friends currently online.  Also allows for the addition and deletion of new friends.
-
-    usage: @friends/switches
-        -add: add the person given as a friend
-        -remove: remove the person given as a friend
-    key = "@friends"
-    help_category = 'general'
-    locks = "cmd:all()" 
-    
-    def parse(self):
-        self.what = self.args
-
-    def func(self):
-        switches = self.switches
-        friendslist_player = self.caller.player
-        friendslist = friendslist_player.db.friends_list
-        if switches:
-            if 'add' in switches:
-                friends_list.add(self.caller, self.what)
-            elif 'remove' in switches:
-                friends_list.remove(self.caller, self.what)
-            else:
-                friendslist.list_friends(self.caller)
-    """
 
 class DefaultCmdSet(CmdSet):
     """
@@ -56,8 +30,9 @@ class DefaultCmdSet(CmdSet):
         self.add(general.CmdGet())
         self.add(general.CmdDrop())
         self.add(general.CmdSay())
+        self.add(CmdFriends())
         self.add(general.CmdAccess())
-        self.add(general.CmdFriend())
+        self.add(general.CmdColorTest())
 
         # The help system
         self.add(help.CmdHelp())
@@ -105,7 +80,7 @@ class DefaultCmdSet(CmdSet):
         self.add(building.CmdTypeclass())
         self.add(building.CmdLock())
         self.add(building.CmdScript())
-        self.add(building.CmdHome())
+        self.add(building.CmdSetHome())
 
         # Batchprocessor commands
         self.add(batchprocess.CmdBatchCommands())

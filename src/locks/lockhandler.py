@@ -211,7 +211,9 @@ class LockHandler(object):
 
             # parse the lock functions and separators
             funclist = _RE_FUNCS.findall(rhs)
-            evalstring = rhs.replace('AND','and').replace('OR','or').replace('NOT','not')
+            evalstring = rhs
+            for pattern in ('AND', 'OR', 'NOT'):
+                evalstring = re.sub(r"\b%s\b" % pattern, pattern.lower(), evalstring)
             nfuncs = len(funclist)
             for funcstring in funclist:
                 funcname, rest = (part.strip().strip(')') for part in funcstring.split('(', 1))
@@ -226,7 +228,7 @@ class LockHandler(object):
             if len(lock_funcs) < nfuncs:
                 continue
             try:
-                # purge the eval string of any superfluos items, then test it
+                # purge the eval string of any superfluous items, then test it
                 evalstring = " ".join(_RE_OK.findall(evalstring))
                 eval(evalstring % tuple(True for func in funclist), {}, {})
             except Exception:
@@ -300,9 +302,11 @@ class LockHandler(object):
             self.add(old_lockstring, log_obj)
             raise
 
-    def get(self, access_type):
-        "get the lockstring of a particular type"
-        return self.locks.get(access_type, None)
+    def get(self, access_type=None):
+        "get the full lockstring or the lockstring of a particular access type."
+        if access_type:
+            return self.locks.get(access_type, ["","",""])[2]
+        return str(self)
 
     def delete(self, access_type):
         "Remove a lock from the handler"

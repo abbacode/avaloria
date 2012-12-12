@@ -245,6 +245,7 @@ class MageShield(Spell):
     
     def on_cast(self, caller, target=None):
         character_attributes = caller.db.attributes
+        print target
         if character_attributes['temp_mana'] < self.db.mana_cost:
             caller.msg("{rNot enough mana!{n")         
             return

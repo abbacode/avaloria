@@ -240,7 +240,6 @@ class Zone(Object):
     def generate_zone_path(self):
         path_map = self.db.path_map
         rooms = self.search('%s_room' % self.db.zone_type, global_search=True, ignore_errors=True)
-        print rooms
         for room in rooms:
             path_map["%s" % room.db.cell_number] = room
             room.db.manager = self

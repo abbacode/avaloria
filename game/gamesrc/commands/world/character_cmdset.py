@@ -20,6 +20,31 @@ class ActionCommand(Command):
         self.caller.msg("{RHP: (%s/%s){n {CMP: (%s/%s){n {yEXP: (%s/%s){n BAL:{g(%s/%s){n" % (temp_health, base_health, temp_mana, base_mana, exp_made, exp_needed, temp_balance, balance))
         self.caller.db.quest_log.check_quest_flags(item=self.caller)
 
+class CmdFriends(MuxCommand):
+    """
+    Displays all friends currently online.  Also allows for the addition and deletion of new friends.
+
+    usage: @friends/switches
+        -add: add the person given as a friend
+        -remove: remove the person given as a friend
+    """
+    key = "@friends"
+    help_category = 'general'
+    locks = "cmd:all()" 
+    
+    def func(self):
+        switches = self.switches
+        self.what = self.args
+        friendslist_player = self.caller.player
+        friendslist = friendslist_player.db.friends_list
+        if len(switches) >= 1:
+            if 'add' in switches:
+                friendslist.add_friend(self.caller, self.what)
+            elif 'remove' in switches:
+                friendslist.remove_friend(self.caller, self.what)
+        else:
+            friendslist.list_friends(self.caller)
+
 class CmdInvite(Command):
     """
     Invite another player to be in a group with you.  Once a group is formed, you will have

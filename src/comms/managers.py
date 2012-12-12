@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 
+_GA = object.__getattribute__
 _PlayerDB = None
 _ObjectDB = None
 _Channel = None
@@ -23,12 +24,14 @@ class CommError(Exception):
 # helper functions
 #
 
-def dbref(dbref):
+def dbref(dbref, reqhash=True):
     """
     Valid forms of dbref (database reference number)
     are either a string '#N' or an integer N.
     Output is the integer part.
     """
+    if reqhash and not (isinstance(dbref, basestring) and dbref.startswith("#")):
+        return None
     if isinstance(dbref, basestring):
         dbref = dbref.lstrip('#')
     try:
@@ -56,7 +59,7 @@ def identify_object(inp):
         return inp, None
     # try to identify the type
     try:
-        obj = inp.dbobj # this works for all typeclassed entities
+        obj = _GA(inp, "dbobj") # this works for all typeclassed entities
     except AttributeError:
         obj = inp
     typ = type(obj)
@@ -136,7 +139,7 @@ class MsgManager(models.Manager):
     def get_message_by_id(self, idnum):
         "Retrieve message by its id."
         try:
-            return self.get(id=self.dbref(idnum))
+            return self.get(id=self.dbref(idnum, reqhash=False))
         except Exception:
             return None
 
@@ -228,7 +231,7 @@ class MsgManager(models.Manager):
             receiver_restrict = Q()
         # filter by full text
         if freetext:
-            fulltext_restrict = Q(db_title__icontains=freetext) | Q(db_message__icontains=freetext)
+            fulltext_restrict = Q(db_header__icontains=freetext) | Q(db_message__icontains=freetext)
         else:
             fulltext_restrict = Q()
         # execute the query

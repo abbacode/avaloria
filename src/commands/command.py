@@ -148,6 +148,17 @@ class Command(object):
             # probably got a string
             return cmd in self._matchset
 
+    def __ne__(self, cmd):
+        """
+        The logical negation of __eq__. Since this is one of the
+        most called methods in Evennia (along with __eq__) we do some
+        code-duplication here rather than issuing a method-lookup to __eq__.
+        """
+        try:
+            return not cmd.key in self._matcheset
+        except AttributeError:
+            return not cmd in self._matchset
+
     def __contains__(self, query):
         """
         This implements searches like 'if query in cmd'. It's a fuzzy matching

@@ -4,6 +4,7 @@ from collections import deque
 from prettytable import PrettyTable
 from ev import Object, Character, utils, create_object, create_channel
 from src.objects.models import ObjAttribute
+from src.utils import logger
 from game.gamesrc.objects.world.items import Item
 from game.gamesrc.scripts.world_scripts import character_class_scripts as cscripts
 from game.gamesrc.scripts.world_scripts import combat_scripts as combat_scripts
@@ -122,10 +123,10 @@ class CharacterClass(Character):
         valid_attribute_num = len(valid_attributes)
         my_attribute_num = len(self_attributes)
         if valid_attribute_num != my_attribute_num:
-            print "CharacterClass->rebuild_model: Possible Character model changes, checking further."
+            logger.log_infomsg("CharacterClass->rebuild_model: Possible Character model changes, checking further.")
             for attribute in valid_attributes:
                 if attribute[0] not in self_attribute_keys:
-                    print "CharacterClass->rebuild_model: %s is not found on %s, setting attribute now." % (attribute[0], self.name)
+                    logger.log_infomsg("CharacterClass->rebuild_model: %s is not found on %s, setting attribute now." % (attribute[0], self.name))
                     self.set_attribute(attribute[0], attribute[1])
         #delete the extra crap made on generating a new character
         lair = nc.db.lair
@@ -261,7 +262,6 @@ class CharacterClass(Character):
         if armor_type.title() not in skillmanager.skills.keys():
             armor_per = self.db.percentages[armor_type]
             rn = random.random()
-            print "Armor Balance check: ==> roll: %s, threshold %s" % (rn, armor_per)
             if rn > armor_per:
                 self.msg("{cYou are wearing armor you are not proficient in, causing loss of balance{n")
                 if self.db.attributes['temp_balance'] == 0:
@@ -383,6 +383,8 @@ class CharacterClass(Character):
         attributes['temp_mana'] = self.db.attributes['mana']
         self.db.attributes = attributes
    
+    def post_combat(self):
+        self.db.target = None
     """
     End combat
     Begin setters used in menus.
@@ -689,19 +691,19 @@ class CharacterClass(Character):
         dex_bonus = self.db.attributes['temp_dexterity'] - self.db.attributes['dexterity']
         not_equipped = ""
         if type == 'Attributes':
-            table._set_field_names(["Attributes", "Value", "Bonus"])
+            table._set_field_names(["Attributes", "Value (Base)", "Bonus"])
             table.align["Attributes"] = "r"
             table.align["Value"] = "l"
             table.add_row(["Name:", self.db.attributes['name'], " "]) 
             table.add_row(["Race:", self.db.attributes['race'], " "])
             table.add_row(["Gender:", self.db.attributes['gender']," "])
             table.add_row(["Level:", self.db.attributes['level'], " "])
-            table.add_row(["Strength:", self.db.attributes['temp_strength'], "+%s" % str_bonus])
-            table.add_row(["Intelligence:", self.db.attributes['intelligence'], "+%s" %int_bonus])
-            table.add_row(["Constitution:", self.db.attributes['constitution'], "%s" % con_bonus])
-            table.add_row(["Dexterity:", self.db.attributes['temp_dexterity'], "+%s" % dex_bonus])
-            table.add_row(["Health:", self.db.attributes['temp_health'], " "])
-            table.add_row(["Mana:", self.db.attributes['temp_mana'], " "])
+            table.add_row(["Strength:", "%s (%s)" % (self.db.attributes['temp_strength'], self.db.attributes['strength']), "+%s" % str_bonus])
+            table.add_row(["Intelligence:", "%s (%s)" % (self.db.attributes['temp_intelligence'], self.db.attributes['intelligence']), "+%s" %int_bonus])
+            table.add_row(["Constitution:", "%s (%s)" % (self.db.attributes['temp_constitution'],self.db.attributes['constitution']), "%s" % con_bonus])
+            table.add_row(["Dexterity:", "%s (%s)" % (self.db.attributes['temp_dexterity'], self.db.attributes['dexterity']), "+%s" % dex_bonus])
+            table.add_row(["Health:", "%s (%s)" % (self.db.attributes['temp_health'], self.db.attributes['health']), " "])
+            table.add_row(["Mana:", "%s (%s)" % (self.db.attributes['temp_mana'], self.db.attributes['mana']), " "])
         elif type == 'Stats':
             armor_diff = self.db.attributes['temp_armor_rating'] - (self.db.attributes['dexterity'] / 5) 
             table._set_field_names(["Other Stats", "Value", "Bonuses"])

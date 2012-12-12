@@ -55,7 +55,9 @@ class CmdConstruct(MuxCommand):
                 manager.begin_construction(self.gold_to_add, self.structure)
             elif 'deposit' in switches:
                 structure = self.caller.search(self.structure, global_search=False)
-                self.caller.spend_gold(self.gold_to_add)
+                rc = self.caller.spend_gold(self.gold_to_add)
+                if rc == 1:
+                    return
                 structure.award_gold(self.gold_to_add)
             elif 'withdraw' in switches:
                 structure = self.caller.location.search(self.structure, global_search=False)

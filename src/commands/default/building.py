@@ -14,7 +14,7 @@ from src.commands.cmdhandler import get_and_merge_cmdsets
 __all__ = ("ObjManipCommand", "CmdSetObjAlias", "CmdCopy",
            "CmdCpAttr", "CmdMvAttr", "CmdCreate", "CmdDebug",
            "CmdDesc", "CmdDestroy", "CmdDig", "CmdTunnel", "CmdLink",
-           "CmdUnLink", "CmdHome", "CmdListCmdSets", "CmdName",
+           "CmdUnLink", "CmdSetHome", "CmdListCmdSets", "CmdName",
            "CmdOpen", "CmdSetAttribute", "CmdTypeclass", "CmdWipe",
            "CmdLock", "CmdExamine", "CmdFind", "CmdTeleport",
            "CmdScript")
@@ -545,7 +545,7 @@ class CmdDestroy(MuxCommand):
             if not obj:
                 self.caller.msg(" (Objects to destroy must either be local or specified with a unique dbref.)")
                 return ""
-            if not "override" in self.switches and obj.dbid == int(settings.CHARACTER_DEFAULT_HOME):
+            if not "override" in self.switches and obj.dbid == int(settings.CHARACTER_DEFAULT_HOME.lstrip("#")):
                 return "\nYou are trying to delete CHARACTER_DEFAULT_HOME. If you want to do this, use the /override switch."
             objname = obj.name
             if not obj.access(caller, 'delete'):
@@ -572,10 +572,10 @@ class CmdDestroy(MuxCommand):
         for objname in self.lhslist:
             if '-' in objname:
                 # might be a range of dbrefs
-                dmin, dmax = [utils.dbref(part) for part in objname.split('-', 1)]
+                dmin, dmax = [utils.dbref(part, reqhash=False) for part in objname.split('-', 1)]
                 if dmin and dmax:
                     for dbref in range(int(dmin),int(dmax+1)):
-                        string += delobj(str(dbref))
+                        string += delobj("#" + str(dbref))
                 else:
                     string += delobj(objname)
             else:
@@ -900,7 +900,7 @@ class CmdUnLink(CmdLink):
         # call the @link functionality
         super(CmdUnLink, self).func()
 
-class CmdHome(CmdLink):
+class CmdSetHome(CmdLink):
     """
     @home - control an object's home location
 
@@ -916,6 +916,7 @@ class CmdHome(CmdLink):
     """
 
     key = "@home"
+    aliases = "@sethome"
     locks = "cmd:perm(@home) or perm(Builders)"
     help_category = "Building"
 
@@ -1501,13 +1502,12 @@ class CmdLock(ObjManipCommand):
                 return
             lockdef = obj.locks.get(access_type)
             if lockdef:
-                string = lockdef[2]
                 if 'del' in self.switches:
                     if not obj.access(caller, 'control'):
                         caller.msg("You are not allowed to do that.")
                         return
                     obj.locks.delete(access_type)
-                    string = "deleted lock %s" % string
+                    string = "deleted lock %s" % lockdef
             else:
                 string = "%s has no lock of access type '%s'." % (obj, access_type)
             caller.msg(string)
@@ -1673,7 +1673,7 @@ class CmdExamine(ObjManipCommand):
 
         if not (len(obj.cmdset.all()) == 1 and obj.cmdset.current.key == "Empty"):
             # list the current cmdsets
-            all_cmdsets = obj.cmdset.all() + (obj.player and obj.player.cmdset.all() or [])
+            all_cmdsets = obj.cmdset.all() + (hasattr(obj, "player") and obj.player.cmdset.all() or [])
             all_cmdsets.sort(key=lambda x:x.priority, reverse=True)
             string += headers["cmdset"] % ("\n ".join("%s (prio %s)" % (cmdset.path, cmdset.priority) for cmdset in all_cmdsets))
             #cmdsetstr = "\n".join([utils.fill(cmdset, indent=2) for cmdset in str(obj.cmdset).split("\n")])
@@ -1750,7 +1750,7 @@ class CmdExamine(ObjManipCommand):
 
             self.player_mode = "player" in self.switches or obj_name.startswith('*')
 
-            obj = caller.search(obj_name, player=self.player_mode)
+            obj = caller.search(obj_name, player=self.player_mode, global_search=True)
             if not obj:
                 continue
 
@@ -1876,19 +1876,29 @@ class CmdFind(MuxCommand):
 
 class CmdTeleport(MuxCommand):
     """
-    teleport
+    teleport object to another location
 
     Usage:
-      @tel/switch [<object> =] <location>
+      @tel/switch [<object> =] <target location>
+
+    Examples:
+      @tel Limbo
+      @tel/quiet box Limbo
+      @tel/tonone box
 
     Switches:
       quiet  - don't echo leave/arrive messages to the source/target
                locations for the move.
       intoexit - if target is an exit, teleport INTO
                  the exit object instead of to its destination
+      tonone - if set, teleport the object to a None-location. If this
+               switch is set, <target location> is ignored.
+               Note that the only way to retrieve
+               an object from a None location is by direct #dbref
+               reference.
 
-    Teleports an object or yourself somewhere.
-    """
+    Teleports an object somewhere. If no object is given, you yourself
+    is teleported to the target location.     """
     key = "@tel"
     aliases = "@teleport"
     locks = "cmd:perm(teleport) or perm(Builders)"
@@ -1902,39 +1912,65 @@ class CmdTeleport(MuxCommand):
         lhs, rhs = self.lhs, self.rhs
         switches = self.switches
 
-        if not args:
+        # setting switches
+        tel_quietly = "quiet" in switches
+        to_none = "tonone" in switches
+
+        if to_none:
+            # teleporting to None
+            if not args:
+                obj_to_teleport = caller
+                caller.msg("Teleported to None-location.")
+                if caller.location and not tel_quietly:
+                    caller.location.msg_contents("%s teleported into nothingness." % caller, exclude=caller)
+            else:
+                obj_to_teleport = caller.search(lhs, global_search=True)
+                if not obj_to_teleport:
+                    caller.msg("Did not find object to teleport.")
+                    return
+                caller.msg("Teleported %s -> None-location." % obj_to_teleport)
+                if obj_to_teleport.location and not tel_quietly:
+                    obj_to_teleport.location.msg_contents("%s teleported %s into nothingness."
+                                                          % (caller, obj_to_teleport),
+                                                          exclude=caller)
+            obj_to_teleport.location=None
+            return
+
+        # not teleporting to None location
+        if not args and not to_none:
             caller.msg("Usage: teleport[/switches] [<obj> =] <target_loc>|home")
             return
-        # The quiet switch suppresses leaving and arrival messages.
-        if "quiet" in switches:
-            tel_quietly = True
-        else:
-            tel_quietly = False
 
         if rhs:
             obj_to_teleport = caller.search(lhs, global_search=True)
             destination = caller.search(rhs, global_search=True)
         else:
             obj_to_teleport = caller
-            destination = caller.search(args, global_search=True)
+            destination = caller.search(lhs, global_search=True)
         if not obj_to_teleport:
             caller.msg("Did not find object to teleport.")
             return
+
         if not destination:
             caller.msg("Destination not found.")
             return
         if obj_to_teleport == destination:
             caller.msg("You can't teleport an object inside of itself!")
             return
+        if obj_to_teleport.location and obj_to_teleport.location == destination:
+            caller.msg("%s is already at %s." % (obj_to_teleport, destination))
+            return
         use_destination = True
         if "intoexit" in self.switches:
             use_destination = False
+
         # try the teleport
-        if obj_to_teleport.move_to(destination, quiet=tel_quietly, emit_to_obj=caller, use_destination=use_destination):
+        if obj_to_teleport.move_to(destination, quiet=tel_quietly, emit_to_obj=caller,
+                                   use_destination=use_destination):
             if obj_to_teleport == caller:
-                caller.msg("Teleported to %s." % destination.key)
+                caller.msg("Teleported to %s." % destination)
             else:
-                caller.msg("Teleported %s -> %s." % (obj_to_teleport, destination.key))
+                caller.msg("Teleported %s -> %s." % (obj_to_teleport, destination))
 
 
 class CmdScript(MuxCommand):

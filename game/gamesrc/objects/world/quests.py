@@ -145,6 +145,7 @@ class QuestManager(Object):
                                 break
                     elif 'use' in quest_objectives[objective]['type']:
                         command = quest_objectives[objective]['type'].split('_')[1]
+                        print command, character.last_cmd
                         try:
                             if character.last_cmd.strip() == command.strip():
                                 quest_obj.tick_counter_objective(objective, caller=character)
