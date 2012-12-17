@@ -1,6 +1,7 @@
 from ev import Room
 from game.gamesrc.scripts.world_scripts import structure_scripts as structure_scripts
 import random
+from prettytable import PrettyTable
 
 class Lair(Room):
     """
@@ -11,7 +12,7 @@ class Lair(Room):
 
     def at_object_creation(self):
         self.db.desc="A large cavernous room, as long and as wide as the eye can see. A good place to build an empire."
-        self.db.attributes = { 'attraction': 0.15,'has_barracks': False, 'level': 1, 'defense_rating': 0, 'deity': None, 'gold_to_next_level': 200, 'gold_to_last_level': 200, 'gold_spent_this_level': 0, 'total_gold_spent': 0, 'attack_rating': 0, 'health': 500, 'action_points': 10}
+        self.db.attributes = { 'attraction': 0.15,'has_barracks': False, 'level': 1, 'defense_rating': 0, 'deity': None, 'gold_to_next_level': 200, 'gold_to_last_level': 200, 'gold_spent_this_level': 0, 'total_gold_spent': 0, 'attack_rating': 0, 'health': 500, 'temp_health': 500, 'action_points': 10}
         self.db.henchmen = {}
         self.db.available_henchman = []
         self.db.structures = {}
@@ -19,7 +20,7 @@ class Lair(Room):
         self.db.gold_to_next_level = None
         self.db.gold_spent = None
         self.db.attribute_bonuses = {}
-        self.db.character_attribute_bonuses = { 'temp_strength': 0, 'temp_constitution': 0, 'temp_dexterity': 0, 'temp_intelligence': 0, 'temp_attack_rating': 0, 'temp_armor_rating': 0 }
+        self.db.character_attribute_bonuses = { 'last_strength': 0, 'last_dexterity': 0, 'last_intelligence': 0, 'last_constitution': 0, 'temp_strength': 0, 'temp_constitution': 0, 'temp_dexterity': 0, 'temp_intelligence': 0, 'temp_attack_rating': 0, 'temp_armor_rating': 0 }
         self.db.owner = None
         self.db.structure_manager_id = None
         self.aliases = ['lair_runner']
@@ -41,32 +42,34 @@ class Lair(Room):
         manager = self.search(self.db.structure_manager_id, global_search=False)
         cab = self.db.character_attribute_bonuses
         structs = manager.db.structures
-        print structs
         for struct in structs:
             struct_obj = structs[struct]
-            print struct_obj.db.attribute_bonuses
             for attr in struct_obj.db.attribute_bonuses:
-                print attr, struct_obj.db.attribute_bonuses[attr]
                 if struct_obj.db.attribute_bonuses[attr] == 1:
                     cab['temp_%s' % attr] += 1
                 else:
+                    cab['last_%s' % attr] = cab['temp_%s' % attr]
                     cab['temp_%s' % attr] += (struct_obj.db.attribute_bonuses[attr] - cab['temp_%s' % attr])
-        print cab
         self.db.character_attribute_bonuses = cab
         
     def apply_character_bonuses(self):
         cab = self.db.character_attribute_bonuses                 
         character = self.db.owner
         character_attributes = character.db.attributes
-        print character_attributes
+        print cab, character_attributes
         for attr in cab:
-            print attr, cab[attr]
+            if attr.startswith('last_'):
+                continue
             if cab[attr] > 1:
-                print "%s - %s" % (character_attributes[attr], (cab[attr] - 1))
-                character_attributes[attr] = character_attributes[attr] - (cab[attr] - 1) 
+                if character_attributes[attr] == character_attributes['%s' % attr.lstrip('temp_')]:
+                    pass
+                elif cab[attr] == cab['last_%s' % attr.lstrip('temp_')]:
+                    character_attributes[attr] = character_attributes[attr] - cab[attr]
+                else:
+                    character_attributes[attr] = character_attributes[attr] - (cab[attr] - 1) 
+                print character_attributes[attr], attr
             character_attributes[attr] += cab[attr]
-        print character_attributes
-            
+            print character_attributes
         character.db.attributes = character_attributes
         
     def add_currency(self, to_add):
@@ -97,6 +100,8 @@ class Lair(Room):
         attributes = self.db.attributes
         owner = self.search(self.db.owner.name, global_search=False)
         attributes['level'] += 1
+        attributes['health'] += int((attributes['health'] * .20))
+        attributes['temp_health'] = attributes['health']
         if zero_out:
             attributes['gold_spent_this_level'] = 0
         attributes['defense_rating'] += 1
@@ -255,9 +260,9 @@ class Lair(Room):
         
         
     def update(self):
-        structure_manager = self.search(self.structure_manager_id, global_search=False)
+        structure_manager = self.search(self.db.structure_manager_id, global_search=False)
         dungeon_manager = self.search(self.db.dungeon_manager_id, global_search=False)
-        character = self.search(self.db.owner.name, global_search=False)
+        character = self.db.owner
         self.attract_followers()
         
         if structure_manager.db.already_built is not None:

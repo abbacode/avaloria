@@ -141,15 +141,15 @@ class Structure(Object):
         
                 
         self.db.attribute_bonuses = attribute_bonuses
-        character_attributes = character.db.attributes
-        lair_attributes = character.db.lair.db.attributes
-        attribute_list = self.apply_attribute_bonuses(character_attributes, lair_attributes)
+        #character_attributes = character.db.attributes
+        #lair_attributes = character.db.lair.db.attributes
+        #attribute_list = self.apply_attribute_bonuses(character_attributes, lair_attributes)
         quest_manager = character.db.quest_log
         quest_manager.check_quest_flags(item=manager)
         #character.db.attributes = attribute_list[0]
         character.db.lair.aggregate_character_bonuses()
         character.db.lair.apply_character_bonuses()
-        character.db.lair.db.attributes = attribute_list[1]
+        #character.db.lair.db.attributes = attribute_list[1]
         #character.refresh_attributes()
 
     def set_gold_per_day(self):
@@ -402,15 +402,14 @@ class StructureManager(Object):
             pass
         
         structures[structure.completed_name] = structure
-        character_attributes = self.character.db.attributes
-        lair_attributes = self.character.db.lair.db.attributes
-        attribute_list = structure.apply_attribute_bonuses(character_attributes, lair_attributes)
+        #character_attributes = self.character.db.attributes
+        #lair_attributes = self.character.db.lair.db.attributes
+        #attribute_list = structure.apply_attribute_bonuses(character_attributes, lair_attributes)
         questmanager = self.character.db.quest_log
         questmanager.check_quest_flags(item=self) 
         self.db.structures = structures
         #self.character.db.lair.aggregate_character_bonuses()
         #self.character.db.lair.apply_character_bonuses()
-        self.character.db.lair.db.attributes = attribute_list[1]
         #self.character.refresh_attribute(character_attributes)
 
 class DungeonManager(Object):

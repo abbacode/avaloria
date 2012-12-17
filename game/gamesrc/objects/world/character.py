@@ -238,6 +238,8 @@ class CharacterClass(Character):
         attributes['temp_attack_rating'] = self.db.attributes['attack_rating']
         attributes['temp_armor_rating'] = self.db.attributes['armor_rating']
         self.db.attributes = attributes
+        self.lair.aggregate_character_bonuses()
+        self.lair.apply_character_bonuses()
 
 
     """
@@ -705,7 +707,7 @@ class CharacterClass(Character):
             table.add_row(["Health:", "%s (%s)" % (self.db.attributes['temp_health'], self.db.attributes['health']), " "])
             table.add_row(["Mana:", "%s (%s)" % (self.db.attributes['temp_mana'], self.db.attributes['mana']), " "])
         elif type == 'Stats':
-            armor_diff = self.db.attributes['temp_armor_rating'] - (self.db.attributes['dexterity'] / 5) 
+            armor_diff = self.db.attributes['temp_armor_rating'] - self.db.attributes['dexterity']  
             table._set_field_names(["Other Stats", "Value", "Bonuses"])
             table.add_row(["Gold:", self.db.attributes['gold'], " "])
             table.add_row(["Armor Rating:", self.db.attributes['temp_armor_rating'], "+%s" % armor_diff])

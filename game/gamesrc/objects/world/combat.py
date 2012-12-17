@@ -41,19 +41,20 @@ class CombatManager(Object):
         skill_manager = self.attacker.db.skill_log
         print "scoring a hit.."
         if 'attacker' in who:
+            print "Checking crit."
             if crit:
                 damage_amount = self.attacker.get_damage()
                 damage_amount = character_weapon.critical(damage_amount)
             else:
                 damage_amount = self.attacker.get_damage()
 
+            print "Checking for weapon.."
             if character_weapon is not None:
                 if character_weapon.db.skill_used not in skill_manager.db.skills.keys():
                     rn = random.random()
                     if rn > self.attacker.db.percentages[character_weapon.db.skill_used]:
                         damage_amount = self.attacker.do_glancing_blow()
                 
-            
             if character_weapon is None:
                 self.punching_texts = ["You pummel %s with a flurry of punches for {R%s{n damage!" % (self.defender.key, damage_amount),
                                             "You connect with a quick jab for {R%s{n damage!" % damage_amount,
@@ -84,6 +85,7 @@ class CombatManager(Object):
                 self.attacker.db.in_combat = False
                 self.attacker.scripts.validate()
             """
+            print "Done with hit."
             return
         else:
             damage_amount = self.defender.get_damage()
@@ -91,6 +93,7 @@ class CombatManager(Object):
             self.attacker.msg("You take {r%s{n points of damage." % damage_amount)
             self.attacker.msg("{rHP: (%s/%s){n {bMP: (%s/%s){n" % (self.attacker.db.attributes['temp_health'], self.attacker.db.attributes['health'], 
                                         self.attacker.db.attributes['temp_mana'], self.attacker.db.attributes['mana']))
+            print "done with hit"
             return
 
     def check_quest_flags(self):

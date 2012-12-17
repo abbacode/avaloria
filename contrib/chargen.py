@@ -310,7 +310,7 @@ Which path to do you desire to walk?
             nodes.append(endnode)
 #        node_string = ' '.join([node.key for node in nodes])
  #       self.obj.msg("{mDEBUG: nodes: %s{n" % node_string)
-            menutree = MenuTree(caller=self.caller.character, nodes=nodes)
+            menutree = MenuTree(caller=self.caller.character, nodes=nodes, exec_end=None)
             flags = new_character.db.flags
             flags['in_menu'] = True
             self.caller.db.flags = flags
