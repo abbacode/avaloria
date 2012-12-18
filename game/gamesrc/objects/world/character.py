@@ -387,6 +387,7 @@ class CharacterClass(Character):
    
     def post_combat(self):
         self.db.target = None
+
     """
     End combat
     Begin setters used in menus.

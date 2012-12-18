@@ -512,6 +512,10 @@ class CmdLoot(ActionCommand):
         self.what = self.args.strip()
 
     def func(self):
+        if self.caller.db.in_combat:
+            self.caller.msg("{RCan not loot while in combat!{n")
+            return
+
         if len(self.args) < 1:
             m = "Loot what? Please specify what you want to loot. (usage: loot <corpse>)"
             self.caller.msg(m)
