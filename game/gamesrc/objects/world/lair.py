@@ -38,6 +38,9 @@ class Lair(Room):
         self.locks.add("edit:id(%s) or perm(Immortals);get:false();enter:id(%s)" % (self.db.owner.name, self.db.owner))
 
 
+    def aggregate_lair_bonuses(self):
+        pass
+
     def aggregate_character_bonuses(self):
         manager = self.search(self.db.structure_manager_id, global_search=False)
         cab = self.db.character_attribute_bonuses
@@ -56,7 +59,6 @@ class Lair(Room):
         cab = self.db.character_attribute_bonuses                 
         character = self.db.owner
         character_attributes = character.db.attributes
-        print cab, character_attributes
         for attr in cab:
             if attr.startswith('last_'):
                 continue
@@ -67,9 +69,7 @@ class Lair(Room):
                     character_attributes[attr] = character_attributes[attr] - cab[attr]
                 else:
                     character_attributes[attr] = character_attributes[attr] - (cab[attr] - 1) 
-                print character_attributes[attr], attr
             character_attributes[attr] += cab[attr]
-            print character_attributes
         character.db.attributes = character_attributes
         
     def add_currency(self, to_add):
@@ -95,7 +95,7 @@ class Lair(Room):
         attributes = self.db.attributes
         attributes['deity'] = owner.db.attributes['deity']
         self.db.attributes = attributes
- 
+
     def level_up(self, zero_out=False):
         attributes = self.db.attributes
         owner = self.search(self.db.owner.name, global_search=False)
@@ -145,6 +145,7 @@ class Lair(Room):
             henchman = { 'name': name, 'str': 10, 'dex': 17, 'con': 15, 'int': 35, 'health': 30, 'mana': 70, 'count': 1, 'attribute_mod': 'intelligence', 'attribute_mod_amount': 1, 'afo': 2}
         henchmen[name] = henchman
         self.db.henchmen = henchmen
+        print "Successfully created a henchman"
 
     def figure_available_henchman(self):
         structure_manager = self.search(self.structure_manager_id, global_search=False)
@@ -154,7 +155,7 @@ class Lair(Room):
             avail_henchman.append('Imp')
         if 'Training Grounds' in structures_built:
             avail_henchman.append('Goblin')
-        if 'Magi' in structures_built:
+        if 'Cave of Magi' in structures_built:
             avail_henchman.append('Hedge Wizards')
         if 'Treasury' in structures_built:
             avail_henchman.append('Ogre')
@@ -167,19 +168,26 @@ class Lair(Room):
         attraction = self.db.attributes['attraction']
         character = self.search(self.db.owner.name, global_search=True)
         self.figure_available_henchman()
+        print "through figuring henchmen"
+        print self.db.available_henchman
         low_level_range = "1,4"
         mid_level_range = "3,8"
         high_level_range = "6,12"
+        print "level ranges committed"
 
 
         rn = random.random()
-        if rn <= attraction:
+        print "checking attraction"
+        if rn > attraction and len(self.db.available_henchman) > 0:
             choice = random.choice(self.db.available_henchman)
+            print "attraction triggered."
             try: 
                 if choice not in self.db.henchmen.keys():
+                    print "Creating a new henchmen"
                     self.create_henchman(archtype=choice)
                     character.msg("{CYour lair has attracted a %s to your cause.{n" % choice)
                 else:
+                    print "finding structure to figure levels"
                     if 'Imp' in choice:
                         structure = self.search('Gold Mine', global_search=False)
                     elif 'Goblin' in choice:
@@ -197,7 +205,7 @@ class Lair(Room):
                         split_list = mid_level_range.split(',')
                     elif structure.db.level <= 15:
                         split_list = high_level_range.splt(',')
-
+                    print "levels found"
                     num_henchmen = random.randrange(int(split_list[0]), int(split_list[1]))
                     self.add_henchman(choice, num_henchmen)
                     if num_henchmen == 1:
@@ -207,36 +215,86 @@ class Lair(Room):
             except IndexError:
                 print "Indexing Error"
                 return
+        else:
+            print "attraction not triggered"
         
         self.db.available_henchman = []
 
-    def assign_henchman(henchman, structure, quantity, caller):
+    def assign_henchman(self, henchman, structure, quantity, caller):
         """
         assign's a given henchman to the given structure.
         
         lair_henchmen - represents the lair's view of the henchmen quantity levels.
-        henchmen - represents the structures internal view of hechmen quantity levels.
+        henchmen - represents the structures internal view of henchmen quantity levels.
         """
         structure_manager = self.search(self.structure_manager_id, global_search=False)
         structure_obj = structure_manager.find(structure)
         lair_henchmen = self.db.henchmen
+        quantity = int(quantity)
         if structure_obj:
             henchmen = structure_obj.db.assigned_henchmen
-            if henchman['count'] < quantity:
-                caller.msg("You do not have enough followers to assing that many.")
+            if int(henchman['count']) < int(quantity):
+                caller.msg("You do not have enough followers to assign that many.")
                 return 
             if henchman['name'] in henchmen:
-                henchmen[henchman['name']]['count'] += quantity
-                lair_henchmen[henchman['name']]['count'] -= quantity
+                henchmen_count = henchmen[henchman['name']]['count']
+                henchmen_count = int(henchmen_count)
+                henchmen_count += quantity
+                henchmen[henchman['name']]['count'] = henchmen_count
+                structure_obj.db.assigned_henchmen = henchmen
+                lair_henchmen_count = lair_henchmen[henchman['name']]['count']
+                lair_henchmen_count = int(lair_henchmen_count)
+                lair_henchmen_count -= quantity
+                lair_henchmen[henchman['name']]['count'] = lair_henchmen_count
+                self.db.henchmen = lair_henchmen
             else:
                 henchmen[henchman['name']] = henchman
+                lair_henchmen_count = henchman['count']
                 henchmen[henchman['name']]['count'] = quantity
-                lair_henchmen[henchman['name']]['count'] -= quantity
-            structure_obj.db.assigned_henchmen = henchmen
+                structure_obj.db.assigned_henchmen = henchmen
+                caller.msg(henchmen)
+                #lair_henchmen_count = henchman['count']
+                caller.msg(lair_henchmen_count)
+                lair_henchmen_count = int(lair_henchmen_count)
+                lair_henchmen_count = lair_henchmen_count - quantity
+                caller.msg(lair_henchmen)
+                caller.msg(lair_henchmen_count)
+                lair_henchmen[henchman['name']]['count'] = lair_henchmen_count
+                self.db.henchmen = lair_henchmen
             structure_obj.after_henchmen_assignment(henchmen[henchman['name']])
+            caller.msg(lair_henchmen)
+            caller.msg("{CYou have successfully assigned %s %s to the %s.{n" % (quantity, henchman['name'], structure_obj.name))
         else:
             return
             
+    def unassign_henchman(self, henchman, structure, quantity, caller):
+        """
+        unassign a henchman or hechmen from the given structure
+        """
+        structure_manager = self.search(self.structure_manager_id, global_search=False)
+        structobj = structure_manager.find(structure)
+        lair_henchmen = self.db.henchmen
+        quantity = int(quantity)
+        if structobj:
+            henchmen = structobj.db.assigned_henchmen
+            if int(henchmen[henchman['name']]['count']) < quantity:
+                caller.msg("{RYou can't unassign more henchmen than are assigned to %s.{n" % structobj.name)
+                return
+            try:
+                henchmen_count = henchmen[henchman['name']]['count']
+                henchmen_count = int(henchmen_count)
+                henchmen[henchman['name']]['count'] = henchmen_count - quantity
+                lair_henchmen_count = lair_henchmen[henchman['name']]['count']
+                lair_henchmen_count = int(lair_henchmen_count)
+                lair_henchmen[henchman['name']]['count'] = lair_henchmen_count + quantity
+            except KeyError:
+                caller.msg("{R%s is not assigned to %s.{n" % (henchman['name'], structobj.name))
+                return
+            structobj.db.assigned_henchmen = henchmen
+            self.db.henchmen = lair_henchmen
+            structobj.after_henchmen_assignment(henchmen[henchman['name']])
+            caller.msg("{CYou have successfully unassigned %s %s back to your lair pool" % (quantity, henchman['name']))
+        
     def display_summary(self, caller):
         structure_manager = self.search(self.structure_manager_id, global_search=False)
         built_structures = structure_manager.db.already_built.split(';')
@@ -256,14 +314,39 @@ class Lair(Room):
         attribute_bonuses = self.db.attribute_bonuses
         msg = "\n{{GAttribute Bonuses:{{n {0:<60}{{n".format(attribute_bonuses)
         caller.msg(msg)
-        
+
+    def display_henchmen(self, caller):
+        """
+        display detailed henchmen levels in the lair
+        and managed structures.
+        """ 
+        table = PrettyTable(["Type", "Quantity", "Attributes"])
+        table2 = PrettyTable(["Structure", "Henchmen Type", "Quantity"])
+        struct_manager = self.search(self.structure_manager_id, global_search=False)
+        struct_henchmen = {}
+        lair_henchmen = self.db.henchmen
+        structs = struct_manager.structures
+        for struct in structs:
+            struct_henchmen[struct] = structs[struct].db.assigned_henchmen
+            print structs[struct].db.assigned_henchmen
+        for struct in struct_henchmen:
+            for h in struct_henchmen[struct]:
+                table2.add_row([struct, struct_henchmen[struct][h]['name'], struct_henchmen[struct][h]['count']])
+        for h in lair_henchmen:
+            attributes = ["Str: %s" % lair_henchmen[h]['str'], "Con: %s" % lair_henchmen[h]['con'], "Dex: %s" % lair_henchmen[h]['dex'], "Int: %s" % lair_henchmen[h]['int']]
+            table.add_row([h, lair_henchmen[h]['count'], attributes])
+
+        caller.msg(table.get_string())
+        caller.msg(table2.get_string())
         
         
     def update(self):
+        print "Beginning run: %s" % self.dbref
         structure_manager = self.search(self.db.structure_manager_id, global_search=False)
         dungeon_manager = self.search(self.db.dungeon_manager_id, global_search=False)
         character = self.db.owner
         self.attract_followers()
+        print 'Through attract followers'
         
         if structure_manager.db.already_built is not None:
             for structure in structure_manager.db.already_built.split(';'):

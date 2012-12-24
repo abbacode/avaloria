@@ -37,11 +37,11 @@ class Structure(Object):
     """
     def after_henchmen_assignment(self, henchman):
         henchmen = self.db.assigned_henchmen
-        lab = self.db.lair_attributes_bonuses
+        lab = self.db.lair_attribute_bonuses
         tta = (henchman['count'] / henchman['afo'])
         attr_add_amount = tta * henchman['attribute_mod_amount']
         lab[henchman['attribute_mod']] = attr_add_amount
-        self.lair_attribute_bonuses = lab
+        self.db.lair_attribute_bonuses = lab
         
     
         
