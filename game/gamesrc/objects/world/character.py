@@ -4,7 +4,7 @@ from collections import deque
 from prettytable import PrettyTable
 from ev import Object, Character, utils, create_object, create_channel
 from src.objects.models import ObjAttribute
-from src.utils import logger
+from src.utils import logger, utils
 from game.gamesrc.objects.world.items import Item
 from game.gamesrc.scripts.world_scripts import character_class_scripts as cscripts
 from game.gamesrc.scripts.world_scripts import combat_scripts as combat_scripts
@@ -174,7 +174,7 @@ class CharacterClass(Character):
             self.cmdset.add(spells_cmdset.SpellsCmdSet)
             self.scripts.validate()
             self.scripts.add(cscripts.CharacterSentinel)
-        self.rebuild_model()
+        utils.run_async(self.rebuild_model)
 
     def at_disconnect(self):
         self.cmdset.clear()

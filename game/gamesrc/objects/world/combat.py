@@ -208,7 +208,14 @@ class CombatManager(Object):
                 if split[1] in character_skills.keys():
                     skill_obj = character_skills[split[1]]
                     skill_obj.on_use(caller=self.attacker)
-                
+               
+                if 'attack' in def_action:
+                    def_atk_roll = self.defender.attack_roll()
+                    if def_atk_roll >= self.attacker.db.attributes['temp_armor_rating']:
+                        self.score_hit(who="defender")
+                    else:
+                        self.score_miss(who="defender")
+ 
             else:
                 pass
         else:
@@ -304,48 +311,6 @@ class CombatManager(Object):
             self.process_action() 
         #self.attacker.msg("Combat round complete.  Queue up to four of your next actions.")
 
-        """
-        if self.attacker_initiative > self.defender_initiative: 
-            self.attacker.msg("{rYou begin your assult against: %s (You rolled a %s and they rolled a %s){n" \
-                                        % (self.defender.key, self.attacker_initiative, self.defender_initiative))
-            attacker_roll = self.attacker.attack_roll()
-#            self.attacker.msg("DEBUG: Your attack roll: %s vs %s armor" % (attacker_roll, self.defender.db.attributes['armor_rating']))
-            if attacker_roll >= self.defender.db.attributes['armor_rating']: 
-                self.score_hit(who="attacker")
-            else:
-                self.score_miss(who="attacker")
-            
-            #check if the opponent is dead before they take their turn
-            if self.defender.db.corpse is True:
-                return
-    
-            defender_roll = self.defender.attack_roll()
-            #self.attacker.msg("DEBUG: Defender attack roll: %s vs %s armor"% (defender_roll, self.attacker.db.attributes['armor_rating']))
-            if defender_roll >= int(self.attacker.db.attributes['temp_armor_rating']):
-                self.score_hit(who="defender")
-            else:
-                self.score_miss(who="defender")
-        else:
-            self.attacker.msg("{r%s gets the jump on you and begins it's assault! (They rolled a %s and you rolled a %s){n" \
-                                     % (self.defender.key, self.defender_initiative, self.attacker_initiative))
-            defender_roll = self.defender.attack_roll()
-            #self.attacker.msg("DEBUG: Defender attack roll: %s vs %s armor" % (defender_roll, self.attacker.db.armor_rating))
-            if defender_roll >= int(self.attacker.db.attributes['temp_armor_rating']):
-                self.score_hit(who="defender")
-            else:
-                self.score_miss(who="defender")
-            
-            if self.attacker.db.in_combat is False: 
-                #assume death has occured
-                return  
-
-            attacker_roll = self.attacker.attack_roll()
-            self.attacker.msg("DEBUG: Your attack roll: %s vs %s armor" % (attacker_roll, self.defender.db.attributes['armor_rating']))
-            if attacker_roll >= self.defender.db.attributes['armor_rating']:
-                self.score_hit(who="attacker")
-            else:
-                self.score_miss(who="attacker")
-        """
 
     def check_for_mob_skill_proc(self):
         chance = 0.20

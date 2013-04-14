@@ -114,7 +114,7 @@ class LairRunner(Script):
     """
     def at_script_creation(self):
         self.key = 'lair_runner'
-        self.interval = 60 #* 120
+        self.interval = 60 * 60
         self.persistent = True
         self.desc = 'controls the subscribing lairs'
         self.db.subscribers = []

@@ -1,4 +1,5 @@
 import random
+from prettytable import PrettyTable
 from src.utils import utils, create
 from ev import Object
 from contrib.menusystem import *
@@ -222,7 +223,10 @@ class Npc(Object):
         nodes = []
         items_for_sale = self.contents
         character_attributes = caller.db.attributes
-        items_string = '\n '.join(["{b%s{n   Cost: {y%s{n" % (i.name, i.value) for i in items_for_sale])
+        table = PrettyTable(["Item", "Cost"])
+        for item in items_for_sale:
+            table.add_row([item.name, item.value])
+        items_string = table.get_string()
         welcome_text = """
             Hello there %s!  Browse my goods:
 %s
